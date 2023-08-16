@@ -76,7 +76,7 @@ def load_nist_gen_training_data(path, pos):
     meta_feature_list = []
     gt_formula_list = []
     orbi_list = []
-    for i in range(50):  # len(db)
+    for i in range(len(db)):  # len(db)
         print(i)
         # parse formula info
         formula = db['Formula'][i]
@@ -158,10 +158,10 @@ def load_nist_gen_training_data(path, pos):
     print('y_arr sum: ' + str(np.sum(y_arr)))
 
     # save to joblib file one by one
-    mf_ls_name = '/msbuddy/ml_b_train/nist_meta_feature_list_' + 'pos' if pos else 'neg'
-    gt_ls_name = '/msbuddy/ml_b_train/nist_gt_formula_list_' + 'pos' if pos else 'neg'
-    X_arr_name = '/msbuddy/ml_b_train/nist_X_arr_' + 'pos' if pos else 'neg'
-    y_arr_name = '/msbuddy/ml_b_train/nist_y_arr_' + 'pos' if pos else 'neg'
+    mf_ls_name = 'nist_meta_feature_list_' + 'pos' if pos else 'neg'
+    gt_ls_name = 'nist_gt_formula_list_' + 'pos' if pos else 'neg'
+    X_arr_name = 'nist_X_arr_' + 'pos' if pos else 'neg'
+    y_arr_name = 'nist_y_arr_' + 'pos' if pos else 'neg'
     joblib.dump(meta_feature_list, mf_ls_name + '.joblib')
     joblib.dump(gt_formula_list, gt_ls_name + '.joblib')
     joblib.dump(X_arr, X_arr_name + '.joblib')
@@ -277,11 +277,11 @@ if __name__ == '__main__':
         exit(0)
     else:  # train model
         if args.pos:
-            X = joblib.load('/msbuddy/ml_b_train/nist_X_arr_pos.joblib')
-            y = joblib.load('/msbuddy/ml_b_train/nist_y_arr_pos.joblib')
+            X = joblib.load('nist_X_arr_pos.joblib')
+            y = joblib.load('nist_y_arr_pos.joblib')
         else:
-            X = joblib.load('/msbuddy/ml_b_train/nist_X_arr_neg.joblib')
-            y = joblib.load('/msbuddy/ml_b_train/nist_y_arr_neg.joblib')
+            X = joblib.load('nist_X_arr_neg.joblib')
+            y = joblib.load('nist_y_arr_neg.joblib')
 
         # train models
         train_model(X, y, args.pos, args.ms1, args.ms2)
