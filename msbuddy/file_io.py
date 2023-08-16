@@ -12,7 +12,18 @@ from pyteomics.mgf import read as mgf_read
 from msbuddy.base_class import MetaFeature, Spectrum
 
 
-# To do: 1. update formula db and its url; 2. other databases
+def check_and_download(url: str, path) -> bool:
+    """
+    check if the file exists, if not, download from url
+    :param url: url to download
+    :param path: path to save
+    :return: True if success
+    """
+    if not path.exists() or path.stat().st_size < 10 ** 4:
+        gdown_download(url, str(path))
+        return True
+
+
 def init_db(db_mode: int) -> bool:
     """
     init databases used in the project
@@ -29,27 +40,27 @@ def init_db(db_mode: int) -> bool:
                    model_a_mean_arr=joblib_load(root_path / 'data' / 'mean_arr.joblib'),
                    model_a_std_arr=joblib_load(root_path / 'data' / 'std_arr.joblib'))
 
-    # check existence of basic_db.joblib
-    db_path = root_path / 'data' / 'basic_db.joblib'
-    if not db_path.exists() or db_path.stat().st_size < 10 ** 5:
-        # download from url
-        url = 'https://drive.google.com/uc?id=1Gr775XCTSOHXZYaaSVie4WlxN_haaGJ7'
-        gdown_download(url, str(db_path))
+    # check existence of basic_db_mass.joblib, basic_db_formula.joblib
+    check_and_download('https://drive.google.com/uc?id=1obPMk9lcfkUpRkeGSkM1s4C9Bzatm1li',
+                       root_path / 'data' / 'basic_db_mass.joblib')
+    check_and_download('https://drive.google.com/uc?id=155AEYIv5XFBIc7Adpnfi-vH3s47QkbJf',
+                       root_path / 'data' / 'basic_db_formula.joblib')
 
     sys.stdout.write("Loading basic_db...\n")
-    set_dependency(basic_db=joblib_load(db_path),
+    set_dependency(basic_db_mass=joblib_load(root_path / 'data' / 'basic_db_mass.joblib'),
+                   basic_db_formula=joblib_load(root_path / 'data' / 'basic_db_formula.joblib'),
                    basic_db_idx=joblib_load(root_path / 'data' / 'basic_db_idx.joblib'))
 
     if db_mode >= 1:
-        # check existence of halogen_db.joblib
-        db_path = root_path / 'data' / 'halogen_db.joblib'
-        if not db_path.exists() or db_path.stat().st_size < 10 ** 5:
-            # download from url
-            url = 'https://drive.google.com/uc?id=1Xj1jvhiocWP21zfD2Dx7jRopuztux37e'
-            gdown_download(url, str(db_path))
+        # check existence of halogen_db_mass.joblib, halogen_db_formula.joblib
+        check_and_download('https://drive.google.com/uc?id=1SMhezxtXtjQNj2N8odYWSEufOO_6N1o5',
+                           root_path / 'data' / 'halogen_db_mass.joblib')
+        check_and_download('https://drive.google.com/uc?id=18G8_qzTXWHDIw9Z9PwvMtjKWOi6FtwDU',
+                           root_path / 'data' / 'halogen_db_formula.joblib')
 
         sys.stdout.write("Loading halogen_db...\n")
-        set_dependency(halogen_db=joblib_load(db_path),
+        set_dependency(halogen_db_mass=joblib_load(root_path / 'data' / 'halogen_db_mass.joblib'),
+                       halogen_db_formula=joblib_load(root_path / 'data' / 'halogen_db_formula.joblib'),
                        halogen_db_idx=joblib_load(root_path / 'data' / 'halogen_db_idx.joblib'))
     return True
 
@@ -174,11 +185,11 @@ def load_usi(usi_list: List[str],
 if __name__ == '__main__':
     init_db(1)
 
-    from .utils import dependencies
+    from msbuddy.utils import dependencies
 
     # print(dependencies['common_loss_db'])
-    print("basic db: " + str(len(dependencies['basic_db'])))
-    print("halogen db: " + str(len(dependencies['halogen_db'])))
+    print("basic db: " + str(len(dependencies['basic_db_mass'])))
+    print("halogen db: " + str(len(dependencies['halogen_db_mass'])))
 
     # usi_1 = 'mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943'
     # # usi_str = 'mzspec:PXD000561:Adult_Frontalcortex_bRP_Elite_85_f09:scan:17555'

@@ -1,5 +1,5 @@
 # msbuddy
-[![Generic badge](https://img.shields.io/badge/pybuddy-ver_0.0.1-<COLOR>.svg)](https://github.com/Philipbear/pybuddy)
+[![Generic badge](https://img.shields.io/badge/msbuddy-ver_0.0.1-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 ![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
 
 `msbuddy` is a python package for de novo molecular formula annotation in MS-based metabolomics.
