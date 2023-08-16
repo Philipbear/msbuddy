@@ -72,7 +72,7 @@ def load_nist_gen_training_data(path, pos):
     meta_feature_list = []
     gt_formula_list = []
     orbi_list = []
-    for i in range(50):  # len(db)
+    for i in range(29, len(db)):  # len(db)
         print(i)
         # parse formula info
         formula = db['Formula'][i]
@@ -243,21 +243,21 @@ def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
 if __name__ == '__main__':
 
     # initiate databases
-    # init_db(1)
+    init_db(1)
 
     # load training data
     # load_nist_gen_training_data('/Users/philip/Documents/projects/pyms2/nist20/nist20_pos.joblib', True)
 
-    # load_nist_gen_training_data('/Users/philip/Documents/projects/pyms2/nist20/nist20_neg.joblib', False)
+    load_nist_gen_training_data('/Users/philip/Documents/projects/pyms2/nist20/nist20_neg.joblib', False)
     #
     # # train models
-    X = joblib.load('nist_X_arr_pos.joblib')
-    y = joblib.load('nist_y_arr_pos.joblib')
-    #
-    # X = joblib.load('nist_X_arr_neg.joblib')
-    # y = joblib.load('nist_y_arr_neg.joblib')
-    #
-    # # train models
-    train_model(X, y, True, True, False)
+    # X = joblib.load('nist_X_arr_pos.joblib')
+    # y = joblib.load('nist_y_arr_pos.joblib')
+    # #
+    # # X = joblib.load('nist_X_arr_neg.joblib')
+    # # y = joblib.load('nist_y_arr_neg.joblib')
+    # #
+    # # # train models
+    # train_model(X, y, True, True, False)
 
     print("Done.")
