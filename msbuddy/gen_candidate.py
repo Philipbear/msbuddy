@@ -452,9 +452,9 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
     # presort candidate list by explained MS2 peak count (decreasing), then by mz difference (increasing)
     candidate_list.sort(key=lambda x: (-len(x.frag_exp_list), abs(x.neutral_mass - t_neutral_mass)))
 
-    # retain top 500 candidate spaces
-    if len(candidate_list) > 500:
-        candidate_list = candidate_list[:500]
+    # retain top 2000 candidate spaces
+    if len(candidate_list) > 2000:
+        candidate_list = candidate_list[:2000]
 
     # generate CandidateFormula object, refine MS2 explanation
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * meta_feature.mz * 1e-6
