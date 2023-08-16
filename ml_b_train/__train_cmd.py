@@ -76,6 +76,7 @@ def load_nist_gen_training_data(path, pos):
     meta_feature_list = []
     gt_formula_list = []
     orbi_list = []
+    d = 1
     for i in range(len(db)):  # len(db)
         print(i)
         # parse formula info
@@ -128,6 +129,15 @@ def load_nist_gen_training_data(path, pos):
                               4)
 
         meta_feature_list.append(mf)
+
+        # save to joblib file one by one
+        if len(meta_feature_list) / len(db) >= 0.05 * d:
+            mf_ls_name = 'nist_meta_feature_list_' + 'pos' if pos else 'neg'
+            gt_ls_name = 'nist_gt_formula_list_' + 'pos' if pos else 'neg'
+            joblib.dump(meta_feature_list, mf_ls_name + '_' + str(d) + '.joblib')
+            joblib.dump(gt_formula_list, gt_ls_name + '_' + str(d) + '.joblib')
+            joblib.dump(orbi_list, 'nist_orbi_list_' + str(d) + '.joblib')
+            d += 1
 
     # predict formula feasibility, using ML model A
     predict_formula_feasibility(meta_feature_list)
