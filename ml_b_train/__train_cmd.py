@@ -132,11 +132,14 @@ def load_nist_gen_training_data(path, pos):
 
         # save to joblib file one by one
         if len(meta_feature_list) / len(db) >= 0.05 * d:
-            mf_ls_name = '/ml_b_train/nist_meta_feature_list_' + 'pos' if pos else 'neg'
-            gt_ls_name = '/ml_b_train/nist_gt_formula_list_' + 'pos' if pos else 'neg'
-            joblib.dump(meta_feature_list, mf_ls_name + '_' + str(d) + '.joblib')
-            joblib.dump(gt_formula_list, gt_ls_name + '_' + str(d) + '.joblib')
-            joblib.dump(orbi_list, '/ml_b_train/nist_orbi_list_' + str(d) + '.joblib')
+            if pos:
+                joblib.dump(meta_feature_list, 'nist_meta_feature_list_pos_' + str(d) + '.joblib')
+                joblib.dump(gt_formula_list, 'nist_gt_formula_list_pos_' + str(d) + '.joblib')
+                joblib.dump(orbi_list, 'nist_orbi_list_pos_' + str(d) + '.joblib')
+            else:
+                joblib.dump(meta_feature_list, 'nist_meta_feature_list_neg_' + str(d) + '.joblib')
+                joblib.dump(gt_formula_list, 'nist_gt_formula_list_neg_' + str(d) + '.joblib')
+                joblib.dump(orbi_list, 'nist_orbi_list_neg_' + str(d) + '.joblib')
             d += 1
 
     # predict formula feasibility, using ML model A
@@ -168,14 +171,18 @@ def load_nist_gen_training_data(path, pos):
     print('y_arr sum: ' + str(np.sum(y_arr)))
 
     # save to joblib file one by one
-    mf_ls_name = 'nist_meta_feature_list_' + 'pos' if pos else 'neg'
-    gt_ls_name = 'nist_gt_formula_list_' + 'pos' if pos else 'neg'
-    X_arr_name = 'nist_X_arr_' + 'pos' if pos else 'neg'
-    y_arr_name = 'nist_y_arr_' + 'pos' if pos else 'neg'
-    joblib.dump(meta_feature_list, mf_ls_name + '.joblib')
-    joblib.dump(gt_formula_list, gt_ls_name + '.joblib')
-    joblib.dump(X_arr, X_arr_name + '.joblib')
-    joblib.dump(y_arr, y_arr_name + '.joblib')
+    if pos:
+        joblib.dump(meta_feature_list, 'nist_meta_feature_list_pos.joblib')
+        joblib.dump(gt_formula_list, 'nist_gt_formula_list_pos.joblib')
+        joblib.dump(orbi_list, 'nist_orbi_list_pos.joblib')
+        joblib.dump(X_arr, 'nist_X_arr_pos.joblib')
+        joblib.dump(y_arr, 'nist_y_arr_pos.joblib')
+    else:
+        joblib.dump(meta_feature_list, 'nist_meta_feature_list_neg.joblib')
+        joblib.dump(gt_formula_list, 'nist_gt_formula_list_neg.joblib')
+        joblib.dump(orbi_list, 'nist_orbi_list_neg.joblib')
+        joblib.dump(X_arr, 'nist_X_arr_neg.joblib')
+        joblib.dump(y_arr, 'nist_y_arr_neg.joblib')
 
     return
 
