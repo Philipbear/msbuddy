@@ -1,7 +1,7 @@
 # candidate ranking with machine learning (model B)
 import numpy as np
 from numba import njit
-from msbuddy.service import common_nl_from_array
+from msbuddy.query import common_nl_from_array
 from msbuddy.utils import dependencies
 from scipy.stats import norm
 import warnings
