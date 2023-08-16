@@ -102,7 +102,6 @@ class CandidateSpace:
             frag_exp.refine_explanation(raw_ms2.mz_array)
 
         # consider to further explain other fragments as isotope peaks
-        arr_len = len(raw_ms2)
         explained_idx = [f.idx for f in self.frag_exp_list]
         for m, exp_idx in enumerate(explained_idx):
             # if the next peak is already explained or the last peak, skip
@@ -453,14 +452,14 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
     # presort candidate list by explained MS2 peak count (decreasing), then by mz difference (increasing)
     candidate_list.sort(key=lambda x: (-len(x.frag_exp_list), abs(x.neutral_mass - t_neutral_mass)))
 
-    # retain top 2000 candidate spaces
-    if len(candidate_list) > 2000:
-        candidate_list = candidate_list[:2000]
+    # retain top 500 candidate spaces
+    if len(candidate_list) > 500:
+        candidate_list = candidate_list[:500]
 
     # generate CandidateFormula object, refine MS2 explanation
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * meta_feature.mz * 1e-6
     # common frag/nl + mz diff, consider isotopes
-    candidate_formula_list = [cs.refine_explanation(meta_feature.ms2_processed, ms2_iso_tol) for cs in candidate_list]
+    candidate_formula_list = [cs.refine_explanation(meta_feature.ms2_raw, ms2_iso_tol) for cs in candidate_list]
 
     if ms2_global_opt:
         pass

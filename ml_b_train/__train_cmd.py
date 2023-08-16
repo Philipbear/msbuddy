@@ -68,6 +68,7 @@ def load_nist_gen_training_data(path, pos):
     :param path: path to NIST library
     :param pos: True for positive mode, False for negative mode
     """
+
     db = joblib.load(path)
     # reset index
     db = db.reset_index(drop=True)
@@ -157,10 +158,10 @@ def load_nist_gen_training_data(path, pos):
     print('y_arr sum: ' + str(np.sum(y_arr)))
 
     # save to joblib file one by one
-    mf_ls_name = '/pybuddy/ml_b/nist_meta_feature_list_' + 'pos' if pos else 'neg'
-    gt_ls_name = '/pybuddy/ml_b/nist_gt_formula_list_' + 'pos' if pos else 'neg'
-    X_arr_name = '/pybuddy/ml_b/nist_X_arr_' + 'pos' if pos else 'neg'
-    y_arr_name = '/pybuddy/ml_b/nist_y_arr_' + 'pos' if pos else 'neg'
+    mf_ls_name = '/msbuddy/ml_b_train/nist_meta_feature_list_' + 'pos' if pos else 'neg'
+    gt_ls_name = '/msbuddy/ml_b_train/nist_gt_formula_list_' + 'pos' if pos else 'neg'
+    X_arr_name = '/msbuddy/ml_b_train/nist_X_arr_' + 'pos' if pos else 'neg'
+    y_arr_name = '/msbuddy/ml_b_train/nist_y_arr_' + 'pos' if pos else 'neg'
     joblib.dump(meta_feature_list, mf_ls_name + '.joblib')
     joblib.dump(gt_formula_list, gt_ls_name + '.joblib')
     joblib.dump(X_arr, X_arr_name + '.joblib')
@@ -233,7 +234,7 @@ def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
           % (mlp, metrics.classification_report(y_test, y_pred)))
 
     # save model
-    model_name = '/pybuddy/ml_b/model_B_'
+    model_name = '/msbuddy/ml_b_train/model_B_'
     model_name += 'pos' if pos else 'neg'
     model_name += '_ms1' if ms1_iso else '_noms1'
     model_name += '_ms2' if ms2_spec else '_noms2'
@@ -276,11 +277,11 @@ if __name__ == '__main__':
         exit(0)
     else:  # train model
         if args.pos:
-            X = joblib.load('/pybuddy/ml_b/nist_X_arr_pos.joblib')
-            y = joblib.load('/pybuddy/ml_b/nist_y_arr_pos.joblib')
+            X = joblib.load('/msbuddy/ml_b_train/nist_X_arr_pos.joblib')
+            y = joblib.load('/msbuddy/ml_b_train/nist_y_arr_pos.joblib')
         else:
-            X = joblib.load('/pybuddy/ml_b/nist_X_arr_neg.joblib')
-            y = joblib.load('/pybuddy/ml_b/nist_y_arr_neg.joblib')
+            X = joblib.load('/msbuddy/ml_b_train/nist_X_arr_neg.joblib')
+            y = joblib.load('/msbuddy/ml_b_train/nist_y_arr_neg.joblib')
 
         # train models
         train_model(X, y, args.pos, args.ms1, args.ms2)

@@ -1,7 +1,7 @@
 import sys
 import numpy as np
-import requests
-import json
+from requests import get as requests_get
+from json import loads as json_loads
 from typing import List, Union
 from gdown import download as gdown_download
 from pathlib import Path
@@ -125,8 +125,8 @@ def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
     """
     # get spectrum from USI
     url = 'https://metabolomics-usi.gnps2.org/json/?usi1=' + usi
-    response = requests.get(url)
-    json_data = json.loads(response.text)
+    response = requests_get(url)
+    json_data = json_loads(response.text)
 
     # check if the USI is valid
     if 'error' in json_data:

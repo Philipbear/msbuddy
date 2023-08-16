@@ -1,25 +1,62 @@
 import numpy as np
 import joblib
 from sklearn import metrics
+from brainpy import isotopic_variants
+from msbuddy.base_class import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
+from msbuddy.ml import gen_ml_B_feature_single, predict_formula_feasibility
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from tqdm import tqdm
-
-
-from base_class.Formula import read_formula
-from base_class.ProcessedMS1 import ProcessedMS1
-from base_class.ProcessedMS2 import ProcessedMS2
-from buddy.ml_candidate_ranking import gen_ml_B_feature_single
-from __ms1_iso_algo import sim_ms1_iso_pattern
-from base_class.MetaFeature import MetaFeature
-from base_class.Spectrum import Spectrum
-from buddy.ml_formula_feasibility import predict_formula_feasibility
-from main.gen_candidate import gen_candidate_formula
-from file_io.init_db import init_db
+from msbuddy.gen_candidate import gen_candidate_formula
+from msbuddy.file_io import init_db
 
 
 # This MLP model is trained using NIST20 library.
 # 8 models will be generated in total: pos/neg mode, ms1 iso similarity included or not, MS/MS spec included or not.
+
+def sim_ms1_iso_pattern(form_arr):
+    """
+    simulate MS1 isotope pattern
+    :param form_arr: numpy array of formula
+    :return: theoretical & simulated isotope pattern
+    """
+
+    # calculate theoretical isotope pattern
+    # mapping to a dictionary
+    arr_dict = {}
+    for i, element in enumerate(Formula.alphabet):
+        arr_dict[element] = form_arr[i]
+
+    # calculate isotope pattern
+    isotope_pattern = isotopic_variants(arr_dict, npeaks=4)
+    int_arr = np.array([iso.intensity for iso in isotope_pattern])
+
+    # simulation
+    sim_int_arr = int_arr.copy()
+    a1, a2, a3 = 2, 2, 2
+    b1, b2, b3 = -1, -1, -1
+
+    # M + 1
+    while a1 * b1 < -1:
+        a1 = abs(np.random.normal(0, 0.11))
+        b1 = np.random.choice([-1, 1])
+    sim_int_arr[1] = sim_int_arr[1] * (1 + a1 * b1)
+
+    # M + 2
+    if len(int_arr) >= 3:
+        while a2 * b2 < -1:
+            a2 = abs(np.random.normal(0, 0.16))
+            # random.choice([-1, 1]), 0.7 probability to be 1
+            b2 = np.random.choice([-b1, b1], p=[0.3, 0.7])
+        sim_int_arr[2] = sim_int_arr[2] * (1 + a2 * b2)
+
+    # M + 3
+    if len(int_arr) >= 4:
+        while a3 * b3 < -1:
+            a3 = abs(np.random.normal(0, 0.19))
+            b3 = np.random.choice([-b2, b2], p=[0.3, 0.7])
+        sim_int_arr[3] = sim_int_arr[3] * (1 + a3 * b3)
+
+    return int_arr, sim_int_arr
 
 
 def load_nist_gen_training_data(path, pos):
@@ -152,13 +189,13 @@ def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
 
     # grid search
     param_grid = {
-        'hidden_layer_sizes': [(1024,), (512,), (256,),
-                               (1024, 512), (512, 512), (512, 256), (256, 256), (256, 128),
-                               (512, 512, 256), (512, 256, 256), (512, 256, 128), (256, 256, 128),
-                               (128, 64, 64, 32), (64, 64, 32, 32)],
+        'hidden_layer_sizes': [(1024,), (512,),
+                               (1024, 512),
+                               (512, 512, 256),
+                               (256, 128, 128, 64)],
         'activation': ['relu'],
-        'alpha': [1e-6, 1e-5, 1e-4, 1e-3],
-        'max_iter': [400, 800]
+        'alpha': [1e-6],
+        'max_iter': [400]
     }
 
     # grid search
@@ -206,21 +243,21 @@ def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
 if __name__ == '__main__':
 
     # initiate databases
-    init_db(1)
+    # init_db(1)
 
     # load training data
-    load_nist_gen_training_data('/Users/philip/Documents/projects/pyms2/nist20/nist20_pos.joblib', True)
+    # load_nist_gen_training_data('/Users/philip/Documents/projects/pyms2/nist20/nist20_pos.joblib', True)
 
     # load_nist_gen_training_data('/Users/philip/Documents/projects/pyms2/nist20/nist20_neg.joblib', False)
     #
     # # train models
-    # X = joblib.load('nist_X_arr_pos.joblib')
-    # y = joblib.load('nist_y_arr_pos.joblib')
+    X = joblib.load('nist_X_arr_pos.joblib')
+    y = joblib.load('nist_y_arr_pos.joblib')
     #
     # X = joblib.load('nist_X_arr_neg.joblib')
     # y = joblib.load('nist_y_arr_neg.joblib')
     #
     # # train models
-    # train_model(X, y, True, True, True)
+    train_model(X, y, True, True, False)
 
     print("Done.")
