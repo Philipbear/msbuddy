@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from ..base_class.Formula import Formula
+from msbuddy.base_class import Formula
 from brainpy import isotopic_variants
 from tqdm import tqdm
 

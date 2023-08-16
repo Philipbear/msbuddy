@@ -1,6 +1,5 @@
 import sys
 import numpy as np
-import tqdm
 import requests
 import json
 from typing import List, Union
@@ -75,7 +74,7 @@ def load_mgf(file) -> List[MetaFeature]:
 
     # create meta_feature_list
     meta_feature_list = []
-    for spec in tqdm(_mgf, desc="Data preprocessing", file=sys.stdout, colour="green"):
+    for spec in _mgf:
 
         params = spec['params']
 

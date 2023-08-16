@@ -10,32 +10,12 @@ na_h_delta = 22.989769 - 1.007825
 k_h_delta = 38.963707 - 1.007825
 
 
-class FormulaModel:
-    """
-    formula database model
-    """
-    def __init__(self,
-                 # formula_str: str,
-                 mass: float,
-                 formula_arr: np.array
-                 # pubchem: int,
-                 # other_db: int
-                 ):
-        # self.formula_str = formula_str
-        self.mass = mass
-        self.formula_arr = formula_arr
-        # self.pubchem = pubchem
-        # self.other_db = other_db
-
-
 def _get_formula_db_idx(start_idx, end_idx, db_mode: int) -> Tuple[int, int]:
     """
     get formula database index
     :param start_idx: start index of candidate space
     :param end_idx: end index of candidate space
     :param db_mode: database label (0: basic, 1: halogen)
-    :param basic_db_idx: basic formula database index, CHNOPS
-    :param halogen_db_idx: halogen formula database index, CHNOPSFClBrI
     :return: database start index, database end index
     """
     if db_mode == 0:
@@ -47,7 +27,7 @@ def _get_formula_db_idx(start_idx, end_idx, db_mode: int) -> Tuple[int, int]:
             db_end_idx = len(dependencies['basic_db_idx']) - 1
         else:
             db_end_idx = dependencies['basic_db_idx'][end_idx]
-    elif db_mode == 1:
+    else:
         if start_idx >= 15000:
             db_start_idx = dependencies['halogen_db_idx'][-1]
         else:
@@ -435,40 +415,3 @@ def common_nl_from_array(form_arr: np.array, nl_db: np.array) -> bool:
         elif nl[0] > form_arr[0]:
             break
     return False
-
-
-# test
-if __name__ == '__main__':
-    import time
-    from file_io import init_db
-
-    start = time.time()
-    init_db(1)
-    print('init db time: ', time.time() - start)
-
-    start = time.time()
-    adduct_ = Adduct(string='[M + H]+', pos_mode=True)
-    for i in range(10000):
-        formulas_ = query_precursor_mass(300, adduct_, 0.01, False, 1)
-    print(len(formulas_))
-    for formula in formulas_:
-        print(formula)
-
-    for i in range(1000):
-        subforms = query_fragnl_mass(300, fragment=False, pos_mode=True, na_contain=False, k_contain=False,
-                                     mz_tol=0.02, ppm=False, db_mode=1)
-    print(len(subforms))
-
-
-    # for subform in subforms:
-    #     print(subform)
-
-
-    # check common frag
-    form = Formula(np.array([10, 14, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]), charge=0)
-    for i in range(100000):
-        a = check_common_frag(form)
-        b = check_common_nl(form)
-    print(a, b)
-
-    print(time.time() - start)

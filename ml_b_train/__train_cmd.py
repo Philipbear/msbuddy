@@ -1,25 +1,65 @@
 import numpy as np
 import joblib
 from sklearn import metrics
-
-from pybuddy.base_class.Formula import read_formula
-from pybuddy.base_class.ProcessedMS1 import ProcessedMS1
-from pybuddy.base_class.ProcessedMS2 import ProcessedMS2
-from pybuddy.buddy.ml_candidate_ranking import gen_ml_B_feature_single
+from brainpy import isotopic_variants
+from msbuddy.base_class import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
+from msbuddy.ml import gen_ml_B_feature_single, predict_formula_feasibility
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from pybuddy.ml_b.__ms1_iso_algo import sim_ms1_iso_pattern
-from pybuddy.base_class.MetaFeature import MetaFeature
-from pybuddy.base_class.Spectrum import Spectrum
-from pybuddy.buddy.ml_formula_feasibility import predict_formula_feasibility
-from pybuddy.main.gen_candidate import gen_candidate_formula
-from pybuddy.file_io.init_db import init_db
+from msbuddy.gen_candidate import gen_candidate_formula
+from msbuddy.file_io import init_db
 from tqdm import tqdm
 import argparse
 
 
 # This MLP model is trained using NIST20 library.
 # 8 models will be generated in total: pos/neg mode, ms1 iso similarity included or not, MS/MS spec included or not.
+
+
+def sim_ms1_iso_pattern(form_arr):
+    """
+    simulate MS1 isotope pattern
+    :param form_arr: numpy array of formula
+    :return: theoretical & simulated isotope pattern
+    """
+
+    # calculate theoretical isotope pattern
+    # mapping to a dictionary
+    arr_dict = {}
+    for i, element in enumerate(Formula.alphabet):
+        arr_dict[element] = form_arr[i]
+
+    # calculate isotope pattern
+    isotope_pattern = isotopic_variants(arr_dict, npeaks=4)
+    int_arr = np.array([iso.intensity for iso in isotope_pattern])
+
+    # simulation
+    sim_int_arr = int_arr.copy()
+    a1, a2, a3 = 2, 2, 2
+    b1, b2, b3 = -1, -1, -1
+
+    # M + 1
+    while a1 * b1 < -1:
+        a1 = abs(np.random.normal(0, 0.11))
+        b1 = np.random.choice([-1, 1])
+    sim_int_arr[1] = sim_int_arr[1] * (1 + a1 * b1)
+
+    # M + 2
+    if len(int_arr) >= 3:
+        while a2 * b2 < -1:
+            a2 = abs(np.random.normal(0, 0.16))
+            # random.choice([-1, 1]), 0.7 probability to be 1
+            b2 = np.random.choice([-b1, b1], p=[0.3, 0.7])
+        sim_int_arr[2] = sim_int_arr[2] * (1 + a2 * b2)
+
+    # M + 3
+    if len(int_arr) >= 4:
+        while a3 * b3 < -1:
+            a3 = abs(np.random.normal(0, 0.19))
+            b3 = np.random.choice([-b2, b2], p=[0.3, 0.7])
+        sim_int_arr[3] = sim_int_arr[3] * (1 + a3 * b3)
+
+    return int_arr, sim_int_arr
 
 
 def load_nist_gen_training_data(path, pos):
