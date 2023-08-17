@@ -5,6 +5,7 @@ from file_io import init_db, load_usi, load_mgf
 from typing import Tuple, Union, List
 from msbuddy.base_class import MetaFeature
 from msbuddy.gen_candidate import gen_candidate_formula
+from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
 
 
 class BuddyParamSet:
@@ -157,13 +158,13 @@ class Buddy:
                                   ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
 
         # ml_a feature generation + prediction
-        #################
+        pred_formula_feasibility(self.data)
 
         # ml_b feature generation + prediction
-        ##################
+        pred_formula_prob(self.data, ps.ppm, ps.ms1_tol, ps.ms2_tol)
 
-        # formula annotation + FDR calculation
-        ##################
+        # FDR calculation
+        calc_fdr(self.data)
 
         return 0
 

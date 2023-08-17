@@ -104,7 +104,7 @@ def _predict_ml_a(feature_arr: np.array) -> np.array:
     return prob_arr[:, 1]
 
 
-def predict_formula_feasibility(buddy_data):
+def pred_formula_feasibility(buddy_data):
     """
     predict formula feasibility using ML model a
     :param buddy_data: buddy data
@@ -373,7 +373,7 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     return prob_arr[:, 1]
 
 
-def predict_formula_probability(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float):
+def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float):
     """
     predict formula probability using ML model b
     :param buddy_data: buddy data
