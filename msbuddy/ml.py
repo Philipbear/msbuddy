@@ -128,10 +128,10 @@ def predict_formula_feasibility(buddy_data):
             cnt += 1
 
 
-def gen_ml_b_feature(buddy_data, ppm: bool, ms2_tol: float) -> np.array:
+def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float) -> np.array:
     """
     generate ML features for model B, for all metabolic features
-    :param buddy_data: List of MetaFeature objects
+    :param meta_feature_list: List of MetaFeature objects
     :param ppm: whether to use ppm error
     :param ms1_tol: m/z tolerance for MS1
     :param ms2_tol: m/z tolerance for MS2
@@ -140,13 +140,13 @@ def gen_ml_b_feature(buddy_data, ppm: bool, ms2_tol: float) -> np.array:
     # generate feature array
     total_feature_arr = np.array([])
 
-    for meta_feature in buddy_data:
+    for meta_feature in meta_feature_list:
         if not meta_feature.candidate_formula_list:
             continue
         # generate ML features for each candidate formula
         for candidate_formula in meta_feature.candidate_formula_list:
             # get ML features
-            ml_feature_arr = gen_ml_b_feature_single(meta_feature, candidate_formula, ppm, ms2_tol)
+            ml_feature_arr = gen_ml_b_feature_single(meta_feature, candidate_formula, ppm, ms1_tol, ms2_tol)
             # add to feature array
             if total_feature_arr.size == 0:
                 total_feature_arr = ml_feature_arr
@@ -337,31 +337,35 @@ def _calc_log_p_norm(arr: np.array, sigma: float) -> np.array:
     return log_p_arr
 
 
-def _predict_ml_b(feature_arr: np.array, group_no: int) -> np.array:
+def _predict_ml_b(meta_feature_list, group_no: int) -> np.array:
     """
-    predict & rank formula candidates using model b
-    :param feature_arr: numpy array of ML features
-    :param group_no: group number; 1:pos ms1 ms2; 2:pos ms1 noms2; 3:pos noms1 ms2; 4:pos noms1 noms2;
-                        5:neg ms1 ms2; 6:neg ms1 noms2; 7:neg noms1 ms2; 8:neg noms1 noms2
+    predict using model b
+    :param meta_feature_list: List of MetaFeature objects
+    :param group_no: group number; 0:pos ms1 ms2; 1:pos ms1 noms2; 2:pos noms1 ms2; 3:pos noms1 noms2;
+                        4:neg ms1 ms2; 5:neg ms1 noms2; 6:neg noms1 ms2; 7:neg noms1 noms2
     :return: numpy array of prediction results
     """
-    if group_no == 1:
+    # generate feature array
+    feature_arr = gen_ml_b_feature(meta_feature_list, group_no)
+
+    if group_no == 0:
         model = dependencies['model_b_pos_ms1_ms2']
-    elif group_no == 2:
+    elif group_no == 1:
         model = dependencies['model_b_pos_ms1_noms2']
-    elif group_no == 3:
+    elif group_no == 2:
         model = dependencies['model_b_pos_noms1_ms2']
-    elif group_no == 4:
+    elif group_no == 3:
         model = dependencies['model_b_pos_noms1_noms2']
-    elif group_no == 5:
+    elif group_no == 4:
         model = dependencies['model_b_neg_ms1_ms2']
-    elif group_no == 6:
+    elif group_no == 5:
         model = dependencies['model_b_neg_ms1_noms2']
-    elif group_no == 7:
+    elif group_no == 6:
         model = dependencies['model_b_neg_noms1_ms2']
     else:
         model = dependencies['model_b_neg_noms1_noms2']
 
+    # predict formula probability
     prob_arr = model.predict_proba(feature_arr)
     return prob_arr[:, 1]
 
@@ -375,7 +379,45 @@ def predict_formula_probability(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: 
     :param ms2_tol: m/z tolerance for MS2
     :return: fill in estimated_prob in candidate formula objects
     """
-    #
+    # split buddy data into 8 groups and store their indices in a dictionary
+    group_dict = dict()
+    for i in range(8):
+        group_dict[i] = []
+
+    for i, meta_feature in enumerate(buddy_data):
+        if not meta_feature.candidate_formula_list:
+            continue
+        if meta_feature.charge > 0:
+            if meta_feature.ms1_raw:
+                if meta_feature.ms2_raw:
+                    group_dict[0].append(i)
+                else:
+                    group_dict[1].append(i)
+            else:
+                if meta_feature.ms2_raw:
+                    group_dict[2].append(i)
+                else:
+                    group_dict[3].append(i)
+        else:
+            if meta_feature.ms1_raw:
+                if meta_feature.ms2_raw:
+                    group_dict[4].append(i)
+                else:
+                    group_dict[5].append(i)
+            else:
+                if meta_feature.ms2_raw:
+                    group_dict[6].append(i)
+                else:
+                    group_dict[7].append(i)
+
+    # predict formula probability
+    for i in range(8):
+        if not group_dict[i]:
+            continue
+        prob_arr = _predict_ml_b([buddy_data[j] for j in group_dict[i]], i)
+
+
+
 
 
 if __name__ == '__main__':
