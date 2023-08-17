@@ -296,7 +296,7 @@ if __name__ == '__main__':
     # _data = load_usi([usi_1, usi_2, usi_3])
     # print(_data[1])
 
-    # _data = load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query.mgf')
-    _data = load_mgf('/Users/philip/Documents/test_data/test.mgf')
+    _data = load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query.mgf')
+    # _data = load_mgf('/Users/philip/Documents/test_data/test.mgf')
     print(len(_data))
     print(_data[0])
