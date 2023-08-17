@@ -427,36 +427,31 @@ def predict_formula_probability(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: 
                 cnt += 1
 
 
-def calc_fdr(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float, fdr_cutoff: float) -> (int, float):
+def calc_fdr(buddy_data):
     """
     calculate FDR
-    :param buddy_data: buddy data
-    :param ppm: whether to use ppm error
-    :param ms1_tol: m/z tolerance for MS1
-    :param ms2_tol: m/z tolerance for MS2
-    :param fdr_cutoff: FDR cutoff
-    :return: number of annotated metabolic features, FDR
+    :param buddy_data: buddy data, list of MetaFeature objects
+    :return: fill in estimated_fdr in MetaFeature objects
     """
     # calculate FDR
     # sort candidate formula list for each metabolic feature
     for meta_feature in buddy_data:
         if not meta_feature.candidate_formula_list:
             continue
+        # sort candidate formula list by estimated probability, in descending order
         meta_feature.candidate_formula_list.sort(key=lambda x: x.estimated_prob, reverse=True)
 
-    # calculate FDR
-    annotated_cnt = 0
-    fdr = 0
-    for meta_feature in buddy_data:
-        if not meta_feature.candidate_formula_list:
-            continue
-        # calculate FDR for each metabolic feature
-        annotated_cnt += 1
-        fdr += _calc_fdr_single(meta_feature, ppm, ms1_tol, ms2_tol, fdr_cutoff)
+        # sum of estimated probabilities
+        prob_sum = np.sum([cand_form.estimated_prob for cand_form in meta_feature.candidate_formula_list])
 
-    fdr /= annotated_cnt
+        # calculate normed estimated prob and FDR considering all candidate formulas
+        sum_normed_estimated_prob = 0
+        for i, cand_form in enumerate(meta_feature.candidate_formula_list):
+            this_normed_estimated_prob = cand_form.estimated_prob / prob_sum
+            sum_normed_estimated_prob += this_normed_estimated_prob
 
-    return annotated_cnt, fdr
+            cand_form.normed_estimated_prob = this_normed_estimated_prob
+            cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
 
 
 if __name__ == '__main__':

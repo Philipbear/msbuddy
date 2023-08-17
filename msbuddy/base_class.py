@@ -702,8 +702,9 @@ class CandidateFormula:
 
         self.formula = formula  # neutral formula
         self.ml_a_prob = None  # ml_a score for model A (formula feasibility)
-        self.estimated_prob = None  # estimated probability
-        self.estimated_fdr = None  # estimated FDR, normalized considering all candidate formulas
+        self.estimated_prob = None  # estimated probability (ml_b score for model B)
+        self.normed_estimated_prob = None  # normalized estimated probability considering all candidate formulas
+        self.estimated_fdr = None  # estimated FDR
         self.optimal_formula = optimal_formula
         self.ms1_isotope_similarity = ms1_isotope_similarity
         self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during precursor formula annotation

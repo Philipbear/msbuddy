@@ -1,9 +1,10 @@
 import sys
+import numpy as np
 from tqdm import tqdm
 from file_io import init_db, load_usi, load_mgf
 from typing import Tuple, Union, List
 from msbuddy.base_class import MetaFeature
-import numpy as np
+from msbuddy.gen_candidate import gen_candidate_formula
 
 
 class BuddyParamSet:
@@ -11,8 +12,7 @@ class BuddyParamSet:
     Buddy parameter set
     """
     def __init__(self,
-                 ppm=True, ms1_tol=5, ms2_tol=10,
-                 halogen=False,
+                 ppm=True, ms1_tol=5, ms2_tol=10, halogen=False,
                  c_range: Tuple[int, int] = (0, 80),
                  h_range: Tuple[int, int] = (0, 150),
                  n_range: Tuple[int, int] = (0, 20),
@@ -29,7 +29,7 @@ class BuddyParamSet:
                  max_noise_frag_ratio: float = 0.85, max_noise_rsd: float = 0.20,
                  max_frag_reserved: int = 50,
                  use_all_frag: bool = False,
-                 ms2_global_optim: bool = True):
+                 ms2_global_optim: bool = False):
         """
         :param ppm: whether ppm is used for m/z tolerance
         :param ms1_tol: MS1 m/z tolerance
@@ -106,18 +106,17 @@ class Buddy:
     """
     def __init__(self, param_set: Union[BuddyParamSet, None] = None):
 
+        self.db_mode = 0  # 0: no halogen, 1: halogen included
         if param_set is None:
             self.param_set = BuddyParamSet()  # default parameter set
             self.db_loaded = init_db(0)  # database initialization
         else:
             self.param_set = param_set
             # check if halogen is included
-            ele_upper_arr = self.param_set.ele_upper
-            if sum(ele_upper_arr[2:6]) > 0:
-                self.db_loaded = init_db(1)  # halogen included
-            else:
-                self.db_loaded = init_db(0)  # halogen not included
+            if sum(self.param_set.ele_upper[2:6]) > 0:
+                self.db_mode = 1  # halogen included
 
+        self.db_loaded = init_db(self.db_mode)  # database initialization
         self.data = None  # List[MetabolicFeature], metabolic feature list
 
     def load_usi(self, usi_list: List[str]):
@@ -140,7 +139,6 @@ class Buddy:
         -> ml_b feature generation (ms2) -> ml_a model B -> formula annotation -> FDR calculation
         :return: number of annotated metabolic features
         """
-
         if not self.data:
             raise ValueError("No data loaded.")
 
@@ -149,13 +147,14 @@ class Buddy:
         # data preprocessing
         for meta_feature in tqdm(self.data, desc="Data preprocessing", file=sys.stdout, colour="green"):
             meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                                         ps.isotope_bin_mztol, ps.max_isotope_cnt,
-                                         ps.ms2_denoise, ps.rel_int_denoise, ps.rel_int_denoise_cutoff,
-                                         ps.max_noise_frag_ratio, ps.max_noise_rsd,
+                                         ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
+                                         ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
                                          ps.max_frag_reserved, ps.use_all_frag)
 
-        # generate formula candidate space
-        ##################
+            # generate formula candidate space
+            # currently, ms2_global_optim is not used here
+            gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, self.db_mode, False,
+                                  ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
 
         # ml_a feature generation + prediction
         ##################
