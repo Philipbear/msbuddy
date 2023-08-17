@@ -185,8 +185,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     ms1_iso_sim = cand_form.ms1_isotope_similarity if cand_form.ms1_isotope_similarity else 0
 
     # MS/MS-related features
-    ms2_feature_arr = _gen_ms2_feature(meta_feature, cand_form.ms2_raw_explanation, pre_dbe, pre_h2c,
-                                             ppm, ms2_tol)
+    ms2_feature_arr = _gen_ms2_feature(meta_feature, cand_form.ms2_raw_explanation, pre_dbe, pre_h2c, ppm, ms2_tol)
 
     # generate output array
     out = np.array([ms1_iso_sim, cand_form.ml_a_prob, mz_error_feature, pre_dbe, pre_h2c])
@@ -209,9 +208,6 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
     """
     # valid MS2 explanation
     if meta_feature.ms2_processed and ms2_explanation:
-        # explained fragment ion count percentage
-        exp_frag_cnt_pct = len(ms2_explanation) / len(meta_feature.ms2_processed)
-
         # explained fragment ion
         exp_idx_arr = ms2_explanation.idx_array
         exp_int_arr = meta_feature.ms2_raw.int_array[exp_idx_arr]
@@ -220,8 +216,19 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
         valid_idx_arr = meta_feature.ms2_processed.idx_array
         valid_int_arr = meta_feature.ms2_raw.int_array[valid_idx_arr]
 
+        # explained fragment ion count percentage
+        exp_frag_cnt_pct = len(exp_idx_arr) / len(valid_idx_arr)
+
+        # debug
+        if exp_frag_cnt_pct > 1:
+            print('exp_frag_cnt_pct > 1')
+
         # explained fragment ion intensity percentage
         exp_frag_int_pct = np.sum(exp_int_arr) / np.sum(valid_int_arr)
+
+        # debug
+        if exp_frag_int_pct > 1:
+            print('exp_frag_int_pct > 1')
 
         frag_form_arr = ms2_explanation.explanation_array  # array of fragment formulas, Formula objects
 

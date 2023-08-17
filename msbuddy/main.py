@@ -160,7 +160,7 @@ class Buddy:
         if not self.data:
             raise ValueError("No data loaded.")
 
-        def _func_a(meta_feature: MetaFeature, ps: BuddyParamSet):
+        def _preprocess_gen_cand(meta_feature: MetaFeature, ps: BuddyParamSet):
             """
             data preprocessing & formula candidate space generation
             :param meta_feature: MetaFeature object
@@ -180,12 +180,12 @@ class Buddy:
         if self.param_set.multiprocess:
             # multiprocessing
             with Pool(self.param_set.n_cpu) as pool:
-                pool.imap(_func_a, self.data)
+                pool.imap(_preprocess_gen_cand, self.data)
         else:
             # common for loop
             for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
                            file=sys.stdout, colour="green"):
-                _func_a(mf, self.param_set)
+                _preprocess_gen_cand(mf, self.param_set)
 
         # ml_a feature generation + prediction
         pred_formula_feasibility(self.data)
@@ -196,7 +196,7 @@ class Buddy:
         # FDR calculation
         calc_fdr(self.data)
 
-    def get_result_summary(self) -> List[dict]:
+    def result_summary(self) -> List[dict]:
         """
         summarize results
         :return: a list of dictionary containing result summary
@@ -204,11 +204,11 @@ class Buddy:
         if not self.data:
             raise ValueError("No data loaded.")
 
-        result_summary = []
+        result_summary_list = []
         for mf in self.data:
-            result_summary.append(mf.summarize_result())
+            result_summary_list.append(mf.summarize_result())
 
-        return result_summary
+        return result_summary_list
 
 
 # test
@@ -226,7 +226,7 @@ if __name__ == '__main__':
     # annotate formula
     # buddy.annotate_formula()
     # # result summary
-    result_summary = buddy.get_result_summary()
+    result_summary = buddy.result_summary()
 
     #########################################
     # use default parameter set
@@ -234,4 +234,4 @@ if __name__ == '__main__':
     print(buddy2 is buddy)  # True, singleton
     buddy2.load_mgf("/Users/philip/Documents/test_data/test.mgf")
     buddy.annotate_formula()
-    result_summary_ = buddy.get_result_summary()
+    result_summary_ = buddy.result_summary()

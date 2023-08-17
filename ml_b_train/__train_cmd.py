@@ -251,7 +251,7 @@ def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
           % (mlp, metrics.classification_report(y_test, y_pred)))
 
     # save model
-    model_name = '/msbuddy/ml_b_train/model_B_'
+    model_name = '/msbuddy/ml_b_train/model_b_'
     model_name += 'pos' if pos else 'neg'
     model_name += '_ms1' if ms1_iso else '_noms1'
     model_name += '_ms2' if ms2_spec else '_noms2'
