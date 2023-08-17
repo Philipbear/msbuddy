@@ -337,16 +337,19 @@ def _calc_log_p_norm(arr: np.array, sigma: float) -> np.array:
     return log_p_arr
 
 
-def _predict_ml_b(meta_feature_list, group_no: int) -> np.array:
+def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2_tol: float) -> np.array:
     """
     predict using model b
     :param meta_feature_list: List of MetaFeature objects
     :param group_no: group number; 0:pos ms1 ms2; 1:pos ms1 noms2; 2:pos noms1 ms2; 3:pos noms1 noms2;
                         4:neg ms1 ms2; 5:neg ms1 noms2; 6:neg noms1 ms2; 7:neg noms1 noms2
+    :param ppm: whether to use ppm error
+    :param ms1_tol: m/z tolerance for MS1
+    :param ms2_tol: m/z tolerance for MS2
     :return: numpy array of prediction results
     """
     # generate feature array
-    feature_arr = gen_ml_b_feature(meta_feature_list, group_no)
+    feature_arr = gen_ml_b_feature(meta_feature_list, ppm, ms1_tol, ms2_tol)
 
     if group_no == 0:
         model = dependencies['model_b_pos_ms1_ms2']
@@ -414,10 +417,46 @@ def predict_formula_probability(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: 
     for i in range(8):
         if not group_dict[i]:
             continue
-        prob_arr = _predict_ml_b([buddy_data[j] for j in group_dict[i]], i)
+        # predict formula probability
+        prob_arr = _predict_ml_b([buddy_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol)
+        # add prediction results to candidate formula objects in the list
+        cnt = 0
+        for j in group_dict[i]:
+            for candidate_formula in buddy_data[j].candidate_formula_list:
+                candidate_formula.estimated_prob = prob_arr[cnt]
+                cnt += 1
 
 
+def calc_fdr(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float, fdr_cutoff: float) -> (int, float):
+    """
+    calculate FDR
+    :param buddy_data: buddy data
+    :param ppm: whether to use ppm error
+    :param ms1_tol: m/z tolerance for MS1
+    :param ms2_tol: m/z tolerance for MS2
+    :param fdr_cutoff: FDR cutoff
+    :return: number of annotated metabolic features, FDR
+    """
+    # calculate FDR
+    # sort candidate formula list for each metabolic feature
+    for meta_feature in buddy_data:
+        if not meta_feature.candidate_formula_list:
+            continue
+        meta_feature.candidate_formula_list.sort(key=lambda x: x.estimated_prob, reverse=True)
 
+    # calculate FDR
+    annotated_cnt = 0
+    fdr = 0
+    for meta_feature in buddy_data:
+        if not meta_feature.candidate_formula_list:
+            continue
+        # calculate FDR for each metabolic feature
+        annotated_cnt += 1
+        fdr += _calc_fdr_single(meta_feature, ppm, ms1_tol, ms2_tol, fdr_cutoff)
+
+    fdr /= annotated_cnt
+
+    return annotated_cnt, fdr
 
 
 if __name__ == '__main__':
