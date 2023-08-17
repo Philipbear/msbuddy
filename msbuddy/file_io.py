@@ -31,7 +31,7 @@ def init_db(db_mode: int) -> bool:
     """
     root_path = Path(__file__).parent
 
-    sys.stdout.write("Loading ML models...\n")
+    sys.stdout.write("Database loading...\n")
     # load database & models into memory
     set_dependency(common_loss_db=joblib_load(root_path / 'data' / 'common_loss.joblib'),
                    common_frag_db=joblib_load(root_path / 'data' / 'common_frag.joblib'),
@@ -45,7 +45,6 @@ def init_db(db_mode: int) -> bool:
     check_and_download('https://drive.google.com/uc?id=155AEYIv5XFBIc7Adpnfi-vH3s47QkbJf',
                        root_path / 'data' / 'basic_db_formula.joblib')
 
-    sys.stdout.write("Loading basic_db...\n")
     set_dependency(basic_db_mass=joblib_load(root_path / 'data' / 'basic_db_mass.joblib'),
                    basic_db_formula=joblib_load(root_path / 'data' / 'basic_db_formula.joblib'),
                    basic_db_idx=joblib_load(root_path / 'data' / 'basic_db_idx.joblib'))
@@ -57,7 +56,6 @@ def init_db(db_mode: int) -> bool:
         check_and_download('https://drive.google.com/uc?id=18G8_qzTXWHDIw9Z9PwvMtjKWOi6FtwDU',
                            root_path / 'data' / 'halogen_db_formula.joblib')
 
-        sys.stdout.write("Loading halogen_db...\n")
         set_dependency(halogen_db_mass=joblib_load(root_path / 'data' / 'halogen_db_mass.joblib'),
                        halogen_db_formula=joblib_load(root_path / 'data' / 'halogen_db_formula.joblib'),
                        halogen_db_idx=joblib_load(root_path / 'data' / 'halogen_db_idx.joblib'))

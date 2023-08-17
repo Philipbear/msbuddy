@@ -121,7 +121,7 @@ class Buddy:
     # singleton
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(Buddy, cls).__new__(cls)
         return cls._instance
@@ -224,12 +224,14 @@ if __name__ == '__main__':
     # buddy.load_usi("mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943")
     buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
     # annotate formula
-    buddy.annotate_formula()
-    # result summary
-
+    # buddy.annotate_formula()
+    # # result summary
+    result_summary = buddy.get_result_summary()
 
     #########################################
     # use default parameter set
-    buddy = Buddy()
-    buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
+    buddy2 = Buddy()
+    print(buddy2 is buddy)  # True, singleton
+    buddy2.load_mgf("/Users/philip/Documents/test_data/test.mgf")
     buddy.annotate_formula()
+    result_summary_ = buddy.get_result_summary()
