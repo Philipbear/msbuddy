@@ -3,7 +3,7 @@ import joblib
 from sklearn import metrics
 from brainpy import isotopic_variants
 from msbuddy.base_class import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
-from msbuddy.ml import gen_ml_B_feature_single, predict_formula_feasibility
+from msbuddy.ml import gen_ml_b_feature_single, predict_formula_feasibility
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from msbuddy.gen_candidate import gen_candidate_formula
@@ -159,7 +159,7 @@ def load_nist_gen_training_data(path, pos):
         # generate ML features for each candidate formula
         for cf in mf.candidate_formula_list:
             # get ML features
-            ml_feature_arr = gen_ml_B_feature_single(mf, cf, True, ms1_tol, ms2_tol)
+            ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol)
             # add to feature array
             if X_arr.size == 0:
                 X_arr = ml_feature_arr

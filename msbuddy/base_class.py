@@ -739,7 +739,8 @@ class MetaFeature:
         self.identifier = identifier
         self.mz = mz
         self.rt = rt
-        self.adduct = Adduct(adduct, charge > 0)  # type: Adduct
+        pos_mode = charge > 0
+        self.adduct = Adduct(adduct, pos_mode)  # type: Adduct
         self.ms1_raw = ms1
         self.ms1_processed = None
         self.ms2_raw = ms2

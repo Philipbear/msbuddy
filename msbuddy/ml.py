@@ -11,7 +11,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def gen_ml_a_array_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
+def _gen_ml_a_feature_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
     """
     generate three arrays for ML model A
     :param buddy_data: List of MetaFeature objects
@@ -34,7 +34,7 @@ def gen_ml_a_array_from_buddy_data(buddy_data) -> (np.array, np.array, np.array)
     return all_cand_form_arr, dbe_arr, mass_arr
 
 
-def gen_ml_a_feature(all_cand_form_arr, dbe_arr, mass_arr) -> np.array:
+def _gen_ml_a_feature(all_cand_form_arr, dbe_arr, mass_arr) -> np.array:
     """
     generate ML features for model A (formula feasibility)
     :param all_cand_form_arr: numpy array of all candidate formula arrays
@@ -92,9 +92,9 @@ def gen_ml_a_feature(all_cand_form_arr, dbe_arr, mass_arr) -> np.array:
     return out
 
 
-def predict_ml_a(feature_arr: np.array) -> np.array:
+def _predict_ml_a(feature_arr: np.array) -> np.array:
     """
-    predict formula feasibility using model A
+    predict formula feasibility using model a
     :param feature_arr: numpy array of ML features
     :return: numpy array of prediction results
     """
@@ -104,18 +104,18 @@ def predict_ml_a(feature_arr: np.array) -> np.array:
     return prob_arr[:, 1]
 
 
-def predict_formula_feasibility(buddy_data) -> None:
+def predict_formula_feasibility(buddy_data):
     """
-    predict formula feasibility using ML model A
+    predict formula feasibility using ML model a
     :param buddy_data: buddy data
     :return: fill in ml_a_prob in candidate formula objects
     """
     # generate three arrays from buddy data
-    cand_form_arr, dbe_arr, mass_arr = gen_ml_a_array_from_buddy_data(buddy_data)
+    cand_form_arr, dbe_arr, mass_arr = _gen_ml_a_feature_from_buddy_data(buddy_data)
     # generate ML feature array
-    feature_arr = gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
+    feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
     # predict formula feasibility
-    prob_arr = predict_ml_a(feature_arr)
+    prob_arr = _predict_ml_a(feature_arr)
 
     # add prediction results to candidate formula objects in the list
     cnt = 0
@@ -128,7 +128,7 @@ def predict_formula_feasibility(buddy_data) -> None:
             cnt += 1
 
 
-def gen_ml_B_feature(buddy_data, ppm, ms2_tol) -> np.array:
+def gen_ml_b_feature(buddy_data, ppm: bool, ms2_tol: float) -> np.array:
     """
     generate ML features for model B, for all metabolic features
     :param buddy_data: List of MetaFeature objects
@@ -146,7 +146,7 @@ def gen_ml_B_feature(buddy_data, ppm, ms2_tol) -> np.array:
         # generate ML features for each candidate formula
         for candidate_formula in meta_feature.candidate_formula_list:
             # get ML features
-            ml_feature_arr = gen_ml_B_feature_single(meta_feature, candidate_formula, ppm, ms2_tol)
+            ml_feature_arr = gen_ml_b_feature_single(meta_feature, candidate_formula, ppm, ms2_tol)
             # add to feature array
             if total_feature_arr.size == 0:
                 total_feature_arr = ml_feature_arr
@@ -156,7 +156,7 @@ def gen_ml_B_feature(buddy_data, ppm, ms2_tol) -> np.array:
     return total_feature_arr
 
 
-def gen_ml_B_feature_single(meta_feature, cand_form, ppm, ms1_tol, ms2_tol) -> np.array:
+def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float) -> np.array:
     """
     generate ML features for model B for a single candidate formula
     :param meta_feature: MetaFeature object
@@ -185,7 +185,7 @@ def gen_ml_B_feature_single(meta_feature, cand_form, ppm, ms1_tol, ms2_tol) -> n
     ms1_iso_sim = cand_form.ms1_isotope_similarity if cand_form.ms1_isotope_similarity else 0
 
     # MS/MS-related features
-    ms2_feature_arr = _gen_ms2_feature_array(meta_feature, cand_form.ms2_raw_explanation, pre_dbe, pre_h2c,
+    ms2_feature_arr = _gen_ms2_feature(meta_feature, cand_form.ms2_raw_explanation, pre_dbe, pre_h2c,
                                              ppm, ms2_tol)
 
     # generate output array
@@ -195,7 +195,8 @@ def gen_ml_B_feature_single(meta_feature, cand_form, ppm, ms1_tol, ms2_tol) -> n
     return out
 
 
-def _gen_ms2_feature_array(meta_feature, ms2_explanation, pre_dbe, pre_h2c, ppm, ms2_tol) -> np.array:
+def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: float,
+                     ppm: bool, ms2_tol: float) -> np.array:
     """
     generate MS/MS-related features for a single candidate formula
     :param meta_feature: MetaFeature object
@@ -336,6 +337,47 @@ def _calc_log_p_norm(arr: np.array, sigma: float) -> np.array:
     return log_p_arr
 
 
+def _predict_ml_b(feature_arr: np.array, group_no: int) -> np.array:
+    """
+    predict & rank formula candidates using model b
+    :param feature_arr: numpy array of ML features
+    :param group_no: group number; 1:pos ms1 ms2; 2:pos ms1 noms2; 3:pos noms1 ms2; 4:pos noms1 noms2;
+                        5:neg ms1 ms2; 6:neg ms1 noms2; 7:neg noms1 ms2; 8:neg noms1 noms2
+    :return: numpy array of prediction results
+    """
+    if group_no == 1:
+        model = dependencies['model_b_pos_ms1_ms2']
+    elif group_no == 2:
+        model = dependencies['model_b_pos_ms1_noms2']
+    elif group_no == 3:
+        model = dependencies['model_b_pos_noms1_ms2']
+    elif group_no == 4:
+        model = dependencies['model_b_pos_noms1_noms2']
+    elif group_no == 5:
+        model = dependencies['model_b_neg_ms1_ms2']
+    elif group_no == 6:
+        model = dependencies['model_b_neg_ms1_noms2']
+    elif group_no == 7:
+        model = dependencies['model_b_neg_noms1_ms2']
+    else:
+        model = dependencies['model_b_neg_noms1_noms2']
+
+    prob_arr = model.predict_proba(feature_arr)
+    return prob_arr[:, 1]
+
+
+def predict_formula_probability(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float):
+    """
+    predict formula probability using ML model b
+    :param buddy_data: buddy data
+    :param ppm: whether to use ppm error
+    :param ms1_tol: m/z tolerance for MS1
+    :param ms2_tol: m/z tolerance for MS2
+    :return: fill in estimated_prob in candidate formula objects
+    """
+    #
+
+
 if __name__ == '__main__':
 
     # from file_io.init_db import init_db
@@ -384,7 +426,7 @@ if __name__ == '__main__':
 
     # predict formula feasibility
     start = time.time()
-    feat_arr = gen_ml_B_feature(_data)
+    feat_arr = gen_ml_b_feature(_data)
     print("feature gen: " + str(time.time() - start))
     print(feat_arr)
     print("Done.")
