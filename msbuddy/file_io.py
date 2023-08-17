@@ -64,7 +64,98 @@ def init_db(db_mode: int) -> bool:
     return True
 
 
-def load_mgf(file) -> List[MetaFeature]:
+def load_mgf(file_path) -> List[MetaFeature]:
+    """
+    read mgf file
+    :param file_path: path to mgf file
+    :return: list of MetaFeature
+    """
+    with open(file_path, 'r') as file:
+        # create meta_feature_list
+        meta_feature_list = []
+        cnt = 0
+        for line in file:
+            # empty line
+            _line = line.strip()  # remove leading and trailing whitespace
+            if not _line:
+                continue
+            elif line.startswith('BEGIN IONS'):
+                # initialize a new spectrum entry
+                mz_arr = np.array([])
+                int_arr = np.array([])
+                precursor_mz = None
+                identifier = None
+                charge = None
+                pos_mode = None
+                ms2_spec = True
+            elif line.startswith('END IONS'):
+                # create a new MetaFeature
+                if precursor_mz is None:
+                    raise ValueError('No precursor mz found.')
+                if identifier is None:
+                    identifier = cnt
+                if charge is None:
+                    charge = 1 if pos_mode else -1
+                else:
+                    charge = abs(charge) if pos_mode else -abs(charge)
+
+                # create MetaFeature object if the same identifier does not exist
+                mf_idx = None
+                for idx, mf in enumerate(meta_feature_list):
+                    if mf.identifier == identifier:
+                        mf_idx = idx
+                        break
+
+                # if the same identifier exists, add to the existing MetaFeature
+                if mf_idx is not None:
+                    if ms2_spec:
+                        meta_feature_list[mf_idx].ms2_raw = Spectrum(mz_arr, int_arr)
+                    else:
+                        meta_feature_list[mf_idx].ms1_raw = Spectrum(mz_arr, int_arr)
+                    continue
+                # if the same identifier does not exist, create a new MetaFeature
+                else:
+                    mf = MetaFeature(mz=precursor_mz,
+                                     charge=charge,
+                                     ms2=Spectrum(mz_arr, int_arr),
+                                     identifier=identifier)
+                    meta_feature_list.append(mf)
+                cnt += 1
+                continue
+            else:
+                # if line contains '=', it is a key-value pair
+                if '=' in _line:
+                    # split by first '=', in case of multiple '=' in the line
+                    key, value = _line.split('=', 1)
+                    # if key (into all upper case) is 'PEPMASS', it is precursor mz
+                    if key.upper() == 'PEPMASS':
+                        precursor_mz = float(value)
+                    # if key is 'CHARGE' and charge is not set, it is charge
+                    elif key.upper() == 'CHARGE':
+                        charge = int(value)
+                    # if key is 'ION', it is adduct type
+                    elif key.upper() == 'ION':
+                        adduct = value
+                    # if key is 'IONMODE', it is ion mode
+                    elif key.upper() == 'IONMODE':
+                        if value.upper() == 'POSITIVE':
+                            pos_mode = True
+                        elif value.upper() == 'NEGATIVE':
+                            pos_mode = False
+                    # if key is 'MSLEVEL', it is ms level
+                    elif key.upper() == 'MSLEVEL':
+                        if value == '1':
+                            ms2_spec = False
+                else:
+                    # if no '=', it is a spectrum pair, split by '\t' or ' '
+                    this_mz, this_int = _line.split()
+                    mz_arr = np.append(mz_arr, float(this_mz))
+                    int_arr = np.append(int_arr, float(this_int))
+
+    return meta_feature_list
+
+
+def load_mgf_pyteomics(file) -> List[MetaFeature]:
     """
     load mgf file. read mgf file using pyteomics.mgf.read
     :param file: mgf file path
@@ -182,13 +273,13 @@ def load_usi(usi_list: List[str],
 
 # test
 if __name__ == '__main__':
-    init_db(1)
-
-    from msbuddy.utils import dependencies
-
-    # print(dependencies['common_loss_db'])
-    print("basic db: " + str(len(dependencies['basic_db_mass'])))
-    print("halogen db: " + str(len(dependencies['halogen_db_mass'])))
+    # init_db(0)
+    #
+    # from msbuddy.utils import dependencies
+    #
+    # # print(dependencies['common_loss_db'])
+    # print("basic db: " + str(len(dependencies['basic_db_mass'])))
+    # print("halogen db: " + str(len(dependencies['halogen_db_mass'])))
 
     # usi_1 = 'mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943'
     # # usi_str = 'mzspec:PXD000561:Adult_Frontalcortex_bRP_Elite_85_f09:scan:17555'
@@ -197,3 +288,8 @@ if __name__ == '__main__':
     #
     # _data = load_usi([usi_1, usi_2, usi_3])
     # print(_data[1])
+
+    _data = load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query.mgf')
+    _data = load_mgf('/Users/philip/Documents/test_data/test.mgf')
+    print(len(_data))
+    print(_data[0])
