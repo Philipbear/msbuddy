@@ -7,8 +7,8 @@ from gdown import download as gdown_download
 from pathlib import Path
 from joblib import load as joblib_load
 from msbuddy.utils import set_dependency
-from pyteomics.mgf import read as mgf_read
 from msbuddy.base_class import MetaFeature, Spectrum
+# from pyteomics.mgf import read as mgf_read
 
 
 def check_and_download(url: str, path) -> bool:
@@ -88,6 +88,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 charge = None
                 pos_mode = None
                 ms2_spec = True
+                rt = None
             elif line.startswith('END IONS'):
                 # create a new MetaFeature
                 if precursor_mz is None:
@@ -117,6 +118,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 else:
                     mf = MetaFeature(mz=precursor_mz,
                                      charge=charge,
+                                     rt=rt,
                                      ms2=Spectrum(mz_arr, int_arr),
                                      identifier=identifier)
                     meta_feature_list.append(mf)
@@ -146,6 +148,11 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     elif key.upper() == 'MSLEVEL':
                         if value == '1':
                             ms2_spec = False
+                    # if key is 'RTINSECONDS', it is rt
+                    elif key.upper() == 'RTINSECONDS' and value != '':
+                        rt = float(value)
+                    elif key.upper() == 'RTINMINUTES' and value != '':
+                        rt = float(value) * 60
                 else:
                     # if no '=', it is a spectrum pair, split by '\t' or ' '
                     this_mz, this_int = _line.split()
@@ -155,53 +162,53 @@ def load_mgf(file_path) -> List[MetaFeature]:
     return meta_feature_list
 
 
-def load_mgf_pyteomics(file) -> List[MetaFeature]:
-    """
-    load mgf file. read mgf file using pyteomics.mgf.read
-    :param file: mgf file path
-    :return: list of MetaFeature
-    """
-    _mgf = mgf_read(file)
-
-    # create meta_feature_list
-    meta_feature_list = []
-    for spec in _mgf:
-
-        params = spec['params']
-
-        # identifier
-        identifier = params['title']
-
-        # adduct
-        # if 'ion' in params: adduct = 'ion'; else: None
-        adduct = None
-        if 'ion' in params.keys():
-            adduct = params['ion']
-
-        # rt
-        rt = None
-        if 'rtinseconds' in params.keys():
-            rt = params['rtinseconds']
-        elif 'rtinminutes' in params.keys():
-            rt = params['rtinminutes'] * 60
-
-        # spectrum
-        mz_arr = np.array(spec['m/z array'])
-        int_arr = np.array(spec['intensity array'])
-        ms2_spectrum = Spectrum(mz_arr, int_arr)
-
-        # create meta_feature
-        meta_feature = MetaFeature(mz=params['pepmass'][0],
-                                   charge=params['charge'][0],
-                                   rt=rt,
-                                   adduct=adduct,
-                                   ms2=ms2_spectrum,
-                                   identifier=identifier)
-
-        # add meta_feature to meta_feature_list
-        meta_feature_list.append(meta_feature)
-
-    return meta_feature_list
+# def load_mgf_pyteomics(file) -> List[MetaFeature]:
+#     """
+#     load mgf file. read mgf file using pyteomics.mgf.read
+#     :param file: mgf file path
+#     :return: list of MetaFeature
+#     """
+#     _mgf = mgf_read(file)
+#
+#     # create meta_feature_list
+#     meta_feature_list = []
+#     for spec in _mgf:
+#
+#         params = spec['params']
+#
+#         # identifier
+#         identifier = params['title']
+#
+#         # adduct
+#         # if 'ion' in params: adduct = 'ion'; else: None
+#         adduct = None
+#         if 'ion' in params.keys():
+#             adduct = params['ion']
+#
+#         # rt
+#         rt = None
+#         if 'rtinseconds' in params.keys():
+#             rt = params['rtinseconds']
+#         elif 'rtinminutes' in params.keys():
+#             rt = params['rtinminutes'] * 60
+#
+#         # spectrum
+#         mz_arr = np.array(spec['m/z array'])
+#         int_arr = np.array(spec['intensity array'])
+#         ms2_spectrum = Spectrum(mz_arr, int_arr)
+#
+#         # create meta_feature
+#         meta_feature = MetaFeature(mz=params['pepmass'][0],
+#                                    charge=params['charge'][0],
+#                                    rt=rt,
+#                                    adduct=adduct,
+#                                    ms2=ms2_spectrum,
+#                                    identifier=identifier)
+#
+#         # add meta_feature to meta_feature_list
+#         meta_feature_list.append(meta_feature)
+#
+#     return meta_feature_list
 
 
 def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
@@ -289,7 +296,7 @@ if __name__ == '__main__':
     # _data = load_usi([usi_1, usi_2, usi_3])
     # print(_data[1])
 
-    _data = load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query.mgf')
+    # _data = load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query.mgf')
     _data = load_mgf('/Users/philip/Documents/test_data/test.mgf')
     print(len(_data))
     print(_data[0])
