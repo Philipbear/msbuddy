@@ -88,18 +88,21 @@ class CandidateSpace:
     def __len__(self):
         return len(self.frag_exp_list)
 
-    def refine_explanation(self, raw_ms2: Spectrum, ms2_iso_tol: float) -> CandidateFormula:
+    def refine_explanation(self, meta_feature: MetaFeature,
+                           ms2_iso_tol: float) -> CandidateFormula:
         """
         Refine the MS2 explanation by selecting the most reasonable explanation.
         Explain other fragments as isotope peaks.
         Convert into a CandidateFormula.
-        :param raw_ms2: raw MS2 spectrum
+        :param meta_feature: MetaFeature object
         :param ms2_iso_tol: MS2 tolerance for isotope peaks, in Da
         :return: CandidateFormula
         """
+        ms2_raw = meta_feature.ms2_raw
+        ms2_processed = meta_feature.ms2_processed
         # for each frag_exp, refine the explanation, select the most reasonable frag/nl
         for frag_exp in self.frag_exp_list:
-            frag_exp.refine_explanation(raw_ms2.mz_array)
+            frag_exp.refine_explanation(ms2_raw.mz_array)
 
         # consider to further explain other fragments as isotope peaks
         explained_idx = [f.idx for f in self.frag_exp_list]
@@ -109,8 +112,12 @@ class CandidateSpace:
                 continue
             # idx of next exp peak
             next_exp_idx = explained_idx[m + 1]
-            if (raw_ms2.mz_array[next_exp_idx] - raw_ms2.mz_array[exp_idx] - 1.003355) <= ms2_iso_tol and \
-                    raw_ms2.int_array[next_exp_idx] <= raw_ms2.int_array[exp_idx]:
+            # if this idx is not in idx_array of ms2_processed, skip
+            if next_exp_idx not in ms2_processed.idx_array:
+                continue
+            # if the next peak is close enough, add it as an isotope peak
+            if (ms2_raw.mz_array[next_exp_idx] - ms2_raw.mz_array[exp_idx] - 1.003355) <= ms2_iso_tol and \
+                    ms2_raw.int_array[next_exp_idx] <= ms2_raw.int_array[exp_idx]:
                 # if the next peak is close enough, add it as an isotope peak
                 this_frag = self.frag_exp_list[m].optim_frag
                 this_nl = self.frag_exp_list[m].optim_nl
@@ -459,7 +466,7 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
     # generate CandidateFormula object, refine MS2 explanation
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * meta_feature.mz * 1e-6
     # common frag/nl + mz diff, consider isotopes
-    candidate_formula_list = [cs.refine_explanation(meta_feature.ms2_raw, ms2_iso_tol) for cs in candidate_list]
+    candidate_formula_list = [cs.refine_explanation(meta_feature, ms2_iso_tol) for cs in candidate_list]
 
     if ms2_global_opt:
         pass

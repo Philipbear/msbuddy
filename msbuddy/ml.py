@@ -219,16 +219,8 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
         # explained fragment ion count percentage
         exp_frag_cnt_pct = len(exp_idx_arr) / len(valid_idx_arr)
 
-        # debug
-        if exp_frag_cnt_pct > 1:
-            print('exp_frag_cnt_pct > 1')
-
         # explained fragment ion intensity percentage
         exp_frag_int_pct = np.sum(exp_int_arr) / np.sum(valid_int_arr)
-
-        # debug
-        if exp_frag_int_pct > 1:
-            print('exp_frag_int_pct > 1')
 
         frag_form_arr = ms2_explanation.explanation_array  # array of fragment formulas, Formula objects
 

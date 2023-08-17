@@ -256,7 +256,7 @@ def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
 if __name__ == '__main__':
 
     # initiate databases
-    # init_db(1)
+    init_db(1)
 
     # load training data
     # load_nist_data('/Users/philip/Documents/projects/pyms2/nist20/nist20_pos.joblib', True)

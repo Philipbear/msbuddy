@@ -745,9 +745,9 @@ class MetaFeature:
         self.adduct = Adduct(adduct, pos_mode)  # type: Adduct
 
         self.ms1_raw = ms1
-        self.ms1_processed = None
+        self.ms1_processed = None  # type: ProcessedMS1
         self.ms2_raw = ms2
-        self.ms2_processed = None
+        self.ms2_processed = None  # type: ProcessedMS2
         self.candidate_formula_list = None  # Union[List[CandidateFormula], None]
 
     def __str__(self):
