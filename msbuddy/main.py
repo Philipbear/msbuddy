@@ -6,6 +6,7 @@ from typing import Tuple, Union, List
 from msbuddy.base_class import MetaFeature
 from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
+from multiprocessing import Pool, cpu_count
 
 
 class BuddyParamSet:
@@ -14,6 +15,7 @@ class BuddyParamSet:
     """
     def __init__(self,
                  ppm=True, ms1_tol=5, ms2_tol=10, halogen=False,
+                 multiprocess=True, n_cpu=-1,
                  c_range: Tuple[int, int] = (0, 80),
                  h_range: Tuple[int, int] = (0, 150),
                  n_range: Tuple[int, int] = (0, 20),
@@ -36,6 +38,8 @@ class BuddyParamSet:
         :param ms1_tol: MS1 m/z tolerance
         :param ms2_tol: MS2 m/z tolerance
         :param halogen: whether to include halogen atoms; if False, ranges of F, Cl, Br, I will be set to (0, 0)
+        :param multiprocess: whether to use multiprocessing for annotation
+        :param n_cpu: number of CPUs used for multiprocessing; if -1, all available CPUs will be used
         :param c_range: C range
         :param h_range: H range
         :param n_range: N range
@@ -60,12 +64,20 @@ class BuddyParamSet:
         self.ppm = ppm
         self.ms1_tol = ms1_tol
         self.ms2_tol = ms2_tol
-        self.halogen = halogen
+        self.db_mode = 0 if not halogen else 1
+        self.multiprocess = multiprocess
+
+        cpu_cnt = cpu_count()
+        if n_cpu == -1 or n_cpu > cpu_cnt:
+            self.n_cpu = cpu_cnt
+        else:
+            self.n_cpu = n_cpu
+
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
                                    0, n_range[0], 0, o_range[0], p_range[0], s_range[0]])
         self.ele_upper = np.array([c_range[1], h_range[1], br_range[1], cl_range[1], f_range[1], i_range[1],
                                    0, n_range[1], 0, o_range[1], p_range[1], s_range[1]])
-        if not self.halogen:
+        if not halogen:
             self.ele_lower[2:6] = 0
             self.ele_upper[2:6] = 0
 
@@ -105,19 +117,23 @@ class Buddy:
     Buddy data is stored in self.data, which is a List[MetaFeature]; MetaFeature is a class defined in
     base_class/MetaFeature.py
     """
+    # singleton
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Buddy, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, param_set: Union[BuddyParamSet, None] = None):
 
-        self.db_mode = 0  # 0: no halogen, 1: halogen included
         if param_set is None:
             self.param_set = BuddyParamSet()  # default parameter set
-            self.db_loaded = init_db(0)  # database initialization
         else:
             self.param_set = param_set
-            # check if halogen is included
-            if sum(self.param_set.ele_upper[2:6]) > 0:
-                self.db_mode = 1  # halogen included
 
-        self.db_loaded = init_db(self.db_mode)  # database initialization
+        self.db_loaded = init_db(self.param_set.db_mode)  # database initialization
+
         self.data = None  # List[MetabolicFeature], metabolic feature list
 
     def load_usi(self, usi_list: List[str]):
@@ -145,17 +161,39 @@ class Buddy:
 
         ps = self.param_set
 
-        # data preprocessing
-        for meta_feature in tqdm(self.data, desc="Data preprocessing", file=sys.stdout, colour="green"):
-            meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                                         ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
-                                         ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
-                                         ps.max_frag_reserved, ps.use_all_frag)
+        if ps.multiprocess:  # multiprocessing
+            # common for loop
+            def func(meta_feature):
+                # data preprocessing
+                meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
+                                             ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
+                                             ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
+                                             ps.max_frag_reserved, ps.use_all_frag)
 
-            # generate formula candidate space
-            # currently, ms2_global_optim is not used here
-            gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, self.db_mode, False,
-                                  ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
+                # generate formula candidate space
+                # currently, ms2_global_optim is not used here
+                gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
+                                      ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
+
+            with Pool(ps.n_cpu) as p:
+                list(tqdm(p.imap(func, self.data), total=len(self.data), desc="Data preprocessing & candidate space generation",
+                           file=sys.stdout, colour="green"))
+
+
+        else:
+            # common for loop
+            for meta_feature in tqdm(self.data, desc="Data preprocessing & candidate space generation",
+                                     file=sys.stdout, colour="green"):
+                # data preprocessing
+                meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
+                                             ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
+                                             ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
+                                             ps.max_frag_reserved, ps.use_all_frag)
+
+                # generate formula candidate space
+                # currently, ms2_global_optim is not used here
+                gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
+                                      ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
 
         # ml_a feature generation + prediction
         pred_formula_feasibility(self.data)
@@ -171,6 +209,7 @@ class Buddy:
 
 # test
 if __name__ == '__main__':
+
     # create parameter set
     buddy_param_set = BuddyParamSet(
         ppm=True, ms1_tol=5, ms2_tol=10,
@@ -179,12 +218,12 @@ if __name__ == '__main__':
     # initiate a Buddy project with the given parameter set
     buddy = Buddy(buddy_param_set)
     # load data
+    # buddy.load_usi("mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943")
     buddy.load_mgf("../demo.mgf")
     # annotate formula
     buddy.annotate_formula()
 
-    # buddy.load_usi("mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943")
-
+    #########################################
     # use default parameter set
     buddy = Buddy()
     buddy.load_mgf("../demo.mgf")
