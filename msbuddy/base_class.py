@@ -740,8 +740,10 @@ class MetaFeature:
         self.identifier = identifier
         self.mz = mz
         self.rt = rt
+
         pos_mode = charge > 0
         self.adduct = Adduct(adduct, pos_mode)  # type: Adduct
+
         self.ms1_raw = ms1
         self.ms1_processed = None
         self.ms2_raw = ms2
@@ -783,6 +785,18 @@ class MetaFeature:
                                               rel_int_denoise, rel_int_denoise_cutoff,
                                               max_noise_frag_ratio,
                                               max_noise_rsd, max_frag_reserved, use_all_frag)
+
+    def summarize_result(self) -> dict:
+        """
+        Summarize the annotation result for a MetaFeature.
+        :return: dict
+        """
+        result = {'mz': self.mz, 'rt': self.rt, 'adduct': self.adduct.string, 'annotated_formula': None,
+                  'estimated_fdr': None}
+        if self.candidate_formula_list:
+            result['annotated_formula'] = self.candidate_formula_list[0].formula.string
+            result['estimated_fdr'] = self.candidate_formula_list[0].estimated_fdr
+        return result
 
 
 # test

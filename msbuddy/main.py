@@ -150,12 +150,12 @@ class Buddy:
         """
         self.data = data
 
-    def annotate_formula(self) -> int:
+    def annotate_formula(self):
         """
         annotate formula for loaded data
         pipeline: data preprocessing -> formula candidate space generation -> ml_a feature generation (ms1) -> ml_a model A
         -> ml_b feature generation (ms2) -> ml_a model B -> formula annotation -> FDR calculation
-        :return: number of annotated metabolic features
+        :return: None
         """
         if not self.data:
             raise ValueError("No data loaded.")
@@ -196,26 +196,40 @@ class Buddy:
         # FDR calculation
         calc_fdr(self.data)
 
-        return 0
+    def get_result_summary(self) -> List[dict]:
+        """
+        summarize results
+        :return: a list of dictionary containing result summary
+        """
+        if not self.data:
+            raise ValueError("No data loaded.")
+
+        result_summary = []
+        for mf in self.data:
+            result_summary.append(mf.summarize_result())
+
+        return result_summary
 
 
 # test
 if __name__ == '__main__':
     # create parameter set
     buddy_param_set = BuddyParamSet(
-        ppm=True, ms1_tol=5, ms2_tol=10,
+        ppm=True, ms1_tol=5, ms2_tol=10, halogen=False, multiprocess=True, n_cpu=-1,
         c_range=(0, 80), h_range=(0, 150), n_range=(0, 20),
         o_range=(0, 30), p_range=(0, 10), s_range=(0, 15))
     # initiate a Buddy project with the given parameter set
     buddy = Buddy(buddy_param_set)
     # load data
     # buddy.load_usi("mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943")
-    buddy.load_mgf("../demo.mgf")
+    buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
     # annotate formula
     buddy.annotate_formula()
+    # result summary
+
 
     #########################################
     # use default parameter set
     buddy = Buddy()
-    buddy.load_mgf("../demo.mgf")
+    buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
     buddy.annotate_formula()
