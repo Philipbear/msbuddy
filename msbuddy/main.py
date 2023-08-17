@@ -13,6 +13,7 @@ class BuddyParamSet:
     """
     Buddy parameter set
     """
+
     def __init__(self,
                  ppm=True, ms1_tol=5, ms2_tol=10, halogen=False,
                  multiprocess=True, n_cpu=-1,
@@ -159,47 +160,38 @@ class Buddy:
         if not self.data:
             raise ValueError("No data loaded.")
 
-        ps = self.param_set
+        def _func_a(meta_feature: MetaFeature, ps: BuddyParamSet):
+            """
+            data preprocessing & formula candidate space generation
+            :param meta_feature: MetaFeature object
+            :param ps: BuddyParamSet object
+            :return: None
+            """
+            # data preprocessing
+            meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
+                                         ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
+                                         ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
+                                         ps.max_frag_reserved, ps.use_all_frag)
 
-        if ps.multiprocess:  # multiprocessing
-            # common for loop
-            def func(meta_feature):
-                # data preprocessing
-                meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                                             ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
-                                             ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
-                                             ps.max_frag_reserved, ps.use_all_frag)
+            # generate formula candidate space; currently, ms2_global_optim is not used here
+            gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
+                                  ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
 
-                # generate formula candidate space
-                # currently, ms2_global_optim is not used here
-                gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
-                                      ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
-
-            with Pool(ps.n_cpu) as p:
-                list(tqdm(p.imap(func, self.data), total=len(self.data), desc="Data preprocessing & candidate space generation",
-                           file=sys.stdout, colour="green"))
-
-
+        if self.param_set.multiprocess:
+            # multiprocessing
+            with Pool(self.param_set.n_cpu) as pool:
+                pool.imap(_func_a, self.data)
         else:
             # common for loop
-            for meta_feature in tqdm(self.data, desc="Data preprocessing & candidate space generation",
-                                     file=sys.stdout, colour="green"):
-                # data preprocessing
-                meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                                             ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
-                                             ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
-                                             ps.max_frag_reserved, ps.use_all_frag)
-
-                # generate formula candidate space
-                # currently, ms2_global_optim is not used here
-                gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
-                                      ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
+            for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
+                           file=sys.stdout, colour="green"):
+                _func_a(mf, self.param_set)
 
         # ml_a feature generation + prediction
         pred_formula_feasibility(self.data)
 
         # ml_b feature generation + prediction
-        pred_formula_prob(self.data, ps.ppm, ps.ms1_tol, ps.ms2_tol)
+        pred_formula_prob(self.data, self.param_set.ppm, self.param_set.ms1_tol, self.param_set.ms2_tol)
 
         # FDR calculation
         calc_fdr(self.data)
@@ -209,7 +201,6 @@ class Buddy:
 
 # test
 if __name__ == '__main__':
-
     # create parameter set
     buddy_param_set = BuddyParamSet(
         ppm=True, ms1_tol=5, ms2_tol=10,
