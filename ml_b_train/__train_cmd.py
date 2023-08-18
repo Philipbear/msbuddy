@@ -3,7 +3,7 @@ import joblib
 from sklearn import metrics
 from brainpy import isotopic_variants
 from msbuddy.base_class import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
-from msbuddy.ml import gen_ml_b_feature_single, predict_formula_feasibility
+from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from msbuddy.gen_candidate import gen_candidate_formula
@@ -62,13 +62,12 @@ def sim_ms1_iso_pattern(form_arr):
     return int_arr, sim_int_arr
 
 
-def load_nist_gen_training_data(path, pos):
+def load_nist_data(path, pos):
     """
-    load NIST library (joblib format) and generate training data
+    load NIST library (joblib format)
     :param path: path to NIST library
     :param pos: True for positive mode, False for negative mode
     """
-
     db = joblib.load(path)
     # reset index
     db = db.reset_index(drop=True)
@@ -76,8 +75,7 @@ def load_nist_gen_training_data(path, pos):
     meta_feature_list = []
     gt_formula_list = []
     orbi_list = []
-    d = 1
-    for i in range(len(db)):  # len(db)
+    for i in range(len(db)):
         print(i)
         # parse formula info
         formula = db['Formula'][i]
@@ -130,21 +128,31 @@ def load_nist_gen_training_data(path, pos):
 
         meta_feature_list.append(mf)
 
-        # save to joblib file one by one
-        if len(meta_feature_list) / len(db) >= 0.05 * d:
-            if pos:
-                joblib.dump(meta_feature_list, 'nist_meta_feature_list_pos_' + str(d) + '.joblib')
-                joblib.dump(gt_formula_list, 'nist_gt_formula_list_pos_' + str(d) + '.joblib')
-                joblib.dump(orbi_list, 'nist_orbi_list_pos_' + str(d) + '.joblib')
-            else:
-                joblib.dump(meta_feature_list, 'nist_meta_feature_list_neg_' + str(d) + '.joblib')
-                joblib.dump(gt_formula_list, 'nist_gt_formula_list_neg_' + str(d) + '.joblib')
-                joblib.dump(orbi_list, 'nist_orbi_list_neg_' + str(d) + '.joblib')
-            d += 1
-
     # predict formula feasibility, using ML model A
-    predict_formula_feasibility(meta_feature_list)
+    pred_formula_feasibility(meta_feature_list)
 
+    # save to joblib file one by one
+    if pos:
+        joblib.dump(meta_feature_list, 'nist_meta_feature_list_pos.joblib')
+        joblib.dump(gt_formula_list, 'nist_gt_formula_list_pos.joblib')
+        joblib.dump(orbi_list, 'nist_orbi_list_pos.joblib')
+    else:
+        joblib.dump(meta_feature_list, 'nist_meta_feature_list_neg.joblib')
+        joblib.dump(gt_formula_list, 'nist_gt_formula_list_neg.joblib')
+        joblib.dump(orbi_list, 'nist_orbi_list_neg.joblib')
+    return
+
+
+def gen_training_data(meta_feature_list, gt_formula_list, orbi_list, pos):
+    """
+    generate training data for ML model B
+    :param meta_feature_list: meta feature list
+    :param gt_formula_list: ground truth formula list
+    :param orbi_list: True for Orbitrap, False for Q-TOF
+    :param pos: True for positive mode, False for negative mode
+    :return: write to joblib file
+    """
+    print("Generating training data...")
     # generate ML features for each candidate formula, for ML model B
     # generate feature array
     X_arr = np.array([])
@@ -169,22 +177,12 @@ def load_nist_gen_training_data(path, pos):
                 y_arr = np.append(y_arr, 1 if np.array_equal(gt_form_arr, cf.formula.array) else 0)
 
     print('y_arr sum: ' + str(np.sum(y_arr)))
-
-    # save to joblib file one by one
     if pos:
-        joblib.dump(meta_feature_list, 'nist_meta_feature_list_pos.joblib')
-        joblib.dump(gt_formula_list, 'nist_gt_formula_list_pos.joblib')
-        joblib.dump(orbi_list, 'nist_orbi_list_pos.joblib')
         joblib.dump(X_arr, 'nist_X_arr_pos.joblib')
         joblib.dump(y_arr, 'nist_y_arr_pos.joblib')
     else:
-        joblib.dump(meta_feature_list, 'nist_meta_feature_list_neg.joblib')
-        joblib.dump(gt_formula_list, 'nist_gt_formula_list_neg.joblib')
-        joblib.dump(orbi_list, 'nist_orbi_list_neg.joblib')
         joblib.dump(X_arr, 'nist_X_arr_neg.joblib')
         joblib.dump(y_arr, 'nist_y_arr_neg.joblib')
-
-    return
 
 
 def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
@@ -267,6 +265,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='ML model B training')
     parser.add_argument('--load', action='store_true', help='load NIST library and generate training data')
+    parser.add_argument('--gen', action='store_true', help='generate training data')
     parser.add_argument('--path', type=str, help='path to NIST library')
     parser.add_argument('--pos', action='store_true', help='positive mode')
     parser.add_argument('--ms1', action='store_true', help='ms1 iso similarity included')
@@ -287,9 +286,22 @@ if __name__ == '__main__':
     # load training data
     if args.load:
         if args.pos:
-            load_nist_gen_training_data(args.path, True)
+            load_nist_data(args.path, True)
         else:
-            load_nist_gen_training_data(args.path, False)
+            load_nist_data(args.path, False)
+        print("Done.")
+        exit(0)
+    elif args.gen:
+        if args.pos:
+            meta_feature_list = joblib.load('nist_meta_feature_list_pos.joblib')
+            gt_formula_list = joblib.load('nist_gt_formula_list_pos.joblib')
+            orbi_list = joblib.load('nist_orbi_list_pos.joblib')
+            gen_training_data(meta_feature_list, gt_formula_list, orbi_list, True)
+        else:
+            meta_feature_list = joblib.load('nist_meta_feature_list_neg.joblib')
+            gt_formula_list = joblib.load('nist_gt_formula_list_neg.joblib')
+            orbi_list = joblib.load('nist_orbi_list_neg.joblib')
+            gen_training_data(meta_feature_list, gt_formula_list, orbi_list, False)
         print("Done.")
         exit(0)
     else:  # train model
