@@ -147,6 +147,8 @@ class Buddy:
         if not self.data:
             raise ValueError("No data loaded.")
 
+        ps = self.param_set
+
         # common for loop
         for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
                        file=sys.stdout, colour="green"):
@@ -164,7 +166,7 @@ class Buddy:
         pred_formula_feasibility(self.data)
 
         # ml_b feature generation + prediction
-        pred_formula_prob(self.data, self.param_set.ppm, self.param_set.ms1_tol, self.param_set.ms2_tol)
+        pred_formula_prob(self.data, ps.ppm, ps.ms1_tol, ps.ms2_tol)
 
         # FDR calculation
         calc_fdr(self.data)
@@ -188,7 +190,7 @@ class Buddy:
 if __name__ == '__main__':
     # # create parameter set
     # buddy_param_set = BuddyParamSet(
-    #     ppm=True, ms1_tol=5, ms2_tol=10, halogen=False, multiprocess=True, n_cpu=-1,
+    #     ppm=True, ms1_tol=5, ms2_tol=10, halogen=False,
     #     c_range=(0, 80), h_range=(0, 150), n_range=(0, 20),
     #     o_range=(0, 30), p_range=(0, 10), s_range=(0, 15))
     # # initiate a Buddy project with the given parameter set
@@ -202,7 +204,7 @@ if __name__ == '__main__':
     # result_summary = buddy.result_summary()
 
     #########################################
-    buddy_param_set = BuddyParamSet(multiprocess=False)
+    buddy_param_set = BuddyParamSet()
     # use default parameter set
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
