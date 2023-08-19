@@ -220,8 +220,7 @@ def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
 
     # grid search
     param_grid = {
-        'hidden_layer_sizes': [
-                               (256, 128, 128, 64)],
+        'hidden_layer_sizes': [(100,)],
         'activation': ['relu'],
         'alpha': [1e-6],
         'max_iter': [500]
@@ -316,7 +315,7 @@ def mlp_train(X_arr, y_arr, pos, ms1_iso, ms2_spec):
     return mlp
 
 
-def mlp_train_2(X_arr, y_arr, pos, ms1_iso, ms2_spec):
+def mlp_train_2(X_arr, y_arr, ms1_iso, ms2_spec):
     """
     train ML model B
     :param X_arr: ML feature array
@@ -334,22 +333,23 @@ def mlp_train_2(X_arr, y_arr, pos, ms1_iso, ms2_spec):
         # discard the last 9 features in X_arr
         X_arr = X_arr[:, :-9]
 
-    # split training and testing data
-    X_train, X_test, y_train, y_test = train_test_split(X_arr, y_arr, test_size=0.2, random_state=0)
-
+    print('downsampling...')
     # downsample the majority class
     # get the indices of the majority and minority classes
-    idx_0 = np.where(y_train == 0)[0]
-    idx_1 = np.where(y_train == 1)[0]
+    idx_0 = np.where(y_arr == 0)[0]
+    idx_1 = np.where(y_arr == 1)[0]
     idx_0_downsampled = np.random.choice(idx_0, size=len(idx_1), replace=False)
     idx_downsampled = np.concatenate((idx_0_downsampled, idx_1))
     # get the downsampled training data
-    X_resampled = X_train[idx_downsampled]
-    y_resampled = y_train[idx_downsampled]
+    X_resampled = X_arr[idx_downsampled]
+    y_resampled = y_arr[idx_downsampled]
+
+    # split training and testing data
+    X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=0)
 
     # Train the MLP
     print("train model...")
-    mlp = MLPClassifier(random_state=1, hidden_layer_sizes=(256, 128, 128, 64), activation='relu', alpha=1e-6,
+    mlp = MLPClassifier(random_state=1, hidden_layer_sizes=(256, ), activation='relu', alpha=1e-6,
                         max_iter=500)
     mlp.fit(X_resampled, y_resampled)
 
@@ -361,8 +361,8 @@ def mlp_train_2(X_arr, y_arr, pos, ms1_iso, ms2_spec):
           % (mlp, metrics.classification_report(y_test, y_pred)))
 
     # save model
-    model_name = 'model_b_'
-    model_name += 'pos' if pos else 'neg'
+    model_name = 'model_b'
+    # model_name += 'pos' if pos else 'neg'
     model_name += '_ms1' if ms1_iso else '_noms1'
     model_name += '_ms2' if ms2_spec else '_noms2'
     joblib.dump(mlp, model_name + '_mlptest.joblib')
@@ -495,18 +495,27 @@ if __name__ == '__main__':
     # gen_training_data(meta_feature_list, gt_formula_list, orbi_list, False)
 
     # # train models
-    X = joblib.load('nist_X_arr_pos.joblib')
-    y = joblib.load('nist_y_arr_pos.joblib')
-    #
+    # X = joblib.load('nist_X_arr_pos.joblib')
+    # y = joblib.load('nist_y_arr_pos.joblib')
+    # #
     # X = joblib.load('nist_X_arr_neg.joblib')
     # y = joblib.load('nist_y_arr_neg.joblib')
+    X_pos = joblib.load('nist_X_arr_pos.joblib')
+    y_pos = joblib.load('nist_y_arr_pos.joblib')
+
+    X_neg = joblib.load('nist_X_arr_neg.joblib')
+    y_neg = joblib.load('nist_y_arr_neg.joblib')
+
+    # combine pos and neg data
+    X = np.vstack((X_pos, X_neg))
+    y = np.append(y_pos, y_neg)
 
     print('data loaded')
     # # train models
-    # train_model(X, y, True, True, True)
-    mlp_train(X, y, True, False, True)
+    # train_model(X, y, True, False, True)
+    # mlp_train(X, y, True, False, True)
     # rf_train(X, y, True, False, True)
-    # mlp_train_2(X, y, True, False, True)
+    mlp_train_2(X, y, False, True)
     # rf_train_2(X, y, True, False, True)
 
     print("Done.")

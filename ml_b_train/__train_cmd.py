@@ -206,6 +206,7 @@ def train_model(X_arr, y_arr, ms1_iso, ms2_spec):
     :return: trained model
     """
 
+    print("Training model B...")
     if not ms1_iso:
         # discard the first feature in X_arr
         X_arr = X_arr[:, 1:]
@@ -213,6 +214,7 @@ def train_model(X_arr, y_arr, ms1_iso, ms2_spec):
         # discard the last 9 features in X_arr
         X_arr = X_arr[:, :-9]
 
+    print('downsampling...')
     # downsample the majority class
     # get the indices of the majority and minority classes
     idx_0 = np.where(y_arr == 0)[0]
@@ -221,7 +223,7 @@ def train_model(X_arr, y_arr, ms1_iso, ms2_spec):
     idx_downsampled = np.concatenate((idx_0_downsampled, idx_1))
     # get the downsampled training data
     X_resampled = X_arr[idx_downsampled]
-    y_resampled = X_arr[idx_downsampled]
+    y_resampled = y_arr[idx_downsampled]
 
     # split training and testing data
     X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=0)

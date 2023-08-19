@@ -340,8 +340,7 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     """
     predict using model b
     :param meta_feature_list: List of MetaFeature objects
-    :param group_no: group number; 0:pos ms1 ms2; 1:pos ms1 noms2; 2:pos noms1 ms2; 3:pos noms1 noms2;
-                        4:neg ms1 ms2; 5:neg ms1 noms2; 6:neg noms1 ms2; 7:neg noms1 noms2
+    :param group_no: group number; 0: ms1 ms2; 1: ms1 noms2; 2: noms1 ms2; 3: noms1 noms2
     :param ppm: whether to use ppm error
     :param ms1_tol: m/z tolerance for MS1
     :param ms2_tol: m/z tolerance for MS2
@@ -350,27 +349,17 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     # generate feature array
     X_arr = gen_ml_b_feature(meta_feature_list, ppm, ms1_tol, ms2_tol)
 
+    # load model
     if group_no == 0:
-        model = dependencies['model_b_pos_ms1_ms2']
+        model = dependencies['model_b_ms1_ms2']
     elif group_no == 1:
-        model = dependencies['model_b_pos_ms1_noms2']
+        model = dependencies['model_b_ms1_noms2']
         X_arr = X_arr[:, :-9]  # remove MS2-related features
     elif group_no == 2:
-        model = dependencies['model_b_pos_noms1_ms2']
+        model = dependencies['model_b_noms1_ms2']
         X_arr = X_arr[:, 1:]  # remove ms1_iso_sim
     elif group_no == 3:
-        model = dependencies['model_b_pos_noms1_noms2']
-        X_arr = X_arr[:, 1:-9]
-    elif group_no == 4:
-        model = dependencies['model_b_neg_ms1_ms2']
-    elif group_no == 5:
-        model = dependencies['model_b_neg_ms1_noms2']
-        X_arr = X_arr[:, :-9]
-    elif group_no == 6:
-        model = dependencies['model_b_neg_noms1_ms2']
-        X_arr = X_arr[:, 1:]
-    else:
-        model = dependencies['model_b_neg_noms1_noms2']
+        model = dependencies['model_b_noms1_noms2']
         X_arr = X_arr[:, 1:-9]
 
     # predict formula probability
@@ -387,39 +376,28 @@ def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float):
     :param ms2_tol: m/z tolerance for MS2
     :return: fill in estimated_prob in candidate formula objects
     """
-    # split buddy data into 8 groups and store their indices in a dictionary
+
+    # split buddy data into 4 groups and store their indices in a dictionary
     group_dict = dict()
-    for i in range(8):
+    for i in range(4):
         group_dict[i] = []
 
     for i, meta_feature in enumerate(buddy_data):
         if not meta_feature.candidate_formula_list:
             continue
-        if meta_feature.adduct.charge > 0:
-            if meta_feature.ms1_raw:
-                if meta_feature.ms2_raw:
-                    group_dict[0].append(i)
-                else:
-                    group_dict[1].append(i)
+        if meta_feature.ms1_raw:
+            if meta_feature.ms2_raw:
+                group_dict[0].append(i)
             else:
-                if meta_feature.ms2_raw:
-                    group_dict[2].append(i)
-                else:
-                    group_dict[3].append(i)
+                group_dict[1].append(i)
         else:
-            if meta_feature.ms1_raw:
-                if meta_feature.ms2_raw:
-                    group_dict[4].append(i)
-                else:
-                    group_dict[5].append(i)
+            if meta_feature.ms2_raw:
+                group_dict[2].append(i)
             else:
-                if meta_feature.ms2_raw:
-                    group_dict[6].append(i)
-                else:
-                    group_dict[7].append(i)
+                group_dict[3].append(i)
 
     # predict formula probability
-    for i in range(8):
+    for i in range(4):
         if not group_dict[i]:
             continue
         # predict formula probability
