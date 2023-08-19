@@ -498,4 +498,3 @@ def _gen_precursor_array(frag_arr: np.array, nl_array: np.array, adduct_array: n
             return pre_array
         else:
             return None
-

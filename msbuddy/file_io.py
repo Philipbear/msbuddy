@@ -276,27 +276,3 @@ def load_usi(usi_list: List[str],
             print('Invalid USI: ' + usi)
 
     return data_list
-
-
-# test
-if __name__ == '__main__':
-    # init_db(0)
-    #
-    # from msbuddy.utils import dependencies
-    #
-    # # print(dependencies['common_loss_db'])
-    # print("basic db: " + str(len(dependencies['basic_db_mass'])))
-    # print("halogen db: " + str(len(dependencies['halogen_db_mass'])))
-
-    # usi_1 = 'mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943'
-    # # usi_str = 'mzspec:PXD000561:Adult_Frontalcortex_bRP_Elite_85_f09:scan:17555'
-    # usi_2 = 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005436077'
-    # usi_3 = 'mzspec:MSV000078547:120228_nbut_3610_it_it_take2:scan:389'
-    #
-    # _data = load_usi([usi_1, usi_2, usi_3])
-    # print(_data[1])
-
-    _data = load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query.mgf')
-    # _data = load_mgf('/Users/philip/Documents/test_data/test.mgf')
-    print(len(_data))
-    print(_data[0])
