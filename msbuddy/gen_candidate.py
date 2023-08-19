@@ -1,6 +1,6 @@
 from typing import Union, List
 import numpy as np
-from msbuddy.base_class import Formula, Spectrum, CandidateFormula, MS2Explanation, MetaFeature
+from msbuddy.base_class import Formula, CandidateFormula, MS2Explanation, MetaFeature
 from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass, convert_na_k
 from brainpy import isotopic_variants
 

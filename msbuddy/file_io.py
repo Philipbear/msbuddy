@@ -37,9 +37,8 @@ def init_db(db_mode: int) -> bool:
                    common_frag_db=joblib_load(root_path / 'data' / 'common_frag.joblib'),
                    model_a=joblib_load(root_path / 'data' / 'formula_model.joblib'),
                    model_a_mean_arr=joblib_load(root_path / 'data' / 'mean_arr.joblib'),
-                   model_a_std_arr=joblib_load(root_path / 'data' / 'std_arr.joblib'))
-
-    set_dependency(model_b_noms1_ms2=
+                   model_a_std_arr=joblib_load(root_path / 'data' / 'std_arr.joblib'),
+                   model_b_noms1_ms2=
                    joblib_load('/Users/philip/Documents/projects/msbuddy/ml_b_train/model_b_noms1_ms2_mlptest.joblib'))
 
     # check existence of basic_db_mass.joblib, basic_db_formula.joblib

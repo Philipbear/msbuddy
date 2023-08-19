@@ -1,11 +1,12 @@
 import sys
 import numpy as np
 from tqdm import tqdm
-from file_io import init_db, load_usi, load_mgf
 from typing import Tuple, Union, List
 from msbuddy.base_class import MetaFeature
+from msbuddy.file_io import init_db, load_usi, load_mgf
 from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
+from msbuddy.utils import dependencies
 from multiprocessing import Pool, cpu_count
 
 
@@ -115,8 +116,7 @@ class BuddyParamSet:
 class Buddy:
     """
     Buddy class
-    Buddy data is stored in self.data, which is a List[MetaFeature]; MetaFeature is a class defined in
-    base_class/MetaFeature.py
+    Buddy data is a List[MetaFeature]; MetaFeature is a class defined in base_class/MetaFeature.py
     """
     # singleton
     _instance = None
@@ -160,27 +160,18 @@ class Buddy:
         if not self.data:
             raise ValueError("No data loaded.")
 
-        def _preprocess_gen_cand(meta_feature: MetaFeature, ps: BuddyParamSet):
-            """
-            data preprocessing & formula candidate space generation
-            :param meta_feature: MetaFeature object
-            :param ps: BuddyParamSet object
-            :return: None
-            """
-            # data preprocessing
-            meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                                         ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
-                                         ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
-                                         ps.max_frag_reserved, ps.use_all_frag)
-
-            # generate formula candidate space; currently, ms2_global_optim is not used here
-            gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
-                                  ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
-
         if self.param_set.multiprocess:
-            # multiprocessing
+            # Create a list of arguments for the multiprocessing
+            args_list = [(mf, self.param_set) for mf in self.data]
+
+            # Multiprocessing
             with Pool(self.param_set.n_cpu) as pool:
-                pool.imap(_preprocess_gen_cand, self.data)
+                for _ in tqdm(pool.imap(_wrapper, args_list),
+                              total=len(self.data),
+                              desc="Data preprocessing & candidate space generation",
+                              file=sys.stdout,
+                              colour="green"):
+                    pass
         else:
             # common for loop
             for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
@@ -211,6 +202,29 @@ class Buddy:
         return result_summary_list
 
 
+def _preprocess_gen_cand(meta_feature: MetaFeature, ps: BuddyParamSet):
+    """
+    data preprocessing & formula candidate space generation
+    :param meta_feature: MetaFeature object
+    :param ps: BuddyParamSet object
+    :return: None
+    """
+    # data preprocessing
+    meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
+                                 ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
+                                 ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
+                                 ps.max_frag_reserved, ps.use_all_frag)
+
+    # generate formula candidate space; currently, ms2_global_optim is not used here
+    gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
+                          ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
+
+
+def _wrapper(args):
+    meta_feature, ps = args
+    return _preprocess_gen_cand(meta_feature, ps)
+
+
 # test
 if __name__ == '__main__':
     # # create parameter set
@@ -229,7 +243,7 @@ if __name__ == '__main__':
     # result_summary = buddy.result_summary()
 
     #########################################
-    buddy_param_set = BuddyParamSet(multiprocess=False)
+    buddy_param_set = BuddyParamSet(multiprocess=True)
     # use default parameter set
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
