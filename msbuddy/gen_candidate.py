@@ -179,7 +179,9 @@ def calc_isotope_similarity(int_arr_x, int_arr_y,
         int_arr_y = np.append(int_arr_y, np.zeros(min_len - len(int_arr_y)))
 
     # normalize
+    int_arr_x = int_arr_x.astype(np.float64)
     int_arr_x /= sum(int_arr_x)
+    int_arr_y = int_arr_y.astype(np.float64)
     int_arr_y /= sum(int_arr_y)
 
     # calculate the similarity

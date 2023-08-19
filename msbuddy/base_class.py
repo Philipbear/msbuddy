@@ -794,7 +794,7 @@ class MetaFeature:
         result = {'mz': self.mz, 'rt': self.rt, 'adduct': self.adduct.string, 'formula_rank_1': None,
                   'estimated_fdr': None}
         if self.candidate_formula_list:
-            result['formula_rank_1'] = self.candidate_formula_list[0].formula.string
+            result['formula_rank_1'] = form_arr_to_str(self.candidate_formula_list[0].formula.array)
             result['estimated_fdr'] = self.candidate_formula_list[0].estimated_fdr
         return result
 

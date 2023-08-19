@@ -8,7 +8,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.file_io import init_db
-from tqdm import tqdm
+from scipy.stats import norm
 import argparse
 
 
@@ -145,14 +145,13 @@ def load_nist_data(path, pos):
 
 def gen_training_data(meta_feature_list, gt_formula_list, orbi_list, pos):
     """
-    generate training data for ML model B
+    generate training data for ML model B, including precursor simulation
     :param meta_feature_list: meta feature list
     :param gt_formula_list: ground truth formula list
     :param orbi_list: True for Orbitrap, False for Q-TOF
     :param pos: True for positive mode, False for negative mode
     :return: write to joblib file
     """
-    print("Generating training data...")
     # generate ML features for each candidate formula, for ML model B
     # generate feature array
     X_arr = np.array([])
@@ -166,15 +165,26 @@ def gen_training_data(meta_feature_list, gt_formula_list, orbi_list, pos):
             continue
         # generate ML features for each candidate formula
         for cf in mf.candidate_formula_list:
+            this_true = False
+            if np.array_equal(gt_form_arr, cf.formula.array):
+                this_true = True
             # get ML features
             ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol)
+            # if true gt, perform precursor simulation
+            if this_true:
+                mz_shift = np.random.normal(0, ms1_tol / 5)
+                mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
+                mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
+                log_p = np.log(mz_shift_p * 2)
+                ml_feature_arr[2] = np.clip(log_p, -4, 0)
+
             # add to feature array
             if X_arr.size == 0:
                 X_arr = ml_feature_arr
-                y_arr = np.array([1 if np.array_equal(gt_form_arr, cf.formula.array) else 0])
+                y_arr = np.array([1 if this_true else 0])
             else:
                 X_arr = np.vstack((X_arr, ml_feature_arr))
-                y_arr = np.append(y_arr, 1 if np.array_equal(gt_form_arr, cf.formula.array) else 0)
+                y_arr = np.append(y_arr, 1 if this_true else 0)
 
     print('y_arr sum: ' + str(np.sum(y_arr)))
     if pos:
@@ -185,7 +195,7 @@ def gen_training_data(meta_feature_list, gt_formula_list, orbi_list, pos):
         joblib.dump(y_arr, 'nist_y_arr_neg.joblib')
 
 
-def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
+def train_model(X_arr, y_arr, ms1_iso, ms2_spec):
     """
     train ML model B
     :param X_arr: ML feature array
@@ -203,23 +213,44 @@ def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
         # discard the last 9 features in X_arr
         X_arr = X_arr[:, :-9]
 
+    # downsample the majority class
+    # get the indices of the majority and minority classes
+    idx_0 = np.where(y_arr == 0)[0]
+    idx_1 = np.where(y_arr == 1)[0]
+    idx_0_downsampled = np.random.choice(idx_0, size=len(idx_1), replace=False)
+    idx_downsampled = np.concatenate((idx_0_downsampled, idx_1))
+    # get the downsampled training data
+    X_resampled = X_arr[idx_downsampled]
+    y_resampled = X_arr[idx_downsampled]
+
     # split training and testing data
-    X_train, X_test, y_train, y_test = train_test_split(X_arr, y_arr, test_size=0.2, random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=0)
 
     # grid search
-    param_grid = {
+    all_param_grid = {
         'hidden_layer_sizes': [(1024,), (512,), (256,),
                                (1024, 512), (512, 512), (512, 256), (256, 256), (256, 128),
                                (512, 512, 256), (512, 256, 256), (512, 256, 128), (256, 256, 128),
-                               (128, 64, 64, 32), (64, 64, 32, 32)],
+                               (256, 256, 128, 128), (128, 64, 64, 32), (64, 64, 32, 32), (64, 32, 32, 16),
+                               (32, 32, 16, 16), (32, 16, 16, 8),
+                               (64, 64, 32, 32, 16), (64, 32, 32, 16, 16), (32, 32, 16, 16, 8), (32, 16, 16, 8, 8)],
         'activation': ['relu'],
         'alpha': [1e-6, 1e-5, 1e-4, 1e-3],
         'max_iter': [400, 800]
     }
+    param_grid = {
+        'hidden_layer_sizes': [(1024,), (512,),
+                               (512, 256), (256, 256),
+                               (512, 256, 128), (256, 256, 128),
+                               (128, 64, 64, 32)],
+        'activation': ['relu'],
+        'alpha': [1e-5, 1e-4],
+        'max_iter': [400]
+    }
 
     # grid search
     mlp = MLPClassifier(random_state=1)
-    clf = GridSearchCV(mlp, param_grid, cv=5, n_jobs=-1, scoring='roc_auc', verbose=1)
+    clf = GridSearchCV(mlp, all_param_grid, cv=5, n_jobs=-1, scoring='f1', verbose=1)
     clf.fit(X_train, y_train)
 
     # print best parameters
@@ -249,8 +280,8 @@ def train_model(X_arr, y_arr, pos, ms1_iso, ms2_spec):
           % (mlp, metrics.classification_report(y_test, y_pred)))
 
     # save model
-    model_name = '/msbuddy/ml_b_train/model_b_'
-    model_name += 'pos' if pos else 'neg'
+    model_name = 'model_b_'
+    # model_name += 'pos' if pos else 'neg'
     model_name += '_ms1' if ms1_iso else '_noms1'
     model_name += '_ms2' if ms2_spec else '_noms2'
     joblib.dump(mlp, model_name + '.joblib')
@@ -305,14 +336,18 @@ if __name__ == '__main__':
         print("Done.")
         exit(0)
     else:  # train model
-        if args.pos:
-            X = joblib.load('nist_X_arr_pos.joblib')
-            y = joblib.load('nist_y_arr_pos.joblib')
-        else:
-            X = joblib.load('nist_X_arr_neg.joblib')
-            y = joblib.load('nist_y_arr_neg.joblib')
+
+        X_pos = joblib.load('nist_X_arr_pos.joblib')
+        y_pos = joblib.load('nist_y_arr_pos.joblib')
+
+        X_neg = joblib.load('nist_X_arr_neg.joblib')
+        y_neg = joblib.load('nist_y_arr_neg.joblib')
+
+        # combine pos and neg data
+        X = np.vstack((X_pos, X_neg))
+        y = np.append(y_pos, y_neg)
 
         # train models
-        train_model(X, y, args.pos, args.ms1, args.ms2)
+        train_model(X, y, args.ms1, args.ms2)
 
     print("Done.")

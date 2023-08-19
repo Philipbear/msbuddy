@@ -348,27 +348,33 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     :return: numpy array of prediction results
     """
     # generate feature array
-    feature_arr = gen_ml_b_feature(meta_feature_list, ppm, ms1_tol, ms2_tol)
+    X_arr = gen_ml_b_feature(meta_feature_list, ppm, ms1_tol, ms2_tol)
 
     if group_no == 0:
         model = dependencies['model_b_pos_ms1_ms2']
     elif group_no == 1:
         model = dependencies['model_b_pos_ms1_noms2']
+        X_arr = X_arr[:, :-9]  # remove MS2-related features
     elif group_no == 2:
         model = dependencies['model_b_pos_noms1_ms2']
+        X_arr = X_arr[:, 1:]  # remove ms1_iso_sim
     elif group_no == 3:
         model = dependencies['model_b_pos_noms1_noms2']
+        X_arr = X_arr[:, 1:-9]
     elif group_no == 4:
         model = dependencies['model_b_neg_ms1_ms2']
     elif group_no == 5:
         model = dependencies['model_b_neg_ms1_noms2']
+        X_arr = X_arr[:, :-9]
     elif group_no == 6:
         model = dependencies['model_b_neg_noms1_ms2']
+        X_arr = X_arr[:, 1:]
     else:
         model = dependencies['model_b_neg_noms1_noms2']
+        X_arr = X_arr[:, 1:-9]
 
     # predict formula probability
-    prob_arr = model.predict_proba(feature_arr)
+    prob_arr = model.predict_proba(X_arr)
     return prob_arr[:, 1]
 
 
@@ -389,7 +395,7 @@ def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float):
     for i, meta_feature in enumerate(buddy_data):
         if not meta_feature.candidate_formula_list:
             continue
-        if meta_feature.charge > 0:
+        if meta_feature.adduct.charge > 0:
             if meta_feature.ms1_raw:
                 if meta_feature.ms2_raw:
                     group_dict[0].append(i)

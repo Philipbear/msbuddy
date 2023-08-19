@@ -213,25 +213,38 @@ class Buddy:
 
 # test
 if __name__ == '__main__':
-    # create parameter set
-    buddy_param_set = BuddyParamSet(
-        ppm=True, ms1_tol=5, ms2_tol=10, halogen=False, multiprocess=True, n_cpu=-1,
-        c_range=(0, 80), h_range=(0, 150), n_range=(0, 20),
-        o_range=(0, 30), p_range=(0, 10), s_range=(0, 15))
-    # initiate a Buddy project with the given parameter set
-    buddy = Buddy(buddy_param_set)
-    # load data
-    # buddy.load_usi("mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943")
-    buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
-    # annotate formula
-    # buddy.annotate_formula()
-    # # result summary
-    result_summary = buddy.result_summary()
+    # # create parameter set
+    # buddy_param_set = BuddyParamSet(
+    #     ppm=True, ms1_tol=5, ms2_tol=10, halogen=False, multiprocess=True, n_cpu=-1,
+    #     c_range=(0, 80), h_range=(0, 150), n_range=(0, 20),
+    #     o_range=(0, 30), p_range=(0, 10), s_range=(0, 15))
+    # # initiate a Buddy project with the given parameter set
+    # buddy = Buddy(buddy_param_set)
+    # # load data
+    # # buddy.load_usi(["mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943"])
+    # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
+    # # annotate formula
+    # # buddy.annotate_formula()
+    # # # result summary
+    # result_summary = buddy.result_summary()
 
     #########################################
+    buddy_param_set = BuddyParamSet(multiprocess=False)
     # use default parameter set
-    buddy2 = Buddy()
-    print(buddy2 is buddy)  # True, singleton
-    buddy2.load_mgf("/Users/philip/Documents/test_data/test.mgf")
+    buddy = Buddy(buddy_param_set)
+    # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
+    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+
+    # add ms1 data
+    from msbuddy.base_class import Spectrum
+
+    # buddy.data[0].ms1_raw = Spectrum(mz_array=np.array([540.369, 541.369]),
+    #                                  int_array=np.array([100, 28]))
+    # buddy.data[1].ms1_raw = Spectrum(mz_array=np.array([buddy.data[1].mz, buddy.data[1].mz + 1]),
+    #                                  int_array=np.array([100, 25]))
+
     buddy.annotate_formula()
     result_summary_ = buddy.result_summary()
+    print(result_summary_)
+    print('done')
