@@ -6,8 +6,6 @@ from msbuddy.base_class import MetaFeature
 from msbuddy.file_io import init_db, load_usi, load_mgf
 from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
-from msbuddy.utils import dependencies
-from multiprocessing import Pool, cpu_count
 
 
 class BuddyParamSet:
@@ -17,7 +15,6 @@ class BuddyParamSet:
 
     def __init__(self,
                  ppm=True, ms1_tol=5, ms2_tol=10, halogen=False,
-                 multiprocess=True, n_cpu=-1,
                  c_range: Tuple[int, int] = (0, 80),
                  h_range: Tuple[int, int] = (0, 150),
                  n_range: Tuple[int, int] = (0, 20),
@@ -40,8 +37,6 @@ class BuddyParamSet:
         :param ms1_tol: MS1 m/z tolerance
         :param ms2_tol: MS2 m/z tolerance
         :param halogen: whether to include halogen atoms; if False, ranges of F, Cl, Br, I will be set to (0, 0)
-        :param multiprocess: whether to use multiprocessing for annotation
-        :param n_cpu: number of CPUs used for multiprocessing; if -1, all available CPUs will be used
         :param c_range: C range
         :param h_range: H range
         :param n_range: N range
@@ -67,13 +62,6 @@ class BuddyParamSet:
         self.ms1_tol = ms1_tol
         self.ms2_tol = ms2_tol
         self.db_mode = 0 if not halogen else 1
-        self.multiprocess = multiprocess
-
-        cpu_cnt = cpu_count()
-        if n_cpu == -1 or n_cpu > cpu_cnt:
-            self.n_cpu = cpu_cnt
-        else:
-            self.n_cpu = n_cpu
 
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
                                    0, n_range[0], 0, o_range[0], p_range[0], s_range[0]])
@@ -134,7 +122,6 @@ class Buddy:
             self.param_set = param_set
 
         self.db_loaded = init_db(self.param_set.db_mode)  # database initialization
-
         self.data = None  # List[MetabolicFeature], metabolic feature list
 
     def load_usi(self, usi_list: List[str]):
@@ -160,23 +147,18 @@ class Buddy:
         if not self.data:
             raise ValueError("No data loaded.")
 
-        if self.param_set.multiprocess:
-            # Create a list of arguments for the multiprocessing
-            args_list = [(mf, self.param_set) for mf in self.data]
+        # common for loop
+        for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
+                       file=sys.stdout, colour="green"):
+            # data preprocessing
+            mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
+                                         ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
+                                         ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
+                                         ps.max_frag_reserved, ps.use_all_frag)
 
-            # Multiprocessing
-            with Pool(self.param_set.n_cpu) as pool:
-                for _ in tqdm(pool.imap(_wrapper, args_list),
-                              total=len(self.data),
-                              desc="Data preprocessing & candidate space generation",
-                              file=sys.stdout,
-                              colour="green"):
-                    pass
-        else:
-            # common for loop
-            for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
-                           file=sys.stdout, colour="green"):
-                _preprocess_gen_cand(mf, self.param_set)
+            # generate formula candidate space; currently, ms2_global_optim is not used here
+            gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
+                                  ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
 
         # ml_a feature generation + prediction
         pred_formula_feasibility(self.data)
@@ -202,29 +184,6 @@ class Buddy:
         return result_summary_list
 
 
-def _preprocess_gen_cand(meta_feature: MetaFeature, ps: BuddyParamSet):
-    """
-    data preprocessing & formula candidate space generation
-    :param meta_feature: MetaFeature object
-    :param ps: BuddyParamSet object
-    :return: None
-    """
-    # data preprocessing
-    meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                                 ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
-                                 ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
-                                 ps.max_frag_reserved, ps.use_all_frag)
-
-    # generate formula candidate space; currently, ms2_global_optim is not used here
-    gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
-                          ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
-
-
-def _wrapper(args):
-    meta_feature, ps = args
-    return _preprocess_gen_cand(meta_feature, ps)
-
-
 # test
 if __name__ == '__main__':
     # # create parameter set
@@ -243,7 +202,7 @@ if __name__ == '__main__':
     # result_summary = buddy.result_summary()
 
     #########################################
-    buddy_param_set = BuddyParamSet(multiprocess=True)
+    buddy_param_set = BuddyParamSet(multiprocess=False)
     # use default parameter set
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
