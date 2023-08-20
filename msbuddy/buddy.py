@@ -30,8 +30,7 @@ class BuddyParamSet:
                  rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01,
                  max_noise_frag_ratio: float = 0.85, max_noise_rsd: float = 0.20,
                  max_frag_reserved: int = 50,
-                 use_all_frag: bool = False,
-                 ms2_global_optim: bool = False):
+                 use_all_frag: bool = False):
         """
         :param ppm: whether ppm is used for m/z tolerance
         :param ms1_tol: MS1 m/z tolerance
@@ -56,7 +55,6 @@ class BuddyParamSet:
         :param max_noise_rsd: maximum noise RSD, used for MS2 denoise
         :param max_frag_reserved: max fragment number reserved, used for MS2 data
         :param use_all_frag: whether to use all fragments for annotation; by default, only top N fragments are used, top N is a function of precursor mass
-        :param ms2_global_optim: whether to use global optimization for MS2 data (to refine fragment annotation)
         """
         self.ppm = ppm
         self.ms1_tol = ms1_tol
@@ -98,7 +96,7 @@ class BuddyParamSet:
         self.max_noise_rsd = max_noise_rsd
         self.max_frag_reserved = max_frag_reserved
         self.use_all_frag = use_all_frag
-        self.ms2_global_optim = ms2_global_optim
+        # self.ms2_global_optim = ms2_global_optim
 
 
 class Buddy:

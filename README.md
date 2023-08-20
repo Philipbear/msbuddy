@@ -2,7 +2,7 @@
 [![Generic badge](https://img.shields.io/badge/msbuddy-ver_0.0.1-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 ![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
 
-`msbuddy` is an informatic tool developed for de novo molecular formula annotation in mass spectrometry-based small molecule analysis.
+`msbuddy` is a tool developed for de novo molecular formula annotation in mass spectrometry-based small molecule analysis.
 
 ## Python API
 
@@ -19,7 +19,7 @@
 
 
 ## Citation
-S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. *Nature Methods* 2023. [DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)
+[S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. *Nature Methods* 2023. DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)
 
 ## License
 This work is licensed under the MIT license.
