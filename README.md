@@ -28,7 +28,7 @@ msbuddy --help
 
 
 ## Citation
-[S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. *Nature Methods* 2023. DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)
+[S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. **Nature Methods** 2023. DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)
 
 ## License
 This work is licensed under the MIT license.
