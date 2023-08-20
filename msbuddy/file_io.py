@@ -38,8 +38,7 @@ def init_db(db_mode: int) -> bool:
                    model_a=joblib_load(root_path / 'data' / 'formula_model.joblib'),
                    model_a_mean_arr=joblib_load(root_path / 'data' / 'mean_arr.joblib'),
                    model_a_std_arr=joblib_load(root_path / 'data' / 'std_arr.joblib'),
-                   model_b_noms1_ms2=
-                   joblib_load('/Users/philip/Documents/projects/msbuddy/ml_b_train/model_b_noms1_ms2_mlptest.joblib'))
+                   model_b_noms1_ms2=joblib_load(root_path / 'data' / 'model_b_noms1_ms2.joblib'))
 
     # check existence of basic_db_mass.joblib, basic_db_formula.joblib
     check_and_download('https://drive.google.com/uc?id=1obPMk9lcfkUpRkeGSkM1s4C9Bzatm1li',

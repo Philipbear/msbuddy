@@ -8,6 +8,7 @@ def main():
     parser.add_argument('--mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('--usi', type=str, help='A single USI string.')
     parser.add_argument('--csv', type=str, help='Path to the CSV file containing USI strings.')
+    parser.add_argument('--output', type=str, help='The output file path.')
     parser.add_argument('--ppm', type=bool, default=True, help='Whether to use ppm for mass tolerance.')
     parser.add_argument('--ms1_tol', type=float, default=5, help='MS1 tolerance.')
     parser.add_argument('--ms2_tol', type=float, default=10, help='MS2 tolerance.')
@@ -51,17 +52,43 @@ def main():
                         help='Whether to use all fragments for annotation; by default, only top N fragments are used, '
                              'top N is a function of precursor mass.')
 
-
     args = parser.parse_args()
 
     buddy_param_set = BuddyParamSet(
-        # Configure parameters based on args
+        ppm=args.ppm, ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
+        c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
+        o_range=(args.o_min, args.o_max), p_range=(args.p_min, args.p_max), s_range=(args.s_min, args.s_max),
+        f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
+        i_range=(args.i_min, args.i_max),
+        isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
+        ms2_denoise=args.ms2_denoise, rel_int_denoise=args.rel_int_denoise,
+        rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_noise_frag_ratio=args.max_noise_frag_ratio,
+        max_noise_rsd=args.max_noise_rsd, max_frag_reserved=args.max_frag_reserved,
+        use_all_frag=args.use_all_frag
     )
 
     buddy = Buddy(buddy_param_set)
     if args.mgf:
         buddy.load_mgf(args.mgf)
+    elif args.usi:
+        buddy.load_usi([args.usi])
+    elif args.csv:
+        # read and load the first column of the CSV file
+        df = pd.read_csv(args.csv)
+        buddy.load_usi(df.iloc[:, 0].tolist())
+    else:
+        raise ValueError('Please specify the input data source.')
 
-    # ... rest of the logic ...
+    if not args.output:
+        raise ValueError('Please specify the output file path.')
+
+    # formula annotation
+    buddy.annotate_formula()
+
+    # write the result to the output file
+    result_ls = buddy.result_summary()
+    if not result_ls:
+        raise ValueError('No result to write.')
+
 
     print('Operation completed successfully.')

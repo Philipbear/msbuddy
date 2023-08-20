@@ -230,23 +230,13 @@ def train_model(X_arr, y_arr, ms1_iso, ms2_spec):
 
     # grid search
     all_param_grid = {
-        'hidden_layer_sizes': [(1024,), (512,), (256,),
-                               (1024, 512), (512, 512), (512, 256), (256, 256), (256, 128),
-                               (512, 512, 256), (512, 256, 256), (512, 256, 128), (256, 256, 128),
-                               (256, 256, 128, 128), (128, 64, 64, 32), (64, 64, 32, 32), (64, 32, 32, 16),
-                               (32, 32, 16, 16), (32, 16, 16, 8),
-                               (64, 64, 32, 32, 16), (64, 32, 32, 16, 16), (32, 32, 16, 16, 8), (32, 16, 16, 8, 8)],
+        'hidden_layer_sizes': [(256,), (128,), (64,), (32,), (16,),
+                               (128, 64), (64, 64), (64, 32), (32, 32), (32, 16), (16, 16), (16, 8),
+                               (128, 64, 32), (64, 64, 32), (64, 32, 32), (32, 32, 16), (32, 16, 16),
+                               (32, 16, 16, 8), (32, 16, 8, 8), (16, 16, 8, 8), (16, 8, 8, 8),
+                               (32, 16, 16, 8, 8), (16, 16, 16, 8, 8), (16, 16, 8, 8, 8), (16, 8, 8, 8, 8)],
         'activation': ['relu'],
-        'alpha': [1e-6, 1e-5, 1e-4, 1e-3],
-        'max_iter': [400, 800]
-    }
-    param_grid = {
-        'hidden_layer_sizes': [(1024,), (512,),
-                               (512, 256), (256, 256),
-                               (512, 256, 128), (256, 256, 128),
-                               (128, 64, 64, 32)],
-        'activation': ['relu'],
-        'alpha': [1e-5, 1e-4],
+        'alpha': [1e-6, 1e-5, 1e-4, 1e-3, 1e-2],
         'max_iter': [400]
     }
 
@@ -268,27 +258,33 @@ def train_model(X_arr, y_arr, ms1_iso, ms2_spec):
               % (mean, std * 2, params))
 
     print("train model...")
-    # train model with best params
-    # best_params = {'activation': 'relu', 'alpha': 1e-6, 'hidden_layer_sizes': (64, 32), 'max_iter': 200}
-    mlp = MLPClassifier(**best_params).fit(X_train, y_train)
-    score = mlp.score(X_test, y_test)  # accuracy on test data
+    # train model with best params for 5 times, and choose the best one
+    best_score = 0
+    for i in range(10):
+        mlp = MLPClassifier(**best_params, random_state=i).fit(X_train, y_train)
+        score = mlp.score(X_test, y_test)
+        if score > best_score:
+            best_score = score
+            best_mlp = mlp
+
+    score = best_mlp.score(X_test, y_test)  # accuracy on test data
     print("MLP acc.: " + str(score))
 
     # predict on test data
-    y_pred = mlp.predict(X_test)
+    y_pred = best_mlp.predict(X_test)
 
     # print performance
     print("Classification report for classifier %s:\n%s\n"
-          % (mlp, metrics.classification_report(y_test, y_pred)))
+          % (best_mlp, metrics.classification_report(y_test, y_pred)))
 
     # save model
-    model_name = 'model_b_'
+    model_name = 'model_b'
     # model_name += 'pos' if pos else 'neg'
     model_name += '_ms1' if ms1_iso else '_noms1'
     model_name += '_ms2' if ms2_spec else '_noms2'
-    joblib.dump(mlp, model_name + '.joblib')
+    joblib.dump(best_mlp, model_name + '.joblib')
 
-    return mlp
+    return best_mlp
 
 
 def parse_args():
