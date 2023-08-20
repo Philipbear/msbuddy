@@ -791,8 +791,8 @@ class MetaFeature:
         Summarize the annotation result for a MetaFeature.
         :return: dict
         """
-        result = {'mz': self.mz, 'rt': self.rt, 'adduct': self.adduct.string, 'formula_rank_1': None,
-                  'estimated_fdr': None}
+        result = {'identifier': self.identifier, 'mz': self.mz, 'rt': self.rt, 'adduct': self.adduct.string,
+                  'formula_rank_1': None, 'estimated_fdr': None}
         if self.candidate_formula_list:
             result['formula_rank_1'] = form_arr_to_str(self.candidate_formula_list[0].formula.array)
             result['estimated_fdr'] = self.candidate_formula_list[0].estimated_fdr

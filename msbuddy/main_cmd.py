@@ -1,6 +1,7 @@
 import argparse
 from msbuddy.buddy import Buddy, BuddyParamSet
 import pandas as pd
+import pathlib
 
 
 def main():
@@ -67,6 +68,9 @@ def main():
         use_all_frag=args.use_all_frag
     )
 
+    if not args.output:
+        raise ValueError('Please specify the output file path.')
+
     buddy = Buddy(buddy_param_set)
     if args.mgf:
         buddy.load_mgf(args.mgf)
@@ -79,16 +83,30 @@ def main():
     else:
         raise ValueError('Please specify the input data source.')
 
-    if not args.output:
-        raise ValueError('Please specify the output file path.')
-
     # formula annotation
     buddy.annotate_formula()
 
-    # write the result to the output file
-    result_ls = buddy.result_summary()
-    if not result_ls:
-        raise ValueError('No result to write.')
+    # create a DataFrame object, with columns: identifier, mz, rt, formula_rank_1, estimated_fdr
+    # fill in the DataFrame object one by one
+    result_df = pd.DataFrame(columns=['identifier', 'mz', 'rt', 'formula_rank_1', 'estimated_fdr'])
+    for mf in buddy.data:
+        individual_result = mf.summarize_result()
+        result_df = result_df.append({
+            'identifier': mf.identifier,
+            'mz': mf.mz,
+            'rt': mf.rt,
+            'formula_rank_1': individual_result['formula_rank_1'],
+            'estimated_fdr': individual_result['estimated_fdr']
+        }, ignore_index=True)
+
+    output_path = pathlib.Path(args.output)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # write the DataFrame object to the output file
+    result_df.to_csv(output_path / 'buddy_result_summary.csv', sep="\t", index=False)
+
+    print('Job completed.')
 
 
-    print('Operation completed successfully.')
+if __name__ == '__main__':
+    main()
