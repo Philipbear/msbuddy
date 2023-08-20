@@ -8,14 +8,23 @@
 
 ### Installation
 `msbuddy` is available on PyPI, you can install it via `pip`:
-```pip install msbuddy```
+
+```
+pip install msbuddy
+```
 
 ### Usage
 
 
 ## Command-line Interface
-```msbuddy --input input_file.mgf --output output_folder```
-```msbuddy --help```
+
+```
+msbuddy --input input_file.mgf --output output_folder
+```
+
+```
+msbuddy --help
+```
 
 
 ## Citation
