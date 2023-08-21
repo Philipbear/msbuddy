@@ -187,8 +187,11 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     # MS/MS-related features
     ms2_feature_arr = _gen_ms2_feature(meta_feature, cand_form.ms2_raw_explanation, pre_dbe, pre_h2c, ppm, ms2_tol)
 
+    # pos mode bool
+    pos_mode = 1 if this_adduct.charge > 0 else 0
+
     # generate output array
-    out = np.array([ms1_iso_sim, cand_form.ml_a_prob, mz_error_feature, pre_dbe, pre_h2c])
+    out = np.array([pos_mode, ms1_iso_sim, cand_form.ml_a_prob, mz_error_feature, pre_dbe, pre_h2c])
     out = np.append(out, ms2_feature_arr)
 
     return out
@@ -256,7 +259,8 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
                                                  for frag_form in frag_form_arr]) * normed_exp_int_arr)
 
         out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, subform_score, subform_common_loss_score,
-                            radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg])
+                            radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
+                            len(valid_idx_arr)])
     else:
         out_arr = np.array([0] * 9)
 
@@ -354,13 +358,14 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         model = dependencies['model_b_ms1_ms2']
     elif group_no == 1:
         model = dependencies['model_b_ms1_noms2']
-        X_arr = X_arr[:, :-9]  # remove MS2-related features
+        X_arr = X_arr[:, :-10]  # remove MS2-related features
     elif group_no == 2:
         model = dependencies['model_b_noms1_ms2']
-        X_arr = X_arr[:, 1:]  # remove ms1_iso_sim
-    elif group_no == 3:
+        X_arr = np.delete(X_arr, 1, axis=1)  # remove MS1 isotope similarity
+    else:
         model = dependencies['model_b_noms1_noms2']
-        X_arr = X_arr[:, 1:-9]
+        X_arr = np.delete(X_arr, 1, axis=1)  # remove MS1 isotope similarity
+        X_arr = X_arr[:, :-10]  # remove MS2-related features
 
     # predict formula probability
     prob_arr = model.predict_proba(X_arr)

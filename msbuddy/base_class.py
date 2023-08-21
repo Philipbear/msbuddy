@@ -656,10 +656,6 @@ def _calc_top_n_frag(pre_mz: float, max_frag_reserved: int) -> int:
     :param max_frag_reserved: max fragment count reserved
     :return: top n frag No. (int)
     """
-    # if pre_mz < 1000:
-    #     top_n = int(80 - 0.06 * pre_mz)
-    # else:
-    #     top_n = 20
 
     if pre_mz < 1000:
         top_n = int(90 - 0.08 * pre_mz)
