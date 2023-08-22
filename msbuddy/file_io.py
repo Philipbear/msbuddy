@@ -8,7 +8,6 @@ from pathlib import Path
 from joblib import load as joblib_load
 from msbuddy.utils import set_dependency
 from msbuddy.base_class import MetaFeature, Spectrum
-# from pyteomics.mgf import read as mgf_read
 
 
 def check_and_download(url: str, path) -> bool:
@@ -88,6 +87,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 pos_mode = None
                 ms2_spec = True
                 rt = None
+                adduct_str = None
             elif line.startswith('END IONS'):
                 # create a new MetaFeature
                 if precursor_mz is None:
@@ -118,6 +118,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     mf = MetaFeature(mz=precursor_mz,
                                      charge=charge,
                                      rt=rt,
+                                     adduct=adduct_str,
                                      ms2=Spectrum(mz_arr, int_arr),
                                      identifier=identifier)
                     meta_feature_list.append(mf)
@@ -136,7 +137,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                         charge = int(value)
                     # if key is 'ION', it is adduct type
                     elif key.upper() == 'ION':
-                        adduct = value
+                        adduct_str = value
                     # if key is 'IONMODE', it is ion mode
                     elif key.upper() == 'IONMODE':
                         if value.upper() == 'POSITIVE':
@@ -159,55 +160,6 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     int_arr = np.append(int_arr, float(this_int))
 
     return meta_feature_list
-
-
-# def load_mgf_pyteomics(file) -> List[MetaFeature]:
-#     """
-#     load mgf file. read mgf file using pyteomics.mgf.read
-#     :param file: mgf file path
-#     :return: list of MetaFeature
-#     """
-#     _mgf = mgf_read(file)
-#
-#     # create meta_feature_list
-#     meta_feature_list = []
-#     for spec in _mgf:
-#
-#         params = spec['params']
-#
-#         # identifier
-#         identifier = params['title']
-#
-#         # adduct
-#         # if 'ion' in params: adduct = 'ion'; else: None
-#         adduct = None
-#         if 'ion' in params.keys():
-#             adduct = params['ion']
-#
-#         # rt
-#         rt = None
-#         if 'rtinseconds' in params.keys():
-#             rt = params['rtinseconds']
-#         elif 'rtinminutes' in params.keys():
-#             rt = params['rtinminutes'] * 60
-#
-#         # spectrum
-#         mz_arr = np.array(spec['m/z array'])
-#         int_arr = np.array(spec['intensity array'])
-#         ms2_spectrum = Spectrum(mz_arr, int_arr)
-#
-#         # create meta_feature
-#         meta_feature = MetaFeature(mz=params['pepmass'][0],
-#                                    charge=params['charge'][0],
-#                                    rt=rt,
-#                                    adduct=adduct,
-#                                    ms2=ms2_spectrum,
-#                                    identifier=identifier)
-#
-#         # add meta_feature to meta_feature_list
-#         meta_feature_list.append(meta_feature)
-#
-#     return meta_feature_list
 
 
 def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
@@ -247,8 +199,8 @@ def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
     return data
 
 
-def load_usi(usi_list: List[str],
-             adduct_list: Union[List[str], None] = None) -> List[MetaFeature]:
+def load_usi(usi_list: Union[str, List[str]],
+             adduct_list: Union[None, str, List[str]] = None) -> List[MetaFeature]:
     """
     Read from a sequence of USI strings and return a list of MetaFeature objects.
     Invalid USI strings are discarded.
@@ -257,17 +209,24 @@ def load_usi(usi_list: List[str],
     Wout Bittremieux et al. doi: 10.1101/2020.05.09.086066.
     See https://ccms-ucsd.github.io/GNPSDocumentation/api/#experimental-or-library-spectrum-by-usi for details.
      ---------------------------------------------------------
-    :param usi_list: List of USI string
+    :param usi_list: List of USI string or a single USI string
     :param adduct_list: adduct string, e.g. [M+H]+
     :return: List of MetaFeature objects
     """
+
+    data_list = []
+
+    # if usi_list is a single string, convert it to a list
+    if isinstance(usi_list, str):
+        usi_list = [usi_list]
+        if adduct_list is not None:
+            adduct_list = [adduct_list]
 
     if adduct_list is None:
         adduct_list = [None] * len(usi_list)
     elif len(adduct_list) != len(usi_list):
         raise ValueError('The length of adduct_list must be the same as the length of usi_list.')
 
-    data_list = []
     for usi, adduct in zip(usi_list, adduct_list):
         try:
             data_list.append(_load_usi(usi, adduct))

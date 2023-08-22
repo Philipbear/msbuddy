@@ -13,7 +13,6 @@ class BuddyParamSet:
     """
     Buddy parameter set
     """
-
     def __init__(self,
                  ppm: bool = True,
                  ms1_tol: float = 5,
@@ -108,10 +107,10 @@ class BuddyParamSet:
 
 class Buddy:
     """
-    Buddy class
-    Buddy data is a List[MetaFeature]; MetaFeature is a class defined in base_class/MetaFeature.py
+    Buddy main class
+    Buddy data is List[MetaFeature]; MetaFeature is a class defined in base_class/MetaFeature.py
     """
-    # singleton
+    # singleton pattern
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -124,13 +123,14 @@ class Buddy:
         if param_set is None:
             self.param_set = BuddyParamSet()  # default parameter set
         else:
-            self.param_set = param_set
+            self.param_set = param_set  # customized parameter set
 
         self.db_loaded = init_db(self.param_set.db_mode)  # database initialization
-        self.data = None  # List[MetabolicFeature], metabolic feature list
+        self.data = None  # List[MetabolicFeature]
 
-    def load_usi(self, usi_list: List[str]):
-        self.data = load_usi(usi_list)
+    def load_usi(self, usi: Union[str, List[str]],
+                 adduct: Union[None, str, List[str]] = None):
+        self.data = load_usi(usi, adduct)
 
     def load_mgf(self, file_path):
         self.data = load_mgf(file_path)
@@ -221,7 +221,7 @@ if __name__ == '__main__':
     # result_summary = buddy.result_summary()
 
     #########################################
-    buddy_param_set = BuddyParamSet(timeout_secs=1)
+    buddy_param_set = BuddyParamSet(timeout_secs=60)
     # use default parameter set
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
