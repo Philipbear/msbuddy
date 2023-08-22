@@ -3,6 +3,7 @@ import numpy as np
 from msbuddy.base_class import Formula, CandidateFormula, MS2Explanation, MetaFeature
 from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass, convert_na_k
 from brainpy import isotopic_variants
+from numba import njit
 
 
 class FragExplanation:
@@ -222,7 +223,7 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
         ms1_cand_form_list = _gen_candidate_formula_from_mz(meta_feature, ppm, ms1_tol,
                                                             element_lower_limit, element_upper_limit, db_mode)
         # merge candidate formulas
-        meta_feature.candidate_formula_list = ms2_cand_form_list + ms1_cand_form_list
+        meta_feature.candidate_formula_list = _merge_cand_form_list(ms1_cand_form_list, ms2_cand_form_list)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if meta_feature.ms1_processed and len(meta_feature.ms1_processed) > 1:
@@ -490,3 +491,35 @@ def _gen_precursor_array(frag_arr: np.array, nl_array: np.array, adduct_array: n
             return pre_array
         else:
             return None
+
+
+def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula],
+                          ms2_cand_list: List[CandidateFormula]) -> List[CandidateFormula]:
+    """
+    Merge MS1 and MS2 candidate formula lists.
+    :param ms1_cand_list: candidate formula list from MS1 mz search
+    :param ms2_cand_list: candidate formula list from MS2 interrogation
+    :return: merged candidate formula list, remove duplicates
+    """
+    out_list = ms2_cand_list.copy()
+    for cf in ms1_cand_list:
+        found = False
+        for cf2 in ms2_cand_list:
+            if _form_array_equal(cf.formula.array, cf2.formula.array):
+                found = True
+                break
+        if not found:
+            out_list.append(cf)
+
+    return out_list
+
+
+@njit
+def _form_array_equal(arr1: np.array, arr2: np.array) -> bool:
+    """
+    check whether two formula arrays are equal
+    :param arr1: 12-dim array
+    :param arr2: 12-dim array
+    :return: True if equal, False otherwise
+    """
+    return True if np.equal(arr1, arr2).all() else False
