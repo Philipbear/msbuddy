@@ -691,9 +691,9 @@ class CandidateFormula:
     precursor formula in CandidateFormula is a neutral formula
     """
     def __init__(self, formula: Formula,
-                 optimal_formula: bool = False,
                  ms1_isotope_similarity: Union[float, None] = None,
                  ms2_raw_explanation: Union[MS2Explanation, None] = None,
+                 optimal_formula: bool = False,
                  ms2_refined_explanation: Union[MS2Explanation, None] = None):
 
         self.formula = formula  # neutral formula
@@ -701,11 +701,10 @@ class CandidateFormula:
         self.estimated_prob = None  # estimated probability (ml_b score for model B)
         self.normed_estimated_prob = None  # normalized estimated probability considering all candidate formulas
         self.estimated_fdr = None  # estimated FDR
-        self.optimal_formula = optimal_formula
         self.ms1_isotope_similarity = ms1_isotope_similarity
         self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during precursor formula annotation
-        self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
-        # self.ml_array = None # ml_a feature array for model B (formula candidate ranking)
+        # self.optimal_formula = optimal_formula
+        # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
 
     def __str__(self):
         return f'{self.formula.__str__()}' + "  ml_a_prob: " + str(self.ml_a_prob) + \

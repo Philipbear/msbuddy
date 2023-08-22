@@ -65,6 +65,9 @@ class BuddyParamSet:
         self.ms1_tol = ms1_tol
         self.ms2_tol = ms2_tol
         self.db_mode = 0 if not halogen else 1
+
+        if timeout_secs <= 0:
+            raise ValueError("Timeout must be positive.")
         self.timeout_secs = timeout_secs
 
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
@@ -153,7 +156,7 @@ class Buddy:
 
         param_set = self.param_set
 
-        @timeout(param_set.timeout_secs)
+        # @timeout(param_set.timeout_secs)
         def _preprocess_and_gen_cand(meta_feature: MetaFeature, ps: BuddyParamSet):
             """
             preprocess data and generate candidate formula space
@@ -169,14 +172,19 @@ class Buddy:
             gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
                                   ps.max_isotope_cnt)
 
-        # common for loop
-        for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
-                       file=sys.stdout, colour="green"):
-            # data preprocessing and candidate space generation
-            try:
-                _preprocess_and_gen_cand(mf, param_set)
-            except TimeoutError:
-                print(f"TimeoutError: {mf.identifier}")
+        # # main loop, with progress bar and timeout
+        # for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
+        #                file=sys.stdout, colour="green"):
+        #     # data preprocessing and candidate space generation
+        #     try:
+        #         _preprocess_and_gen_cand(mf, param_set)
+        #     except:
+        #         print(f"TimeoutError: {mf.identifier}")
+        #         continue
+
+        # debug mode
+        for mf in self.data:
+            _preprocess_and_gen_cand(mf, param_set)
 
         # ml_a feature generation + prediction
         pred_formula_feasibility(self.data)
@@ -220,12 +228,13 @@ if __name__ == '__main__':
     # result_summary = buddy.result_summary()
 
     #########################################
-    buddy_param_set = BuddyParamSet(timeout_secs=60)
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, timeout_secs=5, halogen=True, i_range=(1, 20))
     # use default parameter set
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
-    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
 
     # add ms1 data
     from msbuddy.base_class import Spectrum

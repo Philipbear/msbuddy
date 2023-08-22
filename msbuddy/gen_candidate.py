@@ -10,6 +10,7 @@ class FragExplanation:
     FragExplanation is a class for storing all potential fragment/nl explanations for a single MS/MS peak.
     It contains a list of fragment formulas, neutral loss formulas, and the index of the fragment.
     """
+
     def __init__(self, idx: int, frag: Formula, nl: Formula):
         self.idx = idx  # raw MS2 peak index
         self.frag_list = [frag]  # List[Formula]
@@ -75,10 +76,11 @@ class CandidateSpace:
     CandidateSpace is a class for bottom-up MS/MS interrogation.
     It contains a precursor candidate and a list of FragExplanations.
     """
+
     def __init__(self, pre_neutral_array: np.array, pre_charged_array: np.array,
                  frag_exp: FragExplanation):
         self.pre_neutral_array = pre_neutral_array
-        self.pre_charged_array = pre_charged_array # used for ms2 global optim.
+        self.pre_charged_array = pre_charged_array  # used for ms2 global optim.
         self.neutral_mass = float(np.sum(pre_neutral_array * Formula.mass_arr))
         self.frag_exp_list = [frag_exp]  # List[FragExplanation]
 
@@ -213,10 +215,14 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
                                                                              element_lower_limit,
                                                                              element_upper_limit, db_mode)
 
-    else:  # if MS2 data available, generate candidate space with MS2 data
-        meta_feature.candidate_formula_list = _gen_candidate_formula_from_ms2(meta_feature, ppm, ms1_tol, ms2_tol,
-                                                                              element_lower_limit,
-                                                                              element_upper_limit, db_mode)
+    else:
+        # if MS2 data available, generate candidate space with MS2 data
+        ms2_cand_form_list = _gen_candidate_formula_from_ms2(meta_feature, ppm, ms1_tol, ms2_tol,
+                                                             element_lower_limit, element_upper_limit, db_mode)
+        ms1_cand_form_list = _gen_candidate_formula_from_mz(meta_feature, ppm, ms1_tol,
+                                                            element_lower_limit, element_upper_limit, db_mode)
+        # merge candidate formulas
+        meta_feature.candidate_formula_list = ms2_cand_form_list + ms1_cand_form_list
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if meta_feature.ms1_processed and len(meta_feature.ms1_processed) > 1:
@@ -309,7 +315,8 @@ def _calc_ms1_iso_sim(cand_form, meta_feature, max_isotope_cnt) -> float:
     theo_isotope_pattern = calc_isotope_pattern(charged_form, max_isotope_cnt)
 
     # calculate ms1 isotope similarity
-    ms1_isotope_sim = calc_isotope_similarity(meta_feature.ms1_processed.int_array, theo_isotope_pattern, max_isotope_cnt)
+    ms1_isotope_sim = calc_isotope_similarity(meta_feature.ms1_processed.int_array, theo_isotope_pattern,
+                                              max_isotope_cnt)
 
     return ms1_isotope_sim
 
@@ -396,15 +403,10 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
             else:
                 continue
 
-        # quick filter by element limits, reduce the number of candidate formulas
-        frag_list = [f for f in frag_form_list if _element_check(convert_na_k(f.array), lower_limit, upper_limit)]
-        nl_list = [f for f in nl_form_list if _element_check(convert_na_k(f.array), lower_limit, upper_limit)]
-
         # formula stitching
         # iterate list of Formula objects
-        for frag in frag_list:
-            for nl in nl_list:
-
+        for frag in frag_form_list:
+            for nl in nl_form_list:
                 # DBE check, sum of DBE should be a non-integer
                 if (frag.dbe + nl.dbe) % 1 == 0 or (frag.dbe + nl.dbe) < 0:
                     continue
@@ -457,9 +459,9 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
     # presort candidate list by explained MS2 peak count (decreasing), then by mz difference (increasing)
     candidate_list.sort(key=lambda x: (-len(x.frag_exp_list), abs(x.neutral_mass - t_neutral_mass)))
 
-    # retain top 2000 candidate spaces
-    if len(candidate_list) > 2000:
-        candidate_list = candidate_list[:2000]
+    # retain top 1000 candidate spaces
+    if len(candidate_list) > 1000:
+        candidate_list = candidate_list[:1000]
 
     # generate CandidateFormula object, refine MS2 explanation
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * meta_feature.mz * 1e-6
