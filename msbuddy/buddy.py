@@ -102,7 +102,6 @@ class BuddyParamSet:
         self.max_noise_rsd = max_noise_rsd
         self.max_frag_reserved = max_frag_reserved
         self.use_all_frag = use_all_frag
-        # self.ms2_global_optim = ms2_global_optim
 
 
 class Buddy:
@@ -167,8 +166,8 @@ class Buddy:
                                          ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
                                          ps.max_frag_reserved, ps.use_all_frag)
 
-            gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, False,
-                                  ps.ele_lower, ps.ele_upper, ps.max_isotope_cnt)
+            gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
+                                  ps.max_isotope_cnt)
 
         # common for loop
         for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",

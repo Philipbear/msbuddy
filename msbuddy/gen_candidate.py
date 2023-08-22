@@ -192,8 +192,7 @@ def calc_isotope_similarity(int_arr_x, int_arr_y,
 
 
 def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
-                          db_mode: int, ms2_global_opt: bool,
-                          element_lower_limit: np.array, element_upper_limit: np.array,
+                          db_mode: int, element_lower_limit: np.array, element_upper_limit: np.array,
                           max_isotope_cnt: int):
     """
     Generate candidate formulas for a metabolic feature.
@@ -202,7 +201,6 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
     :param ms1_tol: mz tolerance for precursor ion
     :param ms2_tol: mz tolerance for fragment ions / neutral losses
     :param db_mode: database mode (int, 0: basic; 1: halogen)
-    :param ms2_global_opt: whether to use global optimization for MS2 annotation
     :param element_lower_limit: lower limit of each element
     :param element_upper_limit: upper limit of each element
     :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern matching
@@ -217,7 +215,6 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
 
     else:  # if MS2 data available, generate candidate space with MS2 data
         meta_feature.candidate_formula_list = _gen_candidate_formula_from_ms2(meta_feature, ppm, ms1_tol, ms2_tol,
-                                                                              ms2_global_opt,
                                                                               element_lower_limit,
                                                                               element_upper_limit, db_mode)
 
@@ -342,7 +339,7 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
 
 
 def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
-                                    ppm: bool, ms1_tol: float, ms2_tol: float, ms2_global_opt: bool,
+                                    ppm: bool, ms1_tol: float, ms2_tol: float,
                                     lower_limit: np.array, upper_limit: np.array,
                                     db_mode: int) -> List[CandidateFormula]:
     """
@@ -351,7 +348,6 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
     :param ppm: whether to use ppm as the unit of tolerance
     :param ms1_tol: mz tolerance for precursor ions
     :param ms2_tol: mz tolerance for fragment ions / neutral losses
-    :param ms2_global_opt: whether to use global optimization for MS2 annotation
     :param lower_limit: lower limit of each element
     :param upper_limit: upper limit of each element
     :param db_mode: database mode
@@ -469,11 +465,6 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * meta_feature.mz * 1e-6
     # common frag/nl + mz diff, consider isotopes
     candidate_formula_list = [cs.refine_explanation(meta_feature, ms2_iso_tol) for cs in candidate_list]
-
-    if ms2_global_opt:
-        pass
-        # ms2 global optimization: subformula (edge) + cos (node)
-        # candidate_formula_list = [cs.ms2_global_optim(meta_feature.ms2_raw, ms2_iso_tol) for cs in candidate_list]
 
     return candidate_formula_list
 

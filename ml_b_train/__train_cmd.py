@@ -122,7 +122,7 @@ def load_nist_data(path, pos):
         mf.ms1_processed = ProcessedMS1(mf.mz, mf.ms1_raw, mf.adduct.charge, ms1_tol, True, 0.02, 4)
 
         # generate formula candidates
-        gen_candidate_formula(mf, True, ms1_tol, ms2_tol, 1, False,
+        gen_candidate_formula(mf, True, ms1_tol, ms2_tol, 1,
                               np.array([0] * 12),
                               np.array([80, 150, 10, 15, 20, 10, 0, 20, 0, 30, 10, 15]),
                               4)
