@@ -156,7 +156,7 @@ class Buddy:
 
         param_set = self.param_set
 
-        # @timeout(param_set.timeout_secs)
+        @timeout(param_set.timeout_secs)
         def _preprocess_and_gen_cand(meta_feature: MetaFeature, ps: BuddyParamSet):
             """
             preprocess data and generate candidate formula space
@@ -172,20 +172,20 @@ class Buddy:
             gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
                                   ps.max_isotope_cnt)
 
-        # # main loop, with progress bar and timeout
-        # for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
-        #                file=sys.stdout, colour="green"):
-        #     # data preprocessing and candidate space generation
-        #     try:
-        #         _preprocess_and_gen_cand(mf, param_set)
-        #     except:
-        #         print(f"TimeoutError: {mf.identifier}")
-        #         continue
+        # main loop, with progress bar and timeout
+        for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
+                       file=sys.stdout, colour="green"):
+            # data preprocessing and candidate space generation
+            try:
+                _preprocess_and_gen_cand(mf, param_set)
+            except:
+                sys.stderr.write(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.\n")
+                continue
 
-        # debug mode
-        for mf in self.data:
-            print(f"Processing {mf.identifier}")
-            _preprocess_and_gen_cand(mf, param_set)
+        # # debug mode
+        # for mf in self.data:
+        #     print(f"Processing {mf.identifier}")
+        #     _preprocess_and_gen_cand(mf, param_set)
 
         # ml_a feature generation + prediction
         pred_formula_feasibility(self.data)
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     # result_summary = buddy.result_summary()
     #
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, timeout_secs=5, halogen=True, i_range=(1, 20))
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, timeout_secs=30, halogen=True, i_range=(1, 20))
     # use default parameter set
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
