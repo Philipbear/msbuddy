@@ -471,7 +471,6 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
     return candidate_formula_list
 
 
-# @njit
 def _gen_precursor_array(frag_arr: np.array, nl_array: np.array, adduct_array: np.array, adduct_m: int) -> np.array:
     """
     generate precursor formula array from frag array, nl array and adduct array
