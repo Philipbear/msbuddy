@@ -167,7 +167,7 @@ def gen_training_data(meta_feature_list, gt_formula_list, orbi_list, pos):
         # generate ML features for each candidate formula
         for cf in mf.candidate_formula_list:
             this_true = False
-            if np.array_equal(gt_form_arr, cf.formula.array):
+            if (gt_form_arr == cf.formula.array).all():
                 this_true = True
             # get ML features
             ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol)

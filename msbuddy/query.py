@@ -365,7 +365,6 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
     return forms
 
 
-# @njit
 def convert_na_k(form_arr: np.array) -> np.array:
     """
     convert formula to Na K converted form, Na K into H
@@ -391,7 +390,7 @@ def common_frag_from_array(form_arr: np.array, frag_db: np.array) -> bool:
     for frag in frag_db:
         h_diff = frag[1] - form_arr[1]
         if abs(h_diff) <= 1:
-            if np.array_equal(frag[2:], form_arr[2:]):
+            if np.equal(frag[2:], form_arr[2:]).all():
                 return True
         # if H diff > 1, no need to check further, since the common frag db is sorted
         elif h_diff > 1:
@@ -409,7 +408,7 @@ def common_nl_from_array(form_arr: np.array, nl_db: np.array) -> bool:
     # check
     for nl in nl_db:
         if nl[0] == form_arr[0]:
-            if np.array_equal(nl, form_arr):
+            if np.equal(nl, form_arr).all():
                 return True
         # no need to check further, since the common nl db is sorted
         elif nl[0] > form_arr[0]:

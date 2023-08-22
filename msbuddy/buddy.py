@@ -184,6 +184,7 @@ class Buddy:
 
         # debug mode
         for mf in self.data:
+            print(f"Processing {mf.identifier}")
             _preprocess_and_gen_cand(mf, param_set)
 
         # ml_a feature generation + prediction
@@ -226,7 +227,7 @@ if __name__ == '__main__':
     # # buddy.annotate_formula()
     # # # result summary
     # result_summary = buddy.result_summary()
-
+    #
     #########################################
     buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, timeout_secs=5, halogen=True, i_range=(1, 20))
     # use default parameter set

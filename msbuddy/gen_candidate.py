@@ -424,7 +424,7 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
                 # check whether the precursor formula is already in the candidate space list
                 candidate_exist = False
                 for cs in candidate_space_list:
-                    if np.array_equal(cs.pre_neutral_array, pre_form_arr):
+                    if (cs.pre_neutral_array == pre_form_arr).all():
                         candidate_exist = True
                         # check whether this fragment ion has been explained
                         # one fragment ion can be explained by multiple formulas
