@@ -96,6 +96,8 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     identifier = cnt
                 if charge is None:
                     charge = 1 if pos_mode else -1
+                elif charge == 0:
+                    charge = 1 if pos_mode else -1
                 else:
                     charge = abs(charge) if pos_mode else -abs(charge)
 
@@ -134,7 +136,14 @@ def load_mgf(file_path) -> List[MetaFeature]:
                         precursor_mz = float(value)
                     # if key is 'CHARGE' and charge is not set, it is charge
                     elif key.upper() == 'CHARGE':
-                        charge = int(value)
+                        if '+' in value:
+                            pos_mode = True
+                            value = value.replace('+', '')
+                            charge = int(value)
+                        elif '-' in value:
+                            pos_mode = False
+                            value = value.replace('-', '')
+                            charge = -int(value)
                     # if key is 'ION', it is adduct type
                     elif key.upper() == 'ION':
                         adduct_str = value
