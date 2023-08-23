@@ -26,10 +26,13 @@ from msbuddy import Buddy
 
 # initialize a Buddy object
 buddy = Buddy()
+
 # load data, here we use a mgf file as an example
 buddy.load_mgf('input_file.mgf')
+
 # annotate molecular formula
 buddy.annotate_formula()
+
 # retrieve the annotation result summary
 result = buddy.get_summary()
 ```
@@ -37,9 +40,11 @@ result = buddy.get_summary()
 To specify the parameter settings, you can:
 ```
 from msbuddy import Buddy, BuddyParamSet
+
 # initialize a BuddyParamSet object
 param = BuddyParamSet(ppm = True, ms1_tol = 5, ms2_tol = 10,
                       halogen = False, timeout_secs = 300)
+                      
 # initialize a Buddy object with the parameter settings
 buddy = Buddy(param)
 ```
@@ -49,6 +54,7 @@ The entire list of `BuddyParamSet` is described in the [API documentation](https
 MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
 ```
 buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579622')
+
 # you can load either a single USI string or a list of USIs
 buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579622',
                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579623'])
