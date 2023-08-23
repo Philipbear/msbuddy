@@ -1,5 +1,5 @@
 # msbuddy
-[![Generic badge](https://img.shields.io/badge/msbuddy-ver_0.0.1-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
+[![Generic badge](https://img.shields.io/badge/msbuddy-ver_0.1.1-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 ![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
 
 
