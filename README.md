@@ -2,7 +2,12 @@
 [![Generic badge](https://img.shields.io/badge/msbuddy-ver_0.0.1-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 ![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
 
-`msbuddy` is a tool developed for de novo molecular formula annotation in mass spectrometry-based small molecule analysis.
+
+`msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
+
+* Please cite: [S. Xing et al. **Nature Methods** 2023.](https://doi.org/10.1038/s41592-023-01850-x)
+
+
 
 ## Python API
 
@@ -13,7 +18,39 @@
 pip install msbuddy
 ```
 
-### Usage
+### Quick Start
+
+As a quick start, you can use the following code to annotate molecular formula from a mgf file:
+```
+from msbuddy import Buddy
+# initialize a Buddy object
+buddy = Buddy()
+# load data, here we use a mgf file as an example
+buddy.load_mgf('input_file.mgf')
+# annotate molecular formula
+buddy.annotate_formula()
+# retrieve the annotation result summary
+result = buddy.get_summary()
+```
+
+To specify the parameter settings, you can:
+```
+from msbuddy import Buddy, BuddyParamSet
+# initialize a BuddyParamSet object
+param = BuddyParamSet(ppm = True, ms1_tol = 5, ms2_tol = 10, halogen = False, timeout_secs = 300)
+# initialize a Buddy object with the parameter settings
+buddy = Buddy(param)
+```
+The entire list of `BuddyParamSet` is described in the [API documentation](https://msbuddy.readthedocs.io/en/latest/api.html#msbuddy.BuddyParamSet).
+
+
+MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
+```
+buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579622')
+# you can load either a single USI string or a list of USIs
+buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579622',
+                'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579623'])
+```
 
 
 ## Command-line Interface

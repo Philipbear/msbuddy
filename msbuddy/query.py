@@ -1,6 +1,6 @@
 import numpy as np
 from typing import List, Tuple
-from msbuddy.base_class import Adduct, Formula
+from msbuddy.base import Adduct, Formula
 from math import ceil
 from numba import njit
 from msbuddy.utils import dependencies

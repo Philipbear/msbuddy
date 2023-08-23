@@ -7,7 +7,7 @@ from gdown import download as gdown_download
 from pathlib import Path
 from joblib import load as joblib_load
 from msbuddy.utils import set_dependency
-from msbuddy.base_class import MetaFeature, Spectrum
+from msbuddy.base import MetaFeature, Spectrum
 
 
 def check_and_download(url: str, path) -> bool:

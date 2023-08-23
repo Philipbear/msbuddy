@@ -2,7 +2,7 @@ import numpy as np
 import joblib
 from sklearn import metrics
 from brainpy import isotopic_variants
-from msbuddy.base_class import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
+from msbuddy.base import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
 from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV

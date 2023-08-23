@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from typing import Tuple, Union, List
 from timeout_decorator import timeout
-from msbuddy.base_class import MetaFeature
+from msbuddy.base import MetaFeature
 from msbuddy.file_io import init_db, load_usi, load_mgf
 from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
@@ -196,7 +196,7 @@ class Buddy:
         # FDR calculation
         calc_fdr(self.data)
 
-    def result_summary(self) -> List[dict]:
+    def get_summary(self) -> List[dict]:
         """
         summarize results
         :return: a list of dictionary containing result summary
@@ -226,7 +226,7 @@ if __name__ == '__main__':
     # # annotate formula
     # # buddy.annotate_formula()
     # # # result summary
-    # result_summary = buddy.result_summary()
+    # result_summary = buddy.get_summary()
     #
     #########################################
     buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, timeout_secs=30, halogen=True, i_range=(1, 20))
@@ -238,7 +238,7 @@ if __name__ == '__main__':
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
 
     # add ms1 data
-    from msbuddy.base_class import Spectrum
+    from msbuddy.base import Spectrum
 
     # buddy.data[0].ms1_raw = Spectrum(mz_array=np.array([540.369, 541.369]),
     #                                  int_array=np.array([100, 28]))
@@ -246,6 +246,6 @@ if __name__ == '__main__':
     #                                  int_array=np.array([100, 25]))
 
     buddy.annotate_formula()
-    result_summary_ = buddy.result_summary()
+    result_summary_ = buddy.get_summary()
     print(result_summary_)
     print('done')
