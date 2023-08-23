@@ -23,6 +23,7 @@ pip install msbuddy
 As a quick start, you can use the following code to annotate molecular formula from a mgf file:
 ```
 from msbuddy import Buddy
+
 # initialize a Buddy object
 buddy = Buddy()
 # load data, here we use a mgf file as an example
@@ -37,7 +38,8 @@ To specify the parameter settings, you can:
 ```
 from msbuddy import Buddy, BuddyParamSet
 # initialize a BuddyParamSet object
-param = BuddyParamSet(ppm = True, ms1_tol = 5, ms2_tol = 10, halogen = False, timeout_secs = 300)
+param = BuddyParamSet(ppm = True, ms1_tol = 5, ms2_tol = 10,
+                      halogen = False, timeout_secs = 300)
 # initialize a Buddy object with the parameter settings
 buddy = Buddy(param)
 ```
