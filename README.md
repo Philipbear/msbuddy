@@ -5,6 +5,7 @@
 
 `msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
 
+* The full documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).
 * Please cite: [S. Xing et al. **Nature Methods** 2023.](https://doi.org/10.1038/s41592-023-01850-x)
 
 
@@ -55,7 +56,7 @@ MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/conten
 ```
 buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579622')
 
-# you can load either a single USI string or a list of USIs
+# you can also load a list of USIs at once
 buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579622',
                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579623'])
 ```
