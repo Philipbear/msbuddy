@@ -8,7 +8,7 @@
 * The full documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).
 * Please cite: [S. Xing et al. **Nature Methods** 2023.](https://doi.org/10.1038/s41592-023-01850-x)
 
-
+Should you have any questions or suggestions, please [contact me](mailto: philipxsp@hotmail.com).
 
 ## Python API
 
