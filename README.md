@@ -5,10 +5,8 @@
 
 `msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
 
-* The full documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).
-* Please cite: [S. Xing et al. **Nature Methods** 2023.](https://doi.org/10.1038/s41592-023-01850-x)
+The entire documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).
 
-Should you have any questions or suggestions, please [contact me](mailto: philipxsp@hotmail.com).
 
 ## Python API
 

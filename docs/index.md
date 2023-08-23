@@ -2,12 +2,12 @@
 
 [![Generic badge](https://img.shields.io/badge/msbuddy-ver_0.1.1-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 ![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
-[![PyPI](https://img.shields.io/pypi/v/spectrum_utils?color=green)](https://pypi.org/project/spectrum_utils/)
+[![PyPI](https://img.shields.io/pypi/v/msbuddy?color=green)](https://pypi.org/project/msbuddy/)
 [![docs](https://readthedocs.org/projects/msbuddy/badge/?version=latest)](https://msbuddy.readthedocs.io/en/latest/?badge=latest)
 
-`msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
+[**msbuddy**](https://github.com/Philipbear/msbuddy) is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
 
-spectrum_utils contains the following features:
+`msbuddy` contains the following features:
 
 - Spectrum loading from online proteomics and metabolomics data resources using the [Universal Spectrum Identifier (USI)](https://www.psidev.info/usi) mechanism.
 - Common spectrum processing operations (precursor & noise peak removal, intensity filtering, intensity scaling) optimized for computational efficiency.
