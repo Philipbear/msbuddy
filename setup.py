@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="msbuddy",
-    version="0.1.0",
+    version="0.1.1",
     author="Shipei Xing",
     author_email="philipxsp@hotmail.com",
     description="Bottom-up MS/MS interrogation-based molecular formula annotation for mass spectrometry data.",
@@ -29,13 +29,16 @@ setuptools.setup(
     ],
     packages=["msbuddy"],
     include_package_data=True,
+    package_data={
+        'msbuddy': ['data/*'],  # Include all files in msbuddy/data
+    },
     install_requires=[
         "brain-isotopic-distribution",
         "numpy",
         "numba",
         "requests",
         "joblib",
-        "gdown"
+        "gdown",
         "pathlib",
         "chemparse",
         "scipy",
