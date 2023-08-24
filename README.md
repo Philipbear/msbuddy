@@ -23,14 +23,14 @@
 ### Installation
 `msbuddy` is available on PyPI, you can install it via `pip`:
 
-```
+```commandline
 pip install msbuddy
 ```
 
 ### Quick Start
 
 As a quick start, you can use the following code to annotate molecular formula from a mgf file:
-```
+```python
 from msbuddy import Buddy
 
 # instantiate a Buddy object
@@ -47,7 +47,7 @@ result = buddy.get_summary()
 ```
 
 To specify the parameter settings, you can use the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/paramset.html#BuddyParamSet) object:
-```
+```python
 from msbuddy import Buddy, BuddyParamSet
 
 # instantiate a BuddyParamSet object
@@ -60,7 +60,7 @@ buddy = Buddy(param)
 
 
 MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
-```
+```python
 buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036')
 
 # you can also load a list of USIs at once
@@ -71,11 +71,11 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 
 ## Command-line Interface
 
-```
+```commandline
 msbuddy --input input_file.mgf --output output_folder
 ```
 
-```
+```commandline
 msbuddy --help
 ```
 
