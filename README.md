@@ -15,7 +15,7 @@
   * accurate formula annotation via machine learning
   * false discovery rate estimation
 
-The entire documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).
+**The entire documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
 
 
 ## Python API
@@ -46,27 +46,26 @@ buddy.annotate_formula()
 result = buddy.get_summary()
 ```
 
-To specify the parameter settings, you can:
+To specify the parameter settings, you can use the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/paramset.html#BuddyParamSet) object:
 ```
 from msbuddy import Buddy, BuddyParamSet
 
-# initialize a BuddyParamSet object
+# instantiate a BuddyParamSet object
 param = BuddyParamSet(ppm = True, ms1_tol = 5, ms2_tol = 10,
                       halogen = False, timeout_secs = 300)
                       
-# initialize a Buddy object with the parameter settings
+# instantiate a Buddy object with the specified parameter settings
 buddy = Buddy(param)
 ```
-The entire list of `BuddyParamSet` is described in the [API documentation](https://msbuddy.readthedocs.io/en/latest/api.html#msbuddy.BuddyParamSet).
 
 
 MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
 ```
-buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579622')
+buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036')
 
 # you can also load a list of USIs at once
-buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579622',
-                'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000579623'])
+buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
+                'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 
 
@@ -87,12 +86,7 @@ msbuddy --help
 ## License
 This work is licensed under the MIT license.
 
-## Dependency
-This project's environment is maintained by conda, [install it first](https://docs.conda.io/en/main/miniconda.html),
-and type in the following to create the environment:
+## Contact
+To contribute to `msbuddy`, please feel free to [file an issue](https://github.com/Philipbear/msbuddy/issues), or submit a pull request with improvements.
 
-`conda env create -f environment.yml -n msbuddy`
-
-Alternatively, you can use the following command to update the environment based on the specifications in the YML file:
-
-`conda env update -f environment.yml -n msbuddy`
+You are also welcome to directly contact the maintainer Shipei Xing (philipxsp@hotmail.com).

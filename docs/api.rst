@@ -1,4 +1,4 @@
-Function Name
+Python API
 -------------
 
 .. function:: function_name(param1, param2)

@@ -19,9 +19,9 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
    # retrieve the annotation result summary
    result = buddy.get_summary()
 
-    # print the result
-    for key, value in result.items():
-        print(key, value)
+   # print the result
+   for key, value in result.items():
+       print(key, value)
 
 
 Here, ``result`` is a Python dictionary with the following keys:

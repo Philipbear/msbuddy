@@ -289,9 +289,9 @@ def train_model(X_pos_arr, y_pos_arr, mf_pos_list,
               % (mean, std * 2, params))
 
     print("train model...")
-    # train model with best params for 10 times, and choose the best one
+    # train model with best params for 5 times, and choose the best one
     best_score = 0
-    for i in range(10):
+    for i in range(5):
         mlp = MLPClassifier(**best_params, random_state=i).fit(X_train, y_train)
         score = mlp.score(X_test, y_test)
         if score > best_score:
