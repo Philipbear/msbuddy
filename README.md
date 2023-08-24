@@ -15,10 +15,9 @@
   * accurate formula annotation via machine learning
   * false discovery rate estimation
 
-**The entire documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
-
-
 ## Python API
+
+**The entire documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
 
 ### Installation
 `msbuddy` is available on PyPI, you can install it via `pip`:
@@ -29,7 +28,7 @@ pip install msbuddy
 
 ### Quick Start
 
-As a quick start, you can use the following code to annotate molecular formula from a mgf file:
+As a quick start, we here load a mgf file and annotate the molecular formula for each MS/MS spectrum:
 ```python
 from msbuddy import Buddy
 
@@ -68,6 +67,7 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 
+**Please see [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/) for more.**
 
 ## Command-line Interface
 
