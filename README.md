@@ -67,14 +67,16 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 
-**Please see [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/) for more.**
+Please see [**msbuddy Documentation**](https://msbuddy.readthedocs.io/en/latest/) for more.
 
-## Command-line Interface
+## Command-line API
 
+**msbuddy** can also be used as a command-line tool:
 ```commandline
-msbuddy --input input_file.mgf --output output_folder
+msbuddy --input input_file.mgf --output output_folder_path
 ```
 
+Run the following command to see the full list of options:
 ```commandline
 msbuddy --help
 ```
