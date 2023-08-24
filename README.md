@@ -6,6 +6,14 @@
 
 
 `msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
+* `msbuddy` is able to provide formula annotations for:
+  * metabolic features with or without MS1 isotopic pattern 
+  * metabolic features with or without MS/MS spectra
+  * both positive and negative ionization modes
+* `msbuddy` enables:
+  * candidate space shrinkage via bottom-up MS/MS interrogation
+  * accurate formula annotation via machine learning
+  * false discovery rate estimation
 
 The entire documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).
 
@@ -25,7 +33,7 @@ As a quick start, you can use the following code to annotate molecular formula f
 ```
 from msbuddy import Buddy
 
-# initialize a Buddy object
+# instantiate a Buddy object
 buddy = Buddy()
 
 # load data, here we use a mgf file as an example

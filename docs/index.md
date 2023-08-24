@@ -7,23 +7,13 @@
 
 [**msbuddy**](https://github.com/Philipbear/msbuddy) is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
 
-`msbuddy` contains the following features:
+**msbuddy** is able to provide formula annotations for:
+  * metabolic features with or without MS1 isotopic pattern 
+  * metabolic features with or without MS/MS spectra
+  * both positive and negative ionization modes
 
-- Spectrum loading from online proteomics and metabolomics data resources using the [Universal Spectrum Identifier (USI)](https://www.psidev.info/usi) mechanism.
-- Common spectrum processing operations (precursor & noise peak removal, intensity filtering, intensity scaling) optimized for computational efficiency.
-- Annotating observed spectrum fragments using the [ProForma 2.0 specification](https://www.psidev.info/proforma) for (modified) peptidoforms.
-- Publication-quality, fully customizable spectrum plotting and interactive spectrum plotting.
- 
-See the documentation for more information and detailed examples on how to get started with spectrum_utils for versatile mass spectrometry data manipulation in Python.
- 
-## Citation
- 
-spectrum_utils is freely available as open source under the [Apache 2.0 license](http://opensource.org/licenses/Apache-2.0).
-
-When using spectrum_utils, please cite the following manuscripts:
- 
-- Wout Bittremieux. "spectrum_utils: A Python package for mass spectrometry data processing and visualization." _Analytical Chemistry_ **92**, 659--661 (2020) doi:[10.1021/acs.analchem.9b04884](https://doi.org/10.1021/acs.analchem.9b04884).
-- Wout Bittremieux, Lev Levitsky, Matteo Pilz, Timo Sachsenberg, Florian Huber, Mingxun Wang, Pieter C. Dorrestein. "Unified and standardized mass spectrometry data processing in Python using spectrum_utils" _Journal of Proteome Research_ **22**, 625--631 (2023) doi:[10.1021/acs.jproteome.2c00632](https://doi.org/10.1021/acs.jproteome.2c00632).
+**msbuddy** enables candidate space shrinkage via bottom-up MS/MS interrogation, accurate formula annotation via machine learning and false discovery rate estimation.
+Please refer to [our paper](https://doi.org/10.1038/s41592-023-01850-x) for more details. Source codes are available at [GitHub](https://github.com/Philipbear/msbuddy).
 
 ```{toctree}
 ---
@@ -33,9 +23,38 @@ maxdepth: 1
 
 install
 quickstart
-annotating
-plotting
-runtime
+paramset
+datain
+dataout
+result
 api
 contact
 ```
+ 
+## Citation
+When using **msbuddy**, please cite:
+* Xing, S., Shen, S., Xu, B. et al. [BUDDY: molecular formula discovery via bottom-up MS/MS interrogation](https://doi.org/10.1038/s41592-023-01850-x). _Nat Methods_ **20**, 881–890 (2023).
+
+
+## License
+MIT License
+
+Copyright 2023 Shipei Xing
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

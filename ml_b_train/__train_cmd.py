@@ -7,7 +7,7 @@ from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from msbuddy.gen_candidate import gen_candidate_formula
-from msbuddy.file_io import init_db
+from msbuddy.load import init_db
 from scipy.stats import norm
 import argparse
 from imblearn.over_sampling import SMOTE

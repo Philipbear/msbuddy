@@ -4,7 +4,7 @@ from tqdm import tqdm
 from typing import Tuple, Union, List
 from timeout_decorator import timeout
 from msbuddy.base import MetaFeature
-from msbuddy.file_io import init_db, load_usi, load_mgf
+from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
 
@@ -233,9 +233,9 @@ if __name__ == '__main__':
     # use default parameter set
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
-    buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
-    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    # buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
 
     # add ms1 data
     from msbuddy.base import Spectrum

@@ -44,7 +44,7 @@ setuptools.setup(
         "scipy",
         "scikit-learn",
         "tqdm",
-        "timeout-decorator",
+        "timeout_decorator",
     ],
     python_requires=">=3.8"
 )

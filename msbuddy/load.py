@@ -243,3 +243,8 @@ def load_usi(usi_list: Union[str, List[str]],
             print('Invalid USI: ' + usi)
 
     return data_list
+
+
+# test
+if __name__ == '__main__':
+    data = load_usi('mzspec:GNPS:null:accession:CCMSLIB00000001500')

@@ -10,7 +10,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from msbuddy.gen_candidate import gen_candidate_formula
-from msbuddy.file_io import init_db
+from msbuddy.load import init_db
 from imblearn.over_sampling import SMOTE
 from scipy.stats import norm
 

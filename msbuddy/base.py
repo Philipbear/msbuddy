@@ -712,6 +712,9 @@ class CandidateFormula:
 
 
 class MetaFeature:
+    """
+    MetaFeature class, used for storing a metabolic feature.
+    """
     def __init__(self,
                  identifier: Union[str, int],
                  mz: float,
@@ -721,8 +724,8 @@ class MetaFeature:
                  ms1: Union[Spectrum, None] = None,
                  ms2: Union[Spectrum, None] = None):
         """
-        MetaFeature class.
-        :param identifier: identifier of the metabolic feature (str or int)
+        Instantiate a new MetaFeature object.
+        :param identifier: identifier (str or int)
         :param mz: precursor m/z (float)
         :param charge: precursor charge (int)
         :param rt: retention time in seconds (float)
