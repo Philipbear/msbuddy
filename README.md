@@ -67,7 +67,8 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 
-Please see [**msbuddy Documentation**](https://msbuddy.readthedocs.io/en/latest/) for more.
+### Documentation
+Link to [**msbuddy Documentation**](https://msbuddy.readthedocs.io/en/latest/)
 
 ## Command-line API
 

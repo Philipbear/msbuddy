@@ -7,15 +7,15 @@ Base Classes
 
    Buddy main class.
 
-   :param param1: :class:`BuddyParamSet` object. Default is None.
+   :param param1: :class:`msbuddy.BuddyParamSet` object. Default is None.
 
    .. attribute:: param_set
 
-      :class:`BuddyParamSet` object. The parameter set for the Buddy object.
+      :class:`msbuddy.BuddyParamSet` object. The parameter set for the Buddy object.
 
    .. attribute:: data
 
-      A list of :class:`MetaFeature` objects. Data loaded into the Buddy object.
+      A list of :class:`msbuddy.base.MetaFeature` objects. Data loaded into the Buddy object.
 
    .. attribute:: db_loaded
 
@@ -27,14 +27,14 @@ Base Classes
 
       :param usi_list: str or List[str]. A single USI string or a sequence of USI strings.
       :param optional adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
-      :returns: None. A list of :class:`MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
+      :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
 
    .. method:: load_mgf (mgf_file: str)
 
-      Read a single mgf file, and load the data into the ``data`` attribute of the :class:`Buddy` object.
+      Read a single mgf file, and load the data into the ``data`` attribute of the :class:`msbuddy.Buddy` object.
 
       :param mgf_file: str. The path to the mgf file.
-      :returns: None. A list of :class:`MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
+      :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
 
 
 .. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, timeout_secs: float = 300, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.85, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
