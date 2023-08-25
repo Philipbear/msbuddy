@@ -103,7 +103,7 @@ Example Usage:
 
 Example usage:
 
-.. code-block::
+.. code-block:: python
 
     import numpy as np
     from msbuddy import Spectrum
@@ -111,9 +111,6 @@ Example usage:
     mz_array = np.array([100, 200, 300, 400, 500])
     int_array = np.array([1, 2, 3, 4, 5])
     spectrum = Spectrum(mz_array, int_array)
-
-    print(spectrum.mz_array)
-    print(spectrum.int_array)
 
 
 
