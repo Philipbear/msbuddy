@@ -159,18 +159,9 @@ class Buddy:
         @timeout(param_set.timeout_secs)
         def _preprocess_and_gen_cand(meta_feature: MetaFeature, ps: BuddyParamSet):
             """
-            preprocess data and generate candidate formula space
-            :param meta_feature: MetaFeature object
-            :param ps: Buddy parameter set
-            :return: None
+            a wrapper function for data preprocessing and candidate formula space generation
             """
-            meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                                         ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
-                                         ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
-                                         ps.max_frag_reserved, ps.use_all_frag)
-
-            gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
-                                  ps.max_isotope_cnt)
+            generate_candidate_formula(meta_feature, ps)
 
         # main loop, with progress bar and timeout
         for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
@@ -209,6 +200,22 @@ class Buddy:
             result_summary_list.append(mf.summarize_result())
 
         return result_summary_list
+
+
+def generate_candidate_formula(meta_feature: MetaFeature, ps: BuddyParamSet):
+    """
+    preprocess data and generate candidate formula space
+    :param meta_feature: MetaFeature object
+    :param ps: Buddy parameter set
+    :return: None
+    """
+    meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
+                                 ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
+                                 ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
+                                 ps.max_frag_reserved, ps.use_all_frag)
+
+    gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
+                          ps.max_isotope_cnt)
 
 
 # test

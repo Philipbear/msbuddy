@@ -1,9 +1,10 @@
 Data Import
 -----------
 
-**msbuddy** provides functions to import data from `USI <https://doi.org/10.1101/2020.05.09.086066>`_ and mgf files. Custom data import can be achieved by creating :class:`MetaFeature` objects.
+**msbuddy** provides functions to import data from `USI <https://doi.org/10.1101/2020.05.09.086066>`_ (`load_usi`) and mgf files (`load_mgf`). Custom data import can be achieved by creating :class:`MetaFeature` objects.
 
-
+Built-in Data Import
+====================
 .. function:: load_usi (usi_list: Union[str, List[str]], adduct_list: Union[None, str, List[str]] = None)
 
     Read from a single USI string or a sequence of USI strings, and return a list of :class:`MetaFeature` objects.
@@ -72,19 +73,23 @@ We first show an easy example of importing data from a pandas DataFrame (with co
    buddy = Buddy()
 
    # read an MS/MS spectrum from a pandas DataFrame, with columns 'mz', 'intensity'
-   ms2_df = pd.read_csv('input_file.csv')
+   ms2_df = pd.read_csv('ms2_file.csv')
 
    # create a Spectrum object
    ms2_spec = Spectrum(mz_array = np.array(ms2_df['mz']),
                        int_array = np.array(ms2_df['intensity']))
 
    # create a MetaFeature object
-   metafeature = MetaFeature(mz = 123.4567,
+   metafeature = MetaFeature(identifier = 0,
+                             mz = 123.4567,
+                             rt = 12.34,
                              charge = 1,
                              ms2 = ms2_spec)
 
 
-A more complicated example with MS1 and MS/MS spectra is shown below.
+Note that for :class:`MetaFeature` class, the ``identifier``, ``mz`` and ``charge`` attributes are required, while attributes ``rt``, ``ms1`` and ``ms2`` are optional. If they are not provided, ``None`` will be assigned.
+
+A more complicated example with MS1 isotope pattern and MS/MS spectra is shown below.
 
 .. code-block:: python
 
@@ -95,22 +100,23 @@ A more complicated example with MS1 and MS/MS spectra is shown below.
    # instantiate a Buddy object
    buddy = Buddy()
 
-   # read an MS1 spectrum from a pandas DataFrame, with columns 'mz', 'intensity'
-   ms1_df = pd.read_csv('input_file.csv')
+   # read MS1 isotope pattern from a pandas DataFrame, with columns 'mz', 'intensity'
+   ms1_df = pd.read_csv('ms1_file.csv')
 
    # create a Spectrum object
    ms1_spec = Spectrum(mz_array = np.array(ms1_df['mz']),
                        int_array = np.array(ms1_df['intensity']))
 
    # read an MS/MS spectrum from a pandas DataFrame, with columns 'mz', 'intensity'
-   ms2_df = pd.read_csv('input_file.csv')
+   ms2_df = pd.read_csv('ms2_file.csv')
 
    # create a Spectrum object
    ms2_spec = Spectrum(mz_array = np.array(ms2_df['mz']),
                        int_array = np.array(ms2_df['intensity']))
 
    # create a MetaFeature object
-   metafeature = MetaFeature(mz = 123.4567,
+   metafeature = MetaFeature(identifier = 0,
+                             mz = 123.4567,
                              charge = 1,
                              ms1 = ms1_spec,
                              ms2 = ms2_spec)

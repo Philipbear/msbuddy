@@ -1,6 +1,5 @@
 # msbuddy
 
-[![Generic badge](https://img.shields.io/badge/msbuddy-ver_0.1.1-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 ![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
 [![PyPI](https://img.shields.io/pypi/v/msbuddy?color=green)](https://pypi.org/project/msbuddy/)
 [![docs](https://readthedocs.org/projects/msbuddy/badge/?version=latest)](https://msbuddy.readthedocs.io/en/latest/?badge=latest)
@@ -13,7 +12,9 @@
   * both positive and negative ionization modes
 
 **msbuddy** enables candidate space shrinkage via bottom-up MS/MS interrogation, accurate formula annotation via machine learning and false discovery rate estimation.
-Please refer to [our paper](https://doi.org/10.1038/s41592-023-01850-x) for more details. Source codes are available at [GitHub](https://github.com/Philipbear/msbuddy).
+Please refer to [our paper](https://doi.org/10.1038/s41592-023-01850-x) for more details.
+
+Source codes are available at [GitHub](https://github.com/Philipbear/msbuddy).
 
 ```{toctree}
 ---
@@ -27,13 +28,17 @@ paramset
 datain
 dataout
 result
-api
+pyapi
+cmdapi
 contact
 ```
  
 ## Citation
 When using **msbuddy**, please cite:
 * Xing, S., Shen, S., Xu, B. et al. [BUDDY: molecular formula discovery via bottom-up MS/MS interrogation](https://doi.org/10.1038/s41592-023-01850-x). _Nat Methods_ **20**, 881–890 (2023).
+
+## Contact
+Shipei Xing: philipxsp@hotmail.com
 
 
 ## License

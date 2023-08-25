@@ -72,12 +72,12 @@ Please see [**msbuddy Documentation**](https://msbuddy.readthedocs.io/en/latest/
 ## Command-line API
 
 **msbuddy** can also be used as a command-line tool:
-```commandline
-msbuddy --input input_file.mgf --output output_folder_path
+```bash
+msbuddy --input <input file> --output <output file>
 ```
 
 Run the following command to see the full list of options:
-```commandline
+```bash
 msbuddy --help
 ```
 

@@ -39,9 +39,7 @@ class Formula:
     def __str__(self) -> str:
         if not self:
             return 'Null'
-
-        return form_arr_to_str(self.array) + "  charge:" + str(self.charge) + "  mass:" + str(self.mass) + \
-            "  dbe:" + str(self.dbe) + "  isotope:" + str(self.isotope)
+        return form_arr_to_str(self.array)
 
     def __calc_formula_dbe(self):
         """
