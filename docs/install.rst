@@ -1,10 +1,10 @@
 Installation
-============
+------------
 
 **msbuddy** requires Python version 3.8+. There are a variety of ways to install **msbuddy**.
 
 Option 1: Using pip (recommended)
----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 **msbuddy** is available on PyPI, you can install it via ``pip``:
 
 .. code-block:: bash
@@ -12,7 +12,7 @@ Option 1: Using pip (recommended)
    pip install msbuddy
 
 Option 2: From source
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 You can also install **msbuddy** from source:
 
 .. code-block:: bash
@@ -22,7 +22,7 @@ You can also install **msbuddy** from source:
    python setup.py install
 
 Option 3: From the latest release
----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Alternatively, you can download the latest release from `GitHub <https://github.com/Philipbear/msbuddy/releases>`_ and install it:
 
 .. code-block:: bash

@@ -7,11 +7,11 @@ Built-in Data Import
 ====================
 .. function:: load_usi (usi_list: Union[str, List[str]], adduct_list: Union[None, str, List[str]] = None)
 
-    Read from a single USI string or a sequence of USI strings, and return a list of :class:`MetaFeature` objects.
+    Read from a single USI string or a sequence of USI strings, and load the data into the ``data`` attribute of the :class:`Buddy` object.
 
     :param usi_list: str or List[str]. A single USI string or a sequence of USI strings.
     :param optional adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
-    :returns: A list of :class:`MetaFeature` objects.
+    :returns: None. A list of :class:`MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
 
 Example Usage:
 
@@ -37,10 +37,10 @@ Example Usage:
 
 .. function:: load_mgf (mgf_file: str)
 
-   Read a single mgf file, and return a list of :class:`MetaFeature` objects.
+   Read a single mgf file, and load the data into the ``data`` attribute of the :class:`Buddy` object.
 
    :param mgf_file: str. The path to the mgf file.
-   :returns: A list of :class:`MetaFeature` objects.
+   :returns: None. A list of :class:`MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
 
 Example Usage:
 
