@@ -109,7 +109,7 @@ Example usage:
     from msbuddy import Spectrum
 
     mz_array = np.array([100, 200, 300, 400, 500])
-    int_array = np.array([1, 2, 3, 4, 5])
+    int_array = np.array([10, 20, 30, 40, 50])
     spectrum = Spectrum(mz_array, int_array)
 
 
