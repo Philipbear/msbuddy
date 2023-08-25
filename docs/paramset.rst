@@ -1,9 +1,9 @@
 Parameter Settings
 ------------------
 
-All **msbuddy** parameters are stored in a single class called :class:`BuddyParamSet`.
+All **msbuddy** parameters are stored in a single class called :class:`msbuddy.BuddyParamSet`.
 
-Here is a quick example of how to create a :class:`BuddyParamSet` object and pass it to a :class:`Buddy` object.
+Here is a quick example of how to create a :class:`msbuddy.BuddyParamSet` object and pass it to a :class:`msbuddy.Buddy` object.
 
 .. code-block:: python
 

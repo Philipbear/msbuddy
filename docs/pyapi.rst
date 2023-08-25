@@ -3,7 +3,7 @@ Python API
 
 Base Classes
 ~~~~~~~~~~~~~~~
-.. class:: Buddy (param_set: Union[BuddyParamSet, None] = None)
+.. class:: msbuddy.Buddy (param_set: Union[BuddyParamSet, None] = None)
 
    Buddy main class.
 
@@ -37,7 +37,7 @@ Base Classes
       :returns: None. A list of :class:`MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
 
 
-.. class:: BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, timeout_secs: float = 300, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.85, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
+.. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, timeout_secs: float = 300, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.85, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
 
    It is a class to store all the parameter settings for **msbuddy**.
 
@@ -85,7 +85,7 @@ Example Usage:
     buddy = Buddy(buddy_param_set)
 
 
-.. class:: Spectrum (mz_array: np.array, int_array: np.array)
+.. class:: msbuddy.base.Spectrum (mz_array: np.array, int_array: np.array)
 
     A class to represent a mass spectrum.
 
@@ -106,7 +106,7 @@ Example usage:
 .. code-block:: python
 
     import numpy as np
-    from msbuddy import Spectrum
+    from msbuddy.base import Spectrum
 
     mz_array = np.array([100, 200, 300, 400, 500])
     int_array = np.array([10, 20, 30, 40, 50])
@@ -114,7 +114,7 @@ Example usage:
 
 
 
-.. class:: Adduct (string: Union[str, None], pos_mode: bool)
+.. class:: msbuddy.base.Adduct (string: Union[str, None], pos_mode: bool)
 
     A class to represent an adduct type.
 
@@ -141,7 +141,7 @@ Example usage:
 
 
 
-.. class:: MetaFeature (identifier: Union[str, int], mz: float, charge: int, rt: Union[float, None] = None, adduct: Union[str, None] = None, ms1: Union[Spectrum, None] = None, ms2: Union[Spectrum, None] = None)
+.. class:: msbuddy.base.MetaFeature (identifier: Union[str, int], mz: float, charge: int, rt: Union[float, None] = None, adduct: Union[str, None] = None, ms1: Union[Spectrum, None] = None, ms2: Union[Spectrum, None] = None)
 
     A class to represent a metabolic feature.
 
