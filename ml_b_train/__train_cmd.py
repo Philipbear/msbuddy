@@ -2,12 +2,12 @@ import numpy as np
 import joblib
 from sklearn import metrics
 from brainpy import isotopic_variants
-from msbuddy.base import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
-from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
+# from msbuddy.base import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
+# from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from msbuddy.gen_candidate import gen_candidate_formula
-from msbuddy.load import init_db
+# from msbuddy.gen_candidate import gen_candidate_formula
+# from msbuddy.load import init_db
 from scipy.stats import norm
 import argparse
 from imblearn.over_sampling import SMOTE
@@ -206,26 +206,26 @@ def train_model(X_pos_arr, y_pos_arr, mf_pos_list,
     :param ms2_spec: True for MS/MS spec included, False for not included
     :return: trained model
     """
-    print('Adding new features...')
-    # add new features, for pos mode, add '1' to the start of each feature vector
-    # for neg mode, add '0' to the start of each feature vector
-    X_pos_arr = np.hstack((np.ones((X_pos_arr.shape[0], 1)), X_pos_arr))
-    X_neg_arr = np.hstack((np.zeros((X_neg_arr.shape[0], 1)), X_neg_arr))
-
-    # add len(valid ms2 frag) to the end of each feature vector
-    idx = 0
-    for i, mf in enumerate(mf_pos_list):
-        cf_cnt = len(mf.candidate_formula_list)
-        X_pos_arr[idx:idx + cf_cnt, -1] = len(mf.ms2_processed.idx_array)
-        idx += cf_cnt
-    idx = 0
-    for i, mf in enumerate(mf_neg_list):
-        cf_cnt = len(mf.candidate_formula_list)
-        X_neg_arr[idx:idx + cf_cnt, -1] = len(mf.ms2_processed.idx_array)
-        idx += cf_cnt
-
-    joblib.dump(X_pos_arr, 'nist_X_pos_arr_0820.joblib')
-    joblib.dump(X_neg_arr, 'nist_X_neg_arr_0820.joblib')
+    # print('Adding new features...')
+    # # add new features, for pos mode, add '1' to the start of each feature vector
+    # # for neg mode, add '0' to the start of each feature vector
+    # X_pos_arr = np.hstack((np.ones((X_pos_arr.shape[0], 1)), X_pos_arr))
+    # X_neg_arr = np.hstack((np.zeros((X_neg_arr.shape[0], 1)), X_neg_arr))
+    #
+    # # add len(valid ms2 frag) to the end of each feature vector
+    # idx = 0
+    # for i, mf in enumerate(mf_pos_list):
+    #     cf_cnt = len(mf.candidate_formula_list)
+    #     X_pos_arr[idx:idx + cf_cnt, -1] = len(mf.ms2_processed.idx_array)
+    #     idx += cf_cnt
+    # idx = 0
+    # for i, mf in enumerate(mf_neg_list):
+    #     cf_cnt = len(mf.candidate_formula_list)
+    #     X_neg_arr[idx:idx + cf_cnt, -1] = len(mf.ms2_processed.idx_array)
+    #     idx += cf_cnt
+    #
+    # joblib.dump(X_pos_arr, 'nist_X_pos_arr_0820.joblib')
+    # joblib.dump(X_neg_arr, 'nist_X_neg_arr_0820.joblib')
 
     # concatenate pos and neg data
     X_arr = np.vstack((X_pos_arr, X_neg_arr))
@@ -254,6 +254,10 @@ def train_model(X_pos_arr, y_pos_arr, mf_pos_list,
     # Apply SMOTE to the training data
     smote = SMOTE(random_state=42)
     X_resampled, y_resampled = smote.fit_resample(X_arr, y_arr)
+
+    joblib.dump(X_resampled, 'nist_X_arr_0825.joblib')
+    joblib.dump(y_resampled, 'nist_y_arr_0825.joblib')
+
 
     print('splitting...')
     # split training and testing data
@@ -289,9 +293,9 @@ def train_model(X_pos_arr, y_pos_arr, mf_pos_list,
               % (mean, std * 2, params))
 
     print("train model...")
-    # train model with best params for 5 times, and choose the best one
+    # train model with best params for 3 times, and choose the best one
     best_score = 0
-    for i in range(5):
+    for i in range(3):
         mlp = MLPClassifier(**best_params, random_state=i).fit(X_train, y_train)
         score = mlp.score(X_test, y_test)
         if score > best_score:
@@ -312,7 +316,7 @@ def train_model(X_pos_arr, y_pos_arr, mf_pos_list,
     model_name = 'model_b'
     # model_name += 'pos' if pos else 'neg'
     model_name += '_ms1' if ms1_iso else '_noms1'
-    model_name += '_ms2' if ms2_spec else '_noms2_0821'
+    model_name += '_ms2' if ms2_spec else '_noms2_0825'
     joblib.dump(best_mlp, model_name + '.joblib')
 
     return best_mlp
@@ -341,7 +345,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     # initiate databases
-    init_db(1)
+    # init_db(1)
 
     # load training data
     if args.load:

@@ -4,6 +4,9 @@
 [![docs](https://readthedocs.org/projects/msbuddy/badge/?version=latest)](https://msbuddy.readthedocs.io/en/latest/?badge=latest)
 [![Generic badge](https://img.shields.io/badge/msbuddy-mass_spec_tools-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 
+### msbuddy is in final training process and will be released soon.
+
+
 
 `msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
 * `msbuddy` is able to provide formula annotations for:
