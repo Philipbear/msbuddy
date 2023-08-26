@@ -21,8 +21,7 @@ release = '0.1.1'
 
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx_rtd_theme',
-    'myst_parser'
+    'sphinx_rtd_theme'
 ]
 
 master_doc = 'index'
