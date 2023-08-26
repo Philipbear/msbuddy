@@ -105,7 +105,7 @@ def _predict_ml_a(feature_arr: np.array) -> np.array:
 
 def pred_formula_feasibility(buddy_data):
     """
-    predict formula feasibility using ML model a
+    predict formula feasibility using ML model a, retain top 500 candidate formulas
     :param buddy_data: buddy data
     :return: fill in ml_a_prob in candidate formula objects
     """
@@ -125,6 +125,12 @@ def pred_formula_feasibility(buddy_data):
         for candidate_formula in meta_feature.candidate_formula_list:
             candidate_formula.ml_a_prob = prob_arr[cnt]
             cnt += 1
+
+        # sort candidate formula list by formula feasibility, descending
+        # retain top 500 candidate formulas
+        meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
+        if len(meta_feature.candidate_formula_list) > 500:
+            meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:500]
 
 
 def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float) -> np.array:
