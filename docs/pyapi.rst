@@ -36,6 +36,26 @@ Base Classes
       :param mgf_file: str. The path to the mgf file.
       :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
 
+   .. method:: add_data (data: List[MetaFeature])
+
+      Add data into the ``data`` attribute of the :class:`msbuddy.Buddy` object.
+
+      :param data: A list of :class:`msbuddy.base.MetaFeature` objects. The data to be added.
+      :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
+
+   .. method:: annotate_formula
+
+      Perform formula annotation for loaded data.
+
+      :returns: None. The ``candidate_formula_list`` attribute of each :class:`msbuddy.base.MetaFeature` object in the ``data`` attribute of the :class:`Buddy` object will be updated.
+
+   .. method:: get_summary
+
+      Summarize the annotation results.
+
+      :returns: A list of Python dictionaries. Each dictionary contains the summary information for a single :class:`msbuddy.base.MetaFeature` object.
+
+
 
 .. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, timeout_secs: float = 300, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.85, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
 
@@ -66,7 +86,6 @@ Base Classes
    :param max_frag_reserved: int. The maximum number of fragments to reserve. Default is 50.
    :param use_all_frag: bool. If True, all fragments are used. If False, only the top fragments are used. Default is False.
 
-
 Example Usage:
 
 .. code-block:: python
@@ -85,6 +104,7 @@ Example Usage:
     buddy = Buddy(buddy_param_set)
 
 
+
 .. class:: msbuddy.base.Spectrum (mz_array: np.array, int_array: np.array)
 
     A class to represent a mass spectrum.
@@ -100,7 +120,6 @@ Example Usage:
 
       A numpy array of intensity values.
 
-
 Example usage:
 
 .. code-block:: python
@@ -114,9 +133,41 @@ Example usage:
 
 
 
+.. class:: msbuddy.base.Formula (array: np.array, charge: int, mass: Union[float, None] = None, isotope: int = 0)
+
+    A class to represent a molecular formula.
+
+   :param array: numpy array. The molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S].
+   :param charge: int. The charge of the molecular formula.
+   :param optional mass: float. The exact mass of the molecular formula. Default is None, exact mass will be calculated.
+   :param isotope: int. The isotopologue of the formula. Default is 0, which means M+0.
+
+
+   .. attribute:: array
+
+      A numpy arrat of the molecular formula array.
+
+   .. attribute:: charge
+
+      int. The charge of the molecular formula.
+
+   .. attribute:: mass
+
+      float. The exact mass of the molecular formula.
+
+   .. attribute:: isotope
+
+      int. The isotopologue of the formula.
+
+   .. attribute:: dbe
+
+      float. The double bond equivalent (DBE) of the formula.
+
+
+
 .. class:: msbuddy.base.Adduct (string: Union[str, None], pos_mode: bool)
 
-    A class to represent an adduct type.
+    A class to represent an adduct type. If a invalid string is given, the default adduct type will be used.
 
    :param optional string: str. The adduct type. Default is [M+H]+ for positive mode and [M-H]- for negative mode.
    :param pos_mode: bool. True for positive mode and False for negative mode.
@@ -124,20 +175,159 @@ Example usage:
 
    .. attribute:: string
 
-      The adduct type.
+      str. The adduct type.
 
    .. attribute:: pos_mode
 
-      True for positive mode and False for negative mode.
+      bool. True for positive mode and False for negative mode.
 
    .. attribute:: charge
 
-      The charge of the adduct.
+      int. The charge of the adduct.
 
    .. attribute:: m
 
-      The count of M in the adduct. e.g. [M+H]+ has m=1, [2M+H]+ has m=2.
+      int. The count of M in the adduct. e.g. [M+H]+ has m=1, [2M+H]+ has m=2.
 
+   .. attribute:: net_formula
+
+      :class:`msbuddy.base.Formula` object. The net formula of the adduct. For example, [M+H-H2O]+ has net formula H-1O-1.
+
+
+
+.. class:: msbuddy.base.ProcessedMS1 (mz: float, raw_spec: Spectrum, charge: int, mz_tol: float, ppm: bool, isotope_bin_mztol: float, max_isotope_cnt: int)
+
+    A class to represent a processed MS1 spectrum, for MS1 isotopic pattern extraction.
+
+   :param mz: float. Precursor ion m/z.
+   :param raw_spec: :class:`msbuddy.base.Spectrum` object. Raw MS1 spectrum.
+   :param charge: int. Precursor ion charge.
+   :param mz_tol: float. The mass tolerance for MS1 spectra.
+   :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
+   :param isotope_bin_mztol: float. The mass tolerance for MS1 isotope binning, in Da.
+   :param max_isotope_cnt: int. The maximum number of isotopes to consider.
+
+
+   .. attribute:: mz_tol
+
+      float. The mass tolerance for MS1 spectra.
+
+   .. attribute:: ppm
+
+      bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
+
+   .. attribute:: idx_array
+
+      A numpy array of raw indices of selected peaks.
+
+   .. attribute:: mz_array
+
+      A numpy array of m/z values of selected peaks.
+
+   .. attribute:: int_array
+
+      A numpy array of intensity values of selected peaks.
+
+
+
+.. class:: msbuddy.base.ProcessedMS2 (mz: float, raw_spec: Spectrum, mz_tol: float, ppm: bool, denoise: bool, rel_int_denoise: bool, rel_int_denoise_cutoff: float, max_noise_frag_ratio: float, max_noise_rsd: float, max_frag_reserved: int, use_all_frag: bool = False)
+
+    A class to represent a processed MS/MS spectrum, for MS/MS preprocessing (deprecursor, denoise, reserve top N fragments).
+
+   :param mz: float. Precursor ion m/z.
+   :param raw_spec: :class:`msbuddy.base.Spectrum` object. Raw MS1 spectrum.
+   :param mz_tol: float. The mass tolerance for MS1 spectra.
+   :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
+   :param denoise: bool. If True, the MS/MS spectrum is denoised (see details in `our paper <https://doi.org/10.1038/s41592-023-01850-x>`_).
+   :param rel_int_denoise: bool. If True, the MS/MS spectrum is denoised based on relative intensity.
+   :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising.
+   :param max_noise_frag_ratio: float. The maximum ratio of noise fragments to total fragments.
+   :param max_noise_rsd: float. The maximum relative standard deviation of noise fragments.
+   :param max_frag_reserved: int. The maximum number of fragments to reserve.
+   :param use_all_frag: bool. If True, all fragments are used. If False, only the top fragments are used.
+
+   .. attribute:: mz_tol
+
+      float. The mass tolerance for MS1 spectra.
+
+   .. attribute:: ppm
+
+      bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
+
+   .. attribute:: idx_array
+
+      A numpy array of raw indices of selected peaks.
+
+   .. attribute:: mz_array
+
+      A numpy array of m/z values of selected peaks.
+
+   .. attribute:: int_array
+
+      A numpy array of intensity values of selected peaks.
+
+   .. method:: normalize_intensity(method: str)
+
+      Normalize the intensity of the MS/MS spectrum.
+
+      :param method: str. The normalization method, either "sum" or "max".
+      :returns: None. The ``int_array`` attribute of the :class:`msbuddy.base.ProcessedMS2` object will be updated.
+
+
+
+.. class:: msbuddy.base.MS2Explanation (idx_array: np.array, explanation_array: List[Union[Formula, None]])
+
+    A class to represent MS/MS explanation.
+
+   :param idx_array: numpy array. The indices of the fragments.
+   :param explanation_array: A list of :class:`msbuddy.base.Formula` objects. The explanations for the fragments.
+
+   .. attribute:: idx_array
+
+      A numpy array of the indices of the fragments being explained.
+
+   .. attribute:: explanation_array
+
+      A list of :class:`msbuddy.base.Formula` objects. The explanations for the fragments.
+
+
+
+
+.. class:: msbuddy.base.CandidateFormula (formula: Formula, ms1_isotope_similarity: Union[float, None] = None, ms2_raw_explanation: Union[MS2Explanation, None] = None
+
+    A class to represent a candidate formula.
+
+   :param formula: :class:`msbuddy.base.Formula` object. The candidate formula (in neutral form).
+   :param optional ms1_isotope_similarity: float. The isotope similarity between the candidate formula and the MS1 isotopic pattern.
+   :param optional ms2_raw_explanation: :class:`msbuddy.base.MS2Explanation` object. The MS/MS explanation for the candidate formula.
+
+   .. attribute:: formula
+
+      :class:`msbuddy.base.Formula` object. The candidate formula (in neutral form).
+
+   .. attribute:: ms1_isotope_similarity
+
+      float. The isotope similarity between the candidate formula and the MS1 isotopic pattern.
+
+   .. attribute:: ms2_raw_explanation
+
+      :class:`msbuddy.base.MS2Explanation` object. The MS/MS explanation for the candidate formula.
+
+   .. attribute:: ml_a_prob
+
+      float. The formula feature probability predicted by the ML-a model.
+
+   .. attribute:: estimated_prob
+
+      float. The estimated formula probability predicted by the ML-b model.
+
+   .. attribute:: normed_estimated_prob
+
+      float. The normalized estimated formula probability considering all the candidate formulas for the same metabolic feature.
+
+   .. attribute:: estimated_fdr
+
+      float. The estimated FDR of the candidate formula.
 
 
 
@@ -150,80 +340,51 @@ Example usage:
    :param charge: int. Precursor ion charge.
    :param optional rt: float. Retention time in seconds. Default is None.
    :param optional adduct: str. Adduct type. Default is [M+H]+ for positive mode and [M-H]- for negative mode.
-   :param optional ms1: :class:`Spectrum` object. MS1 spectrum containing the isotopic pattern information. Default is None.
-   :param optional ms2: :class:`Spectrum` object. MS/MS spectrum. Default is None.
+   :param optional ms1: :class:`msbuddy.base.Spectrum` object. MS1 spectrum containing the isotopic pattern information. Default is None.
+   :param optional ms2: :class:`msbuddy.base.Spectrum` object. MS/MS spectrum. Default is None.
 
    .. attribute:: identifier
 
-      The unique identifier for the metabolic feature.
+      str. The unique identifier for the metabolic feature.
 
    .. attribute:: mz
 
-      Precursor ion m/z.
+      float. Precursor ion m/z.
 
    .. attribute:: charge
 
-      Precursor ion charge.
+      int. Precursor ion charge.
 
    .. attribute:: rt
 
-      Retention time in seconds.
+      float. Retention time in seconds.
 
    .. attribute:: adduct
 
-      :class:`Adduct` object representing the adduct type.
+      :class:`msbuddy.base.Adduct` object representing the adduct type.
 
    .. attribute:: ms1_raw
 
-      :class:`Spectrum` object. Raw MS1 spectrum.
+      :class:`msbuddy.base.Spectrum` object. Raw MS1 spectrum.
 
    .. attribute:: ms2_raw
 
-      :class:`Spectrum` object. Raw MS/MS spectrum.
+      :class:`msbuddy.base.Spectrum` object. Raw MS/MS spectrum.
 
    .. attribute:: ms1_processed
 
-      :class:`ProcessedMS1` object. Processed MS1 spectrum.
+      :class:`msbuddy.base.ProcessedMS1` object. Processed MS1 spectrum.
 
    .. attribute:: ms2_processed
 
-      :class:`ProcessedMS2` object. Processed MS/MS spectrum.
+      :class:`msbuddy.base.ProcessedMS2` object. Processed MS/MS spectrum.
 
    .. attribute:: candidate_formula_list
 
-      :class: A list of `CandidateFormula` objects. Candidate formulas generated for the metabolic feature.
+      A list of :class:`msbuddy.base.CandidateFormula` objects. Candidate formulas generated for the metabolic feature.
 
 
 
-.. class:: ClassName(param1, param2)
-
-   Brief description of the class and its purpose.
-
-   :param param1: (type) Description of the first constructor parameter. Default: default_value1.
-   :param param2: (type) Description of the second constructor parameter. Default: default_value2.
-
-   .. attribute:: attribute1
-
-      Description of the first attribute.
-
-   .. attribute:: attribute2
-
-      Description of the second attribute.
-
-   .. method:: method1(arg1, arg2)
-
-      Description of the first method.
-
-      :param arg1: (type) Description of the first argument. Default: default_value1.
-      :param arg2: (type) Description of the second argument. Default: default_value2.
-      :returns: (type) Description of the return value.
-
-   .. method:: method2(arg1)
-
-      Description of the second method.
-
-      :param arg1: (type) Description of the argument. Default: default_value1.
-      :returns: (type) Description of the return value.
 
 Functions
 ~~~~~~~~~~~~~~~
@@ -231,17 +392,36 @@ Functions
 
    Generate candidate formula for a given metabolic feature based on the given parameter set.
 
-   :param meta_feature: :class:`MetaFeature` object.
-   :param param_set: :class:`BuddyParamSet` object.
-   :returns: A list of :class:`CandidateFormula` objects will be generated within the :class:`MetaFeature` object.
+   :param meta_feature: :class:`msbuddy.base.MetaFeature` object.
+   :param param_set: :class:`msbuddy.BuddyParamSet` object.
+   :returns: A list of :class:`msbuddy.base.CandidateFormula` objects will be generated within the :class:`msbuddy.base.MetaFeature` object.
 
 Example Usage:
 
 .. code-block:: python
 
-   # generate candidate formulas for a given metabolic feature
+   from msbuddy import generate_candidate_formula
+
+   # generate candidate formulas for a given metabolic feature based on the given parameter set
    generate_candidate_formula(meta_feature, param_set)
 
    # print all the candidate formula strings and their estimated FDRs
    for candidate_formula in meta_feature.candidate_formula_list:
       print(candidate_formula.formula.__str__() + "\t" + str(candidate_formula.estimated_fdr))
+
+
+.. function:: read_formula (formula_string: str)
+
+   Read a neutral formula string and return a numpy array, return None if invalid
+
+   :param formula_string: str. The molecular formula string.
+   :returns: A numpy array of the molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S]. None if invalid.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy.base import read_formula
+
+   formula_array = read_formula("C10H20O5")
+   print(formula_array)

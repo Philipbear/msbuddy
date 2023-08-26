@@ -87,6 +87,9 @@ We first show an easy example of importing data from a pandas DataFrame (with co
                              charge = 1,
                              ms2 = ms2_spec)
 
+   # add to the Buddy object, List[MetaFeature] is accepted
+   buddy.add_data([metafeature])
+
 
 Note that for :class:`msbuddy.base.MetaFeature` class, the ``identifier``, ``mz`` and ``charge`` attributes are required, while attributes ``rt``, ``ms1`` and ``ms2`` are optional. If they are not provided, ``None`` will be assigned.
 
@@ -122,3 +125,6 @@ A more complicated example with MS1 isotope pattern and MS/MS spectra is shown b
                              charge = 1,
                              ms1 = ms1_spec,
                              ms2 = ms2_spec)
+
+   # add to the Buddy object, List[MetaFeature] is accepted
+   buddy.add_data([metafeature])

@@ -173,11 +173,6 @@ class Buddy:
                 sys.stderr.write(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.\n")
                 continue
 
-        # # debug mode
-        # for mf in self.data:
-        #     print(f"Processing {mf.identifier}")
-        #     _preprocess_and_gen_cand(mf, param_set)
-
         # ml_a feature generation + prediction
         pred_formula_feasibility(self.data)
 

@@ -27,7 +27,6 @@ quickstart
 paramset
 datain
 dataout
-result
 pyapi
 cmdapi
 contact
