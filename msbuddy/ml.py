@@ -1,4 +1,3 @@
-# candidate ranking with machine learning (model B)
 import numpy as np
 from numba import njit
 from msbuddy.query import common_nl_from_array

@@ -793,17 +793,3 @@ class MetaFeature:
             result['formula_rank_1'] = form_arr_to_str(self.candidate_formula_list[0].formula.array)
             result['estimated_fdr'] = self.candidate_formula_list[0].estimated_fdr
         return result
-
-
-# test
-if __name__ == '__main__':
-    a = Adduct(string='[M+2H]2+', pos_mode=True)
-    print(a.loss_formula)
-    print(a.net_formula)
-
-    # b = Adduct(string="[M-2ACN-3H+2DMSO]-", pos_mode=False)
-    # print(b.loss_formula)
-    # print(b.net_formula)
-
-    c = Adduct(string="[M-H]-", pos_mode=True)  # invalid adduct test
-    print(c)

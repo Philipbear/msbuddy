@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/Philipbear/msbuddy",
     project_urls={
         "Bug Tracker": "https://github.com/Philipbear/msbuddy/issues",
-        "Documentation": "https://Philipbear.github.io/msbuddy_Documentation/"
+        "Documentation": "https://msbuddy.readthedocs.io/en/latest/"
     },
     scripts=['msbuddy/main_cmd.py'],
     entry_points={
@@ -39,12 +39,12 @@ setuptools.setup(
         "requests",
         "joblib",
         "gdown",
-        "pathlib",
         "chemparse",
         "scipy",
         "scikit-learn",
         "tqdm",
         "timeout_decorator",
+        "pandas",
     ],
     python_requires=">=3.8"
 )

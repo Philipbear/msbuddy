@@ -1,7 +1,7 @@
 Python API
 -------------
 
-Base Classes
+Classes
 ~~~~~~~~~~~~~~~
 .. class:: msbuddy.Buddy (param_set: Union[BuddyParamSet, None] = None)
 
@@ -292,8 +292,7 @@ Example usage:
 
 
 
-
-.. class:: msbuddy.base.CandidateFormula (formula: Formula, ms1_isotope_similarity: Union[float, None] = None, ms2_raw_explanation: Union[MS2Explanation, None] = None
+.. class:: msbuddy.base.CandidateFormula (formula: Formula, ms1_isotope_similarity: Union[float, None] = None, ms2_raw_explanation: Union[MS2Explanation, None] = None)
 
     A class to represent a candidate formula.
 
@@ -315,7 +314,7 @@ Example usage:
 
    .. attribute:: ml_a_prob
 
-      float. The formula feature probability predicted by the ML-a model.
+      float. The formula feasibility predicted by the ML-a model.
 
    .. attribute:: estimated_prob
 

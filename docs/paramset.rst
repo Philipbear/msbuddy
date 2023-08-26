@@ -21,4 +21,4 @@ Here is a quick example of how to create a :class:`msbuddy.BuddyParamSet` object
     buddy = Buddy(buddy_param_set)
 
 
-
+For more information on the parameters, see :class:`msbuddy.BuddyParamSet`.

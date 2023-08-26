@@ -67,21 +67,23 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 
-### Documentation
-Link to [**msbuddy Documentation**](https://msbuddy.readthedocs.io/en/latest/)
-
 ## Command-line API
 
 **msbuddy** can also be used as a command-line tool:
 ```bash
-msbuddy --input <input file> --output <output file>
+msbuddy --mgf <mgf file> --output <output folder>
 ```
-
+or for a csv file containing USI strings (one USI per line):
+```bash
+msbuddy --csv <csv file> --output <output folder>
+```
 Run the following command to see the full list of options:
 ```bash
 msbuddy --help
 ```
 
+## Documentation
+Link to [**msbuddy Documentation**](https://msbuddy.readthedocs.io/en/latest/)
 
 ## Citation
 [S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation.](https://doi.org/10.1038/s41592-023-01850-x) **Nature Methods** 2023. DOI: 10.1038/s41592-023-01850-x
