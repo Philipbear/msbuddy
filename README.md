@@ -45,7 +45,7 @@ buddy.annotate_formula()
 result = buddy.get_summary()
 ```
 
-To specify the parameter settings, you can use the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/paramset.html#BuddyParamSet) object:
+To specify the parameter settings, you can use the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.BuddyParamSet) object:
 ```python
 from msbuddy import Buddy, BuddyParamSet
 
