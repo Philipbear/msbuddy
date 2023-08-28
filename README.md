@@ -87,8 +87,10 @@ msbuddy --help
 ```
 
 ## Links
-[**Documentation**](https://msbuddy.readthedocs.io/en/latest/)
+[**msbuddy Documentation**](https://msbuddy.readthedocs.io/en/latest/)
+
 [PyPI release](https://pypi.org/project/msbuddy/)
+
 [GitHub repository](https://github.com/Philipbear/msbuddy)
 
 ## Citation
