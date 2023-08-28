@@ -30,7 +30,7 @@
 pip install msbuddy
 ```
 
-### [Quick Start](https://msbuddy.readthedocs.io/en/latest/quickstart.html)
+### Quick Start ([link](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 
 As a quick start, we here load a mgf file and annotate the molecular formula for each MS/MS spectrum:
 ```python
@@ -71,7 +71,7 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 
-## [Command-line API](https://msbuddy.readthedocs.io/en/latest/cmdapi.html)
+## Command-line API ([link](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
 
 **msbuddy** can also be used as a command-line tool:
 ```bash
