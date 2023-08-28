@@ -14,8 +14,8 @@ from imblearn.over_sampling import SMOTE
 import json
 
 
-# This MLP model is trained using NIST20 library.
-# 8 models will be generated in total: pos/neg mode, ms1 iso similarity included or not, MS/MS spec included or not.
+# This MLP model is trained using GNPS library.
+# 4 models will be generated in total: ms1 iso similarity included or not, MS/MS spec included or not.
 
 
 def sim_ms1_iso_pattern(form_arr):

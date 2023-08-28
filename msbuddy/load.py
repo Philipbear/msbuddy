@@ -236,11 +236,22 @@ def load_usi(usi_list: Union[str, List[str]],
     elif len(adduct_list) != len(usi_list):
         raise ValueError('The length of adduct_list must be the same as the length of usi_list.')
 
-    for usi, adduct in zip(usi_list, adduct_list):
+    # retrieve indices of unique USIs from the list
+    seen = {}
+    unique_indices = []
+    for idx, item in enumerate(usi_list):
+        if item not in seen:
+            seen[item] = True
+            unique_indices.append(idx)
+    usi_list_unique = [usi_list[idx] for idx in unique_indices]
+    adduct_list_unique = [adduct_list[idx] for idx in unique_indices]
+
+    # load data
+    for usi, adduct in zip(usi_list_unique, adduct_list_unique):
         try:
             data_list.append(_load_usi(usi, adduct))
         except:
-            print('Invalid USI: ' + usi)
+            sys.stderr.write('Invalid USI: ' + usi + '\n')
 
     return data_list
 

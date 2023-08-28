@@ -9,7 +9,8 @@ def main():
     parser.add_argument('--mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('--usi', type=str, help='A single USI string.')
     parser.add_argument('--csv', type=str, help='Path to the CSV file containing USI strings.')
-    parser.add_argument('--output', type=str, help='The output file path.')
+    parser.add_argument('--out', type=str, help='The output file path.')
+    parser.add_argument('details', type=bool, action='store_true', help='Whether to write detailed results.')
     parser.add_argument('--ppm', type=bool, default=True, help='Whether to use ppm for mass tolerance.')
     parser.add_argument('--ms1_tol', type=float, default=5, help='MS1 tolerance.')
     parser.add_argument('--ms2_tol', type=float, default=10, help='MS2 tolerance.')
@@ -103,7 +104,16 @@ def main():
     output_path.mkdir(parents=True, exist_ok=True)
 
     # write the DataFrame object to the output file
-    result_df.to_csv(output_path / 'buddy_result_summary.csv', sep="\t", index=False)
+    result_df.to_csv(output_path / 'buddy_result_summary.tsv', sep="\t", index=False)
+
+    # write detailed results
+    if args.details:
+        for mf in buddy.data:
+            # make a directory for each mf
+            # replace '/' with '_' in the identifier, remove special characters
+            _identifier = str(mf.identifier).replace('/', '_').replace(':', '_').replace(' ', '_').strip()
+            mf_path = pathlib.Path(output_path / _identifier)
+            mf_path.mkdir(parents=True, exist_ok=True)
 
     print('Job completed.')
 
