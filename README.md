@@ -72,6 +72,7 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 ```
 
 ## Command-line API
+[Command-line Documentation](https://msbuddy.readthedocs.io/en/latest/cmdapi.html)
 
 **msbuddy** can also be used as a command-line tool:
 ```bash
@@ -86,8 +87,10 @@ Run the following command to see the full list of options:
 msbuddy --help
 ```
 
-## Documentation
-Link to [**msbuddy Documentation**](https://msbuddy.readthedocs.io/en/latest/)
+## Links
+[**Documentation**](https://msbuddy.readthedocs.io/en/latest/)
+[PyPI release](https://pypi.org/project/msbuddy/)
+[GitHub repository](https://github.com/Philipbear/msbuddy)
 
 ## Citation
 [S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation.](https://doi.org/10.1038/s41592-023-01850-x) **Nature Methods** 2023. DOI: 10.1038/s41592-023-01850-x
