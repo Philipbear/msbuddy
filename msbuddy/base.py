@@ -444,6 +444,9 @@ class ProcessedMS1:
         # find the closest peak to the precursor mz
         m0_found, idx = _func_a(mz, raw_spec.mz_array, tmp_mz_diff)
         if not m0_found:
+            self.idx_array = np.array([])
+            self.mz_array = np.array([])
+            self.int_array = np.array([])
             return
 
         # fill in M0

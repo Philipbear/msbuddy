@@ -1,11 +1,11 @@
 import sys
 import numpy as np
-from requests import get as requests_get
-from json import loads as json_loads
+from requests import get
+from json import loads as loads
 from typing import List, Union
-from gdown import download as gdown_download
+from gdown import download as download
 from pathlib import Path
-from joblib import load as joblib_load
+from joblib import load as j_load
 from msbuddy.utils import set_dependency
 from msbuddy.base import MetaFeature, Spectrum
 
@@ -18,7 +18,7 @@ def check_and_download(url: str, path) -> bool:
     :return: True if success
     """
     if not path.exists() or path.stat().st_size < 10 ** 4:
-        gdown_download(url, str(path))
+        download(url, str(path))
         return True
 
 
@@ -32,12 +32,12 @@ def init_db(db_mode: int) -> bool:
 
     sys.stdout.write("Database loading...\n")
     # load database & models into memory
-    set_dependency(common_loss_db=joblib_load(root_path / 'data' / 'common_loss.joblib'),
-                   common_frag_db=joblib_load(root_path / 'data' / 'common_frag.joblib'),
-                   model_a=joblib_load(root_path / 'data' / 'formula_model.joblib'),
-                   model_a_mean_arr=joblib_load(root_path / 'data' / 'mean_arr.joblib'),
-                   model_a_std_arr=joblib_load(root_path / 'data' / 'std_arr.joblib'),
-                   model_b_noms1_ms2=joblib_load(root_path / 'data' / 'model_b_noms1_ms2_2.joblib'))
+    set_dependency(common_loss_db=j_load(root_path / 'data' / 'common_loss.joblib'),
+                   common_frag_db=j_load(root_path / 'data' / 'common_frag.joblib'),
+                   model_a=j_load(root_path / 'data' / 'model_a.joblib'),
+                   model_a_mean_arr=j_load(root_path / 'data' / 'mean_arr.joblib'),
+                   model_a_std_arr=j_load(root_path / 'data' / 'std_arr.joblib'),
+                   model_b_noms1_ms2=j_load(root_path / 'data' / 'model_b_noms1_ms2_2.joblib'))
 
     # check existence of basic_db_mass.joblib, basic_db_formula.joblib
     check_and_download('https://drive.google.com/uc?id=1obPMk9lcfkUpRkeGSkM1s4C9Bzatm1li',
@@ -45,9 +45,9 @@ def init_db(db_mode: int) -> bool:
     check_and_download('https://drive.google.com/uc?id=155AEYIv5XFBIc7Adpnfi-vH3s47QkbJf',
                        root_path / 'data' / 'basic_db_formula.joblib')
 
-    set_dependency(basic_db_mass=joblib_load(root_path / 'data' / 'basic_db_mass.joblib'),
-                   basic_db_formula=joblib_load(root_path / 'data' / 'basic_db_formula.joblib'),
-                   basic_db_idx=joblib_load(root_path / 'data' / 'basic_db_idx.joblib'))
+    set_dependency(basic_db_mass=j_load(root_path / 'data' / 'basic_db_mass.joblib'),
+                   basic_db_formula=j_load(root_path / 'data' / 'basic_db_formula.joblib'),
+                   basic_db_idx=j_load(root_path / 'data' / 'basic_db_idx.joblib'))
 
     if db_mode >= 1:
         # check existence of halogen_db_mass.joblib, halogen_db_formula.joblib
@@ -56,9 +56,9 @@ def init_db(db_mode: int) -> bool:
         check_and_download('https://drive.google.com/uc?id=18G8_qzTXWHDIw9Z9PwvMtjKWOi6FtwDU',
                            root_path / 'data' / 'halogen_db_formula.joblib')
 
-        set_dependency(halogen_db_mass=joblib_load(root_path / 'data' / 'halogen_db_mass.joblib'),
-                       halogen_db_formula=joblib_load(root_path / 'data' / 'halogen_db_formula.joblib'),
-                       halogen_db_idx=joblib_load(root_path / 'data' / 'halogen_db_idx.joblib'))
+        set_dependency(halogen_db_mass=j_load(root_path / 'data' / 'halogen_db_mass.joblib'),
+                       halogen_db_formula=j_load(root_path / 'data' / 'halogen_db_formula.joblib'),
+                       halogen_db_idx=j_load(root_path / 'data' / 'halogen_db_idx.joblib'))
     return True
 
 
@@ -183,8 +183,8 @@ def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
     """
     # get spectrum from USI
     url = 'https://metabolomics-usi.gnps2.org/json/?usi1=' + usi
-    response = requests_get(url)
-    json_data = json_loads(response.text)
+    response = get(url)
+    json_data = loads(response.text)
 
     # check if the USI is valid
     if 'error' in json_data:

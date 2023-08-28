@@ -353,7 +353,7 @@ def train_cls_model(X_file):
     print("MLP acc.: " + str(score))
 
     # save model
-    joblib.dump(mlp, "../ml_a/formula_model.joblib")
+    joblib.dump(mlp, "../ml_a/model_a.joblib")
 
 
 def predict_prob(X_file):
@@ -361,7 +361,7 @@ def predict_prob(X_file):
     predict probability
     """
     X = pd.read_csv(X_file)
-    model = joblib.load("../ml_a/formula_model.joblib")
+    model = joblib.load("../ml_a/model_a.joblib")
     prob = model.predict_proba(X)
     return prob[:, 1]
 
@@ -407,7 +407,7 @@ if __name__ == '__main__':
     # y = np.array([1] * int(X.shape[0] / 2))
     # y = np.append(y, [0] * int(X.shape[0] / 2))
     # from sklearn.inspection import permutation_importance
-    # model = joblib.load( "../ml_a/formula_model.joblib")
+    # model = joblib.load( "../ml_a/model_a.joblib")
     # fi_result = permutation_importance(model, X, y, n_repeats=10, random_state=1, n_jobs=3)
     # print(fi_result.importances_mean)
     # joblib.dump(fi_result, "../ml_a/formula_feature_importance.joblib")
