@@ -8,13 +8,13 @@ def main():
     parser = argparse.ArgumentParser(description="msbuddy command line interface.")
     parser.add_argument('--mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('--usi', type=str, help='A single USI string.')
-    parser.add_argument('--csv', type=str, help='Path to the CSV file containing USI strings.')
+    parser.add_argument('--csv', type=str, help='Path to the CSV file containing USI strings in the first column.')
     parser.add_argument('--out', type=str, help='The output file path.')
-    parser.add_argument('details', type=bool, action='store_true', help='Whether to write detailed results.')
+    parser.add_argument('--details', type=bool, action='store_true', help='Whether to write detailed results.')
     parser.add_argument('--ppm', type=bool, default=True, help='Whether to use ppm for mass tolerance.')
     parser.add_argument('--ms1_tol', type=float, default=5, help='MS1 tolerance.')
     parser.add_argument('--ms2_tol', type=float, default=10, help='MS2 tolerance.')
-    parser.add_argument('--halogen', type=bool, default=False, help='Whether to consider halogen atoms.')
+    parser.add_argument('--halogen', type=bool, default=False, help='Whether to consider halogen atoms FClBrI.')
     parser.add_argument('--c_min', type=int, default=0, help='Minimum number of C atoms.')
     parser.add_argument('--c_max', type=int, default=80, help='Maximum number of C atoms.')
     parser.add_argument('--h_min', type=int, default=0, help='Minimum number of H atoms.')
@@ -114,6 +114,19 @@ def main():
             _identifier = str(mf.identifier).replace('/', '_').replace(':', '_').replace(' ', '_').strip()
             mf_path = pathlib.Path(output_path / _identifier)
             mf_path.mkdir(parents=True, exist_ok=True)
+
+            # write the csv file containing all the candidate formulas
+            all_candidates_df = pd.DataFrame(columns=['rank', 'formula', 'formula_feasibility',
+                                                      'ms1_isotope_similarity', 'estimated_fdr'])
+            for i, candidate in enumerate(mf.candidates):
+                all_candidates_df = all_candidates_df.append({
+                    'rank': i + 1,
+                    'formula': candidate.formula.__str__(),
+                    'formula_feasibility': candidate.ml_a_prob,
+                    'ms1_isotope_similarity': candidate.ms1_isotope_similarity,
+                    'estimated_fdr': candidate.estimated_fdr
+                }, ignore_index=True)
+            all_candidates_df.to_csv(mf_path / 'all_candidates.tsv', sep="\t", index=False)
 
     print('Job completed.')
 
