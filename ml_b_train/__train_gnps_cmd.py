@@ -2,12 +2,12 @@ import numpy as np
 import joblib
 from sklearn import metrics
 from brainpy import isotopic_variants
-from ..msbuddy.base import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
-from ..msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
+from msbuddy.base import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
+from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from ..msbuddy.gen_candidate import gen_candidate_formula
-from ..msbuddy.load import init_db
+from msbuddy.gen_candidate import gen_candidate_formula
+from msbuddy.load import init_db
 from scipy.stats import norm
 import argparse
 from imblearn.over_sampling import SMOTE
@@ -300,7 +300,7 @@ def parse_args():
 
 # test
 if __name__ == '__main__':
-
+    __package__ = "msbuddy"
     # parse arguments
     args = parse_args()
 
