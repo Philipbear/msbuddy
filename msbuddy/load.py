@@ -1,4 +1,4 @@
-import sys
+import logging
 import numpy as np
 from requests import get
 from json import loads as loads
@@ -8,6 +8,9 @@ from pathlib import Path
 from joblib import load as j_load
 from msbuddy.utils import set_dependency
 from msbuddy.base import MetaFeature, Spectrum
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 def check_and_download(url: str, path) -> bool:
@@ -234,7 +237,7 @@ def load_usi(usi_list: Union[str, List[str]],
     if adduct_list is None:
         adduct_list = [None] * len(usi_list)
     elif len(adduct_list) != len(usi_list):
-        raise ValueError('The length of adduct_list must be the same as the length of usi_list.')
+        logging.warning('adduct_list and usi_list must have the same length. Default adducts are used.')
 
     # retrieve indices of unique USIs from the list
     seen = {}
@@ -251,8 +254,8 @@ def load_usi(usi_list: Union[str, List[str]],
         try:
             data_list.append(_load_usi(usi, adduct))
         except:
-            sys.stderr.write('Invalid USI: ' + usi + '\n')
-
+            logging.warning('Invalid USI: ' + usi)
+            continue
     return data_list
 
 

@@ -2,6 +2,87 @@ import argparse
 from msbuddy.buddy import Buddy, BuddyParamSet
 import pandas as pd
 import pathlib
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+
+def buddy_cmd(args) -> Buddy:
+    # create a BuddyParamSet object
+    buddy_param_set = BuddyParamSet(
+        ppm=args.ppm, ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
+        c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
+        o_range=(args.o_min, args.o_max), p_range=(args.p_min, args.p_max), s_range=(args.s_min, args.s_max),
+        f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
+        i_range=(args.i_min, args.i_max),
+        isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
+        ms2_denoise=args.ms2_denoise, rel_int_denoise=args.rel_int_denoise,
+        rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_noise_frag_ratio=args.max_noise_frag_ratio,
+        max_noise_rsd=args.max_noise_rsd, max_frag_reserved=args.max_frag_reserved,
+        use_all_frag=args.use_all_frag
+    )
+
+    if not args.output:
+        raise ValueError('Please specify the output file path.')
+
+    buddy = Buddy(buddy_param_set)
+
+    if args.mgf:
+        buddy.load_mgf(args.mgf)
+    elif args.usi:
+        buddy.load_usi([args.usi])
+    elif args.csv:
+        # read and load the first column of the CSV file
+        df = pd.read_csv(args.csv)
+        buddy.load_usi(df.iloc[:, 0].tolist())
+    else:
+        raise ValueError('Please specify the input data source.')
+
+    # formula annotation
+    buddy.annotate_formula()
+
+    return buddy
+
+
+def write_summary_results(buddy: Buddy, output_path: pathlib.Path):
+    # create a DataFrame object, with columns: identifier, mz, rt, formula_rank_1, estimated_fdr
+    # fill in the DataFrame object one by one
+    result_df = pd.DataFrame(columns=['identifier', 'mz', 'rt', 'formula_rank_1', 'estimated_fdr'])
+    for mf in buddy.data:
+        individual_result = mf.summarize_result()
+        result_df = result_df.append({
+            'identifier': mf.identifier,
+            'mz': mf.mz,
+            'rt': mf.rt,
+            'formula_rank_1': individual_result['formula_rank_1'],
+            'estimated_fdr': individual_result['estimated_fdr']
+        }, ignore_index=True)
+
+    # write the DataFrame object to the output file
+    result_df.to_csv(output_path / 'buddy_result_summary.tsv', sep="\t", index=False)
+
+
+def write_detailed_results(buddy: Buddy, output_path: pathlib.Path):
+    # write detailed results for each mf
+    for mf in buddy.data:
+        # make a directory for each mf
+        # replace '/' with '_' in the identifier, remove special characters
+        _identifier = str(mf.identifier).replace('/', '_').replace(':', '_').replace(' ', '_').strip()
+        mf_path = pathlib.Path(output_path / _identifier)
+        mf_path.mkdir(parents=True, exist_ok=True)
+
+        # write the csv file containing all the candidate formulas
+        all_candidates_df = pd.DataFrame(columns=['rank', 'formula', 'formula_feasibility',
+                                                  'ms1_isotope_similarity', 'estimated_fdr'])
+        for i, candidate in enumerate(mf.candidates):
+            all_candidates_df = all_candidates_df.append({
+                'rank': i + 1,
+                'formula': candidate.formula.__str__(),
+                'formula_feasibility': candidate.ml_a_prob,
+                'ms1_isotope_similarity': candidate.ms1_isotope_similarity,
+                'estimated_fdr': candidate.estimated_fdr
+            }, ignore_index=True)
+        all_candidates_df.to_csv(mf_path / 'all_candidates.tsv', sep="\t", index=False)
 
 
 def main():
@@ -56,79 +137,21 @@ def main():
 
     args = parser.parse_args()
 
-    buddy_param_set = BuddyParamSet(
-        ppm=args.ppm, ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
-        c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
-        o_range=(args.o_min, args.o_max), p_range=(args.p_min, args.p_max), s_range=(args.s_min, args.s_max),
-        f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
-        i_range=(args.i_min, args.i_max),
-        isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
-        ms2_denoise=args.ms2_denoise, rel_int_denoise=args.rel_int_denoise,
-        rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_noise_frag_ratio=args.max_noise_frag_ratio,
-        max_noise_rsd=args.max_noise_rsd, max_frag_reserved=args.max_frag_reserved,
-        use_all_frag=args.use_all_frag
-    )
+    logging.info('Job started.')
+    # run msbuddy
+    buddy = buddy_cmd(args)
 
-    if not args.output:
-        raise ValueError('Please specify the output file path.')
+    logging.info('Writing summary results...')
+    # write summary results
+    output_path = pathlib.Path(args.out)
+    write_summary_results(buddy, output_path)
 
-    buddy = Buddy(buddy_param_set)
-    if args.mgf:
-        buddy.load_mgf(args.mgf)
-    elif args.usi:
-        buddy.load_usi([args.usi])
-    elif args.csv:
-        # read and load the first column of the CSV file
-        df = pd.read_csv(args.csv)
-        buddy.load_usi(df.iloc[:, 0].tolist())
-    else:
-        raise ValueError('Please specify the input data source.')
-
-    # formula annotation
-    buddy.annotate_formula()
-
-    # create a DataFrame object, with columns: identifier, mz, rt, formula_rank_1, estimated_fdr
-    # fill in the DataFrame object one by one
-    result_df = pd.DataFrame(columns=['identifier', 'mz', 'rt', 'formula_rank_1', 'estimated_fdr'])
-    for mf in buddy.data:
-        individual_result = mf.summarize_result()
-        result_df = result_df.append({
-            'identifier': mf.identifier,
-            'mz': mf.mz,
-            'rt': mf.rt,
-            'formula_rank_1': individual_result['formula_rank_1'],
-            'estimated_fdr': individual_result['estimated_fdr']
-        }, ignore_index=True)
-
-    output_path = pathlib.Path(args.output)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    # write the DataFrame object to the output file
-    result_df.to_csv(output_path / 'buddy_result_summary.tsv', sep="\t", index=False)
-
+    logging.info('Writing detailed results...')
     # write detailed results
     if args.details:
-        for mf in buddy.data:
-            # make a directory for each mf
-            # replace '/' with '_' in the identifier, remove special characters
-            _identifier = str(mf.identifier).replace('/', '_').replace(':', '_').replace(' ', '_').strip()
-            mf_path = pathlib.Path(output_path / _identifier)
-            mf_path.mkdir(parents=True, exist_ok=True)
+        write_detailed_results(buddy, output_path)
 
-            # write the csv file containing all the candidate formulas
-            all_candidates_df = pd.DataFrame(columns=['rank', 'formula', 'formula_feasibility',
-                                                      'ms1_isotope_similarity', 'estimated_fdr'])
-            for i, candidate in enumerate(mf.candidates):
-                all_candidates_df = all_candidates_df.append({
-                    'rank': i + 1,
-                    'formula': candidate.formula.__str__(),
-                    'formula_feasibility': candidate.ml_a_prob,
-                    'ms1_isotope_similarity': candidate.ms1_isotope_similarity,
-                    'estimated_fdr': candidate.estimated_fdr
-                }, ignore_index=True)
-            all_candidates_df.to_csv(mf_path / 'all_candidates.tsv', sep="\t", index=False)
-
-    print('Job completed.')
+    logging.info('Job finished.')
 
 
 if __name__ == '__main__':

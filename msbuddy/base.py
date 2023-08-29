@@ -1,8 +1,13 @@
-import sys
+import logging
 import math
 import numpy as np
 from typing import Union, Tuple, List
 from chemparse import parse_formula
+
+mass_i = 1.0033548  # mass of isotope
+mass_e = 0.00054858  # mass of electron
+
+logging.basicConfig(level=logging.INFO)
 
 
 class Formula:
@@ -59,10 +64,10 @@ class Formula:
         :return: fill in mass
         """
         if self.charge == 0:
-            self.mass = float(np.sum(self.array * Formula.mass_arr) + self.isotope * 1.0033548)
+            self.mass = float(np.sum(self.array * Formula.mass_arr) + self.isotope * mass_i)
         else:
-            self.mass = float((np.sum(self.array * Formula.mass_arr) - self.charge * 0.00054858 +
-                               self.isotope * 1.0033548) / abs(self.charge))
+            self.mass = float((np.sum(self.array * Formula.mass_arr) - self.charge * mass_e +
+                               self.isotope * mass_i) / abs(self.charge))
 
 
 # global functions related to formula
@@ -197,13 +202,13 @@ class Adduct:
     # return default value for invalid adduct
     def _invalid(self):
         if self.pos_mode:
-            sys.stdout.write("Invalid adduct for positive mode, set to [M+H]+\n")
+            logging.warning("Invalid adduct for positive mode, set to [M+H]+")
             self.string = "[M+H]+"
             self.charge = +1
             self.loss_formula = None
             self.net_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
         else:
-            sys.stdout.write("Invalid adduct for negative mode, set to [M-H]-\n")
+            logging.warning("Invalid adduct for negative mode, set to [M-H]-")
             self.string = "[M-H]-"
             self.charge = -1
             self.loss_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
@@ -497,7 +502,7 @@ def _func_b(mz: float, mz_arr: np.array, charge: int,
     idx_array = np.array([], dtype=int)
     tmp_mz = mz
     for k in range(max_isotope_cnt - 1):
-        tmp_mz += 1.003355 / abs(charge)
+        tmp_mz += mass_i / abs(charge)
         found = False
         for j, m in enumerate(mz_arr):
             if abs(m - tmp_mz) <= isotope_bin_mztol:
@@ -669,7 +674,6 @@ class MS2Explanation:
     # class for storing MS2 explanation
     def __init__(self, idx_array: np.array,
                  explanation_array: List[Union[Formula, None]]):
-
         self.idx_array = idx_array  # raw MS2 peak index, fragment index
         self.explanation_array = explanation_array  # List[Formula], isotope peaks are included
 
@@ -691,12 +695,12 @@ class CandidateFormula:
     CandidateFormula is a class for storing a candidate formula. It's used in MetaFeature.candidate_formula_list.
     precursor formula in CandidateFormula is a neutral formula
     """
+
     def __init__(self, formula: Formula,
                  ms1_isotope_similarity: Union[float, None] = None,
                  ms2_raw_explanation: Union[MS2Explanation, None] = None,
                  optimal_formula: bool = False,
                  ms2_refined_explanation: Union[MS2Explanation, None] = None):
-
         self.formula = formula  # neutral formula
         self.ml_a_prob = None  # ml_a score for model A (formula feasibility)
         self.estimated_prob = None  # estimated probability (ml_b score for model B)
@@ -716,6 +720,7 @@ class MetaFeature:
     """
     MetaFeature class, used for storing a metabolic feature.
     """
+
     def __init__(self,
                  identifier: Union[str, int],
                  mz: float,

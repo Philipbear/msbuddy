@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 from tqdm import tqdm
 from typing import Tuple, Union, List
@@ -7,6 +6,10 @@ from msbuddy.base import MetaFeature
 from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO)
 
 
 class BuddyParamSet:
@@ -67,7 +70,8 @@ class BuddyParamSet:
         self.db_mode = 0 if not halogen else 1
 
         if timeout_secs <= 0:
-            raise ValueError("Timeout must be positive.")
+            logging.warning("Timeout is set to 300 seconds.")
+            self.timeout_secs = 300
         self.timeout_secs = timeout_secs
 
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
@@ -170,7 +174,7 @@ class Buddy:
             try:
                 _preprocess_and_gen_cand(mf, param_set)
             except:
-                sys.stderr.write(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.\n")
+                logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
                 continue
 
         # ml_a feature generation + prediction
@@ -231,13 +235,13 @@ if __name__ == '__main__':
     # result_summary = buddy.get_summary()
     #
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, timeout_secs=30, halogen=True, i_range=(1, 20))
+    buddy_param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20, timeout_secs=30, halogen=True, max_frag_reserved=10)
     # use default parameter set
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
     # buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
-    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
 
     # add ms1 data
     from msbuddy.base import Spectrum
@@ -246,6 +250,9 @@ if __name__ == '__main__':
     #                                  int_array=np.array([100, 28]))
     # buddy.data[1].ms1_raw = Spectrum(mz_array=np.array([buddy.data[1].mz, buddy.data[1].mz + 1]),
     #                                  int_array=np.array([100, 25]))
+
+    # test adduct
+    buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()
