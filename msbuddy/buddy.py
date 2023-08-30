@@ -10,8 +10,6 @@ from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
 from multiprocessing import Pool, cpu_count
 
-import time
-
 logging.basicConfig(level=logging.INFO)
 
 # global variable containing shared data
@@ -211,14 +209,15 @@ class Buddy:
             mf = generate_candidate_formula(meta_feature, ps, shared_data_dict)
             return mf
 
-        start_time = time.time()
         # data preprocessing and candidate space generation
         if param_set.parallel:
+            # parallel processing, no progress bar
             logging.info(f"Parallel processing with {param_set.process_num} processes.")
             with Pool(processes=int(param_set.process_num), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
 
-                async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel, (mf, param_set)) for mf in self.data]
+                async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
+                                                  (mf, param_set)) for mf in self.data]
 
                 for i, async_result in enumerate(async_results):
                     try:
@@ -229,7 +228,6 @@ class Buddy:
                         logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
                         modified_mf_ls.append(mf)
                         continue
-
             del async_results
 
             # # parallel processing
@@ -240,7 +238,7 @@ class Buddy:
             #                                   [(mf, param_set) for mf in self.data])
 
         else:
-            # main loop, with progress bar and timeout
+            # normal loop, with progress bar, timeout implemented using timeout_decorator
             for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
                            file=sys.stdout, colour="green"):
                 try:
@@ -250,9 +248,6 @@ class Buddy:
                     logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
                     modified_mf_ls.append(mf)
                     continue
-
-        end_time = time.time()
-        print(f"Data preprocessing & candidate space generation time: {end_time - start_time} seconds.")
 
         self.data = modified_mf_ls
         del modified_mf_ls
