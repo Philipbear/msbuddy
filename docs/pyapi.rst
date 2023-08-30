@@ -57,7 +57,7 @@ Classes
 
 
 
-.. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, timeout_secs: float = 300, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.85, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
+.. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.85, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
 
    It is a class to store all the parameter settings for **msbuddy**.
 
@@ -65,6 +65,8 @@ Classes
    :param ms1_tol: float. The mass tolerance for MS1 spectra. Default is 5 ppm.
    :param ms2_tol: float. The mass tolerance for MS/MS spectra. Default is 10 ppm.
    :param halogen: bool. If True, the halogen elements (F, Cl, Br, I) are considered. Default is False.
+   :param parallel: bool. If True, the annotation is performed in parallel. Default is False.
+   :param n_cpu: int. The number of CPUs to use. Default is -1, which means all available CPUs.
    :param timeout_secs: float. The timeout in seconds for each query. Default is 300 seconds.
    :param c_range: Tuple[int, int]. The range of carbon atoms. Default is (0, 80).
    :param h_range: Tuple[int, int]. The range of hydrogen atoms. Default is (0, 150).
@@ -98,6 +100,8 @@ Example Usage:
         ms1_tol=10,
         ms2_tol=20,
         halogen=True,
+        parallel=True,
+        n_cpu=4,
         timeout_secs=600)
 
     # create a Buddy object with the specified parameter set
@@ -187,7 +191,7 @@ Example usage:
 
    .. attribute:: m
 
-      int. The count of M in the adduct. e.g. [M+H]+ has m=1, [2M+H]+ has m=2.
+      int. The count of multimer (M) in the adduct. e.g. [M+H]+ has m=1, [2M+H]+ has m=2.
 
    .. attribute:: net_formula
 
@@ -393,7 +397,7 @@ Functions
 
    :param meta_feature: :class:`msbuddy.base.MetaFeature` object.
    :param param_set: :class:`msbuddy.BuddyParamSet` object.
-   :returns: A list of :class:`msbuddy.base.CandidateFormula` objects will be generated within the :class:`msbuddy.base.MetaFeature` object.
+   :returns: :class:`msbuddy.base.MetaFeature` object, with :class:`msbuddy.base.CandidateFormula` objects updated.
 
 Example Usage:
 
@@ -402,10 +406,10 @@ Example Usage:
    from msbuddy import generate_candidate_formula
 
    # generate candidate formulas for a given metabolic feature based on the given parameter set
-   generate_candidate_formula(meta_feature, param_set)
+   mf = generate_candidate_formula(meta_feature, param_set)
 
    # print all the candidate formula strings and their estimated FDRs
-   for candidate_formula in meta_feature.candidate_formula_list:
+   for candidate_formula in mf.candidate_formula_list:
       print(candidate_formula.formula.__str__() + "\t" + str(candidate_formula.estimated_fdr))
 
 

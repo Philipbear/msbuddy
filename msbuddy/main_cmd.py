@@ -11,6 +11,7 @@ def buddy_cmd(args) -> Buddy:
     # create a BuddyParamSet object
     buddy_param_set = BuddyParamSet(
         ppm=args.ppm, ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
+        parallel=args.parallel, n_cpu=args.n_cpu,
         c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
         o_range=(args.o_min, args.o_max), p_range=(args.p_min, args.p_max), s_range=(args.s_min, args.s_max),
         f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
@@ -92,10 +93,12 @@ def main():
     parser.add_argument('--csv', type=str, help='Path to the CSV file containing USI strings in the first column.')
     parser.add_argument('--out', type=str, help='The output file path.')
     parser.add_argument('--details', type=bool, action='store_true', help='Whether to write detailed results.')
-    parser.add_argument('--ppm', type=bool, default=True, help='Whether to use ppm for mass tolerance.')
+    parser.add_argument('--ppm', type=bool, action='store_true', help='Whether to use ppm for mass tolerance.')
     parser.add_argument('--ms1_tol', type=float, default=5, help='MS1 tolerance.')
     parser.add_argument('--ms2_tol', type=float, default=10, help='MS2 tolerance.')
-    parser.add_argument('--halogen', type=bool, default=False, help='Whether to consider halogen atoms FClBrI.')
+    parser.add_argument('--halogen', type=bool, action='store_true', help='Whether to consider halogen atoms FClBrI.')
+    parser.add_argument('--parallel', type=bool, action='store_true', help='Whether to use parallel computing.')
+    parser.add_argument('--n_cpu', type=int, default=-1, help='Number of CPUs to use.')
     parser.add_argument('--c_min', type=int, default=0, help='Minimum number of C atoms.')
     parser.add_argument('--c_max', type=int, default=80, help='Maximum number of C atoms.')
     parser.add_argument('--h_min', type=int, default=0, help='Minimum number of H atoms.')

@@ -79,7 +79,7 @@ class BuddyParamSet:
         self.db_mode = 0 if not halogen else 1
         self.parallel = parallel
         if n_cpu > cpu_count() or n_cpu <= 0:
-            self.process_num = cpu_count() - 1
+            self.process_num = cpu_count()
             logging.info(f"Processing core number is set to {self.n_cpu}.")
         else:
             self.n_cpu = n_cpu
@@ -171,9 +171,9 @@ class Buddy:
 
         self.data = None  # List[MetabolicFeature]
 
-    def load_usi(self, usi: Union[str, List[str]],
-                 adduct: Union[None, str, List[str]] = None):
-        self.data = load_usi(usi, adduct)
+    def load_usi(self, usi_list: Union[str, List[str]],
+                 adduct_list: Union[None, str, List[str]] = None):
+        self.data = load_usi(usi_list, adduct_list)
 
     def load_mgf(self, file_path):
         self.data = load_mgf(file_path)
