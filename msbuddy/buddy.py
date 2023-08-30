@@ -27,7 +27,7 @@ class BuddyParamSet:
                  ms2_tol: float = 10,
                  halogen: bool = False,
                  parallel: bool = False,
-                 process_num: int = -1,
+                 n_cpu: int = -1,
                  timeout_secs: float = 300,
                  c_range: Tuple[int, int] = (0, 80),
                  h_range: Tuple[int, int] = (0, 150),
@@ -51,7 +51,7 @@ class BuddyParamSet:
         :param ms2_tol: MS2 m/z tolerance
         :param halogen: whether to include halogen atoms; if False, ranges of F, Cl, Br, I will be set to (0, 0)
         :param parallel: whether to use parallel processing
-        :param process_num: number of processes used for parallel processing
+        :param n_cpu: number of CPU cores used for parallel processing; if -1, all available cores will be used
         :param timeout_secs: timeout in seconds
         :param c_range: C range
         :param h_range: H range
@@ -78,11 +78,11 @@ class BuddyParamSet:
         self.ms2_tol = ms2_tol
         self.db_mode = 0 if not halogen else 1
         self.parallel = parallel
-        if process_num > cpu_count() or process_num <= 0:
+        if n_cpu > cpu_count() or n_cpu <= 0:
             self.process_num = cpu_count() - 1
-            logging.info(f"Processing core number is set to {self.process_num}.")
+            logging.info(f"Processing core number is set to {self.n_cpu}.")
         else:
-            self.process_num = process_num
+            self.n_cpu = n_cpu
 
         if timeout_secs <= 0:
             logging.warning("Timeout is set to 300 seconds.")
@@ -212,8 +212,8 @@ class Buddy:
         # data preprocessing and candidate space generation
         if param_set.parallel:
             # parallel processing, no progress bar
-            logging.info(f"Parallel processing with {param_set.process_num} processes.")
-            with Pool(processes=int(param_set.process_num), initializer=init_pool,
+            logging.info(f"Parallel processing with {param_set.n_cpu} processes.")
+            with Pool(processes=int(param_set.n_cpu), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
 
                 async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
@@ -319,7 +319,7 @@ def generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) 
 # test
 if __name__ == '__main__':
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, process_num=8,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=8,
                                     timeout_secs=2, halogen=True, max_frag_reserved=50)
 
     buddy = Buddy(buddy_param_set)

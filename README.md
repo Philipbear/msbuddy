@@ -49,13 +49,15 @@ buddy.annotate_formula()
 result = buddy.get_summary()
 ```
 
-To specify the parameter settings, you can use the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.BuddyParamSet) object:
+To specify the parameter settings, you can use the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.BuddyParamSet) object.
+**Parallel computing** is also supported.
 ```python
 from msbuddy import Buddy, BuddyParamSet
 
 # instantiate a BuddyParamSet object
 param = BuddyParamSet(ppm = True, ms1_tol = 5, ms2_tol = 10,
-                      halogen = False, timeout_secs = 300)
+                      halogen = False, timeout_secs = 300,
+                      parallel = True, n_cpu = 8)
                       
 # instantiate a Buddy object with the specified parameter settings
 buddy = Buddy(param)
