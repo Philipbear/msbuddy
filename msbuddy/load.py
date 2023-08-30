@@ -25,7 +25,7 @@ def check_and_download(url: str, path) -> bool:
         return True
 
 
-def init_db(db_mode: int) -> bool:
+def init_db(db_mode: int) -> dict:
     """
     init databases used in the project
     :param db_mode: 0: basic; 1: halogen
@@ -33,14 +33,16 @@ def init_db(db_mode: int) -> bool:
     """
     root_path = Path(__file__).parent
 
-    sys.stdout.write("Database loading...\n")
+    logging.info('Initializing databases...')
+
+    global_dict = dict()
     # load database & models into memory
-    set_dependency(common_loss_db=j_load(root_path / 'data' / 'common_loss.joblib'),
-                   common_frag_db=j_load(root_path / 'data' / 'common_frag.joblib'),
-                   model_a=j_load(root_path / 'data' / 'model_a.joblib'),
-                   model_a_mean_arr=j_load(root_path / 'data' / 'mean_arr.joblib'),
-                   model_a_std_arr=j_load(root_path / 'data' / 'std_arr.joblib'),
-                   model_b_noms1_ms2=j_load(root_path / 'data' / 'model_b_noms1_ms2_2.joblib'))
+    global_dict['common_loss_db'] = j_load(root_path / 'data' / 'common_loss.joblib')
+    global_dict['common_frag_db'] = j_load(root_path / 'data' / 'common_frag.joblib')
+    global_dict['model_a'] = j_load(root_path / 'data' / 'model_a.joblib')
+    global_dict['model_a_mean_arr'] = j_load(root_path / 'data' / 'mean_arr.joblib')
+    global_dict['model_a_std_arr'] = j_load(root_path / 'data' / 'std_arr.joblib')
+    global_dict['model_b_noms1_ms2'] = j_load(root_path / 'data' / 'model_b_noms1_ms2_2.joblib')
 
     # check existence of basic_db_mass.joblib, basic_db_formula.joblib
     check_and_download('https://drive.google.com/uc?id=1obPMk9lcfkUpRkeGSkM1s4C9Bzatm1li',
@@ -48,9 +50,9 @@ def init_db(db_mode: int) -> bool:
     check_and_download('https://drive.google.com/uc?id=155AEYIv5XFBIc7Adpnfi-vH3s47QkbJf',
                        root_path / 'data' / 'basic_db_formula.joblib')
 
-    set_dependency(basic_db_mass=j_load(root_path / 'data' / 'basic_db_mass.joblib'),
-                   basic_db_formula=j_load(root_path / 'data' / 'basic_db_formula.joblib'),
-                   basic_db_idx=j_load(root_path / 'data' / 'basic_db_idx.joblib'))
+    global_dict['basic_db_mass'] = j_load(root_path / 'data' / 'basic_db_mass.joblib')
+    global_dict['basic_db_formula'] = j_load(root_path / 'data' / 'basic_db_formula.joblib')
+    global_dict['basic_db_idx'] = j_load(root_path / 'data' / 'basic_db_idx.joblib')
 
     if db_mode >= 1:
         # check existence of halogen_db_mass.joblib, halogen_db_formula.joblib
@@ -59,10 +61,11 @@ def init_db(db_mode: int) -> bool:
         check_and_download('https://drive.google.com/uc?id=18G8_qzTXWHDIw9Z9PwvMtjKWOi6FtwDU',
                            root_path / 'data' / 'halogen_db_formula.joblib')
 
-        set_dependency(halogen_db_mass=j_load(root_path / 'data' / 'halogen_db_mass.joblib'),
-                       halogen_db_formula=j_load(root_path / 'data' / 'halogen_db_formula.joblib'),
-                       halogen_db_idx=j_load(root_path / 'data' / 'halogen_db_idx.joblib'))
-    return True
+        global_dict['halogen_db_mass'] = j_load(root_path / 'data' / 'halogen_db_mass.joblib')
+        global_dict['halogen_db_formula'] = j_load(root_path / 'data' / 'halogen_db_formula.joblib')
+        global_dict['halogen_db_idx'] = j_load(root_path / 'data' / 'halogen_db_idx.joblib')
+
+    return global_dict
 
 
 def load_mgf(file_path) -> List[MetaFeature]:
@@ -261,4 +264,4 @@ def load_usi(usi_list: Union[str, List[str]],
 
 # test
 if __name__ == '__main__':
-    data = load_usi('mzspec:GNPS:null:accession:CCMSLIB00000001500')
+    usi_data = load_usi('mzspec:GNPS:null:accession:CCMSLIB00000001500')

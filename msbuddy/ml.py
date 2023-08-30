@@ -1,7 +1,6 @@
 import numpy as np
 from numba import njit
 from msbuddy.query import common_nl_from_array
-from msbuddy.utils import dependencies
 from scipy.stats import norm
 import warnings
 
@@ -33,12 +32,13 @@ def _gen_ml_a_feature_from_buddy_data(buddy_data) -> (np.array, np.array, np.arr
     return all_cand_form_arr, dbe_arr, mass_arr
 
 
-def _gen_ml_a_feature(all_cand_form_arr, dbe_arr, mass_arr) -> np.array:
+def _gen_ml_a_feature(all_cand_form_arr, dbe_arr, mass_arr, gd) -> np.array:
     """
     generate ML features for model A (formula feasibility)
     :param all_cand_form_arr: numpy array of all candidate formula arrays
     :param dbe_arr: numpy array of all candidate formula dbe
     :param mass_arr: numpy array of all candidate formula mass
+    :param gd: global dependencies
     :return: numpy array of ML features
     """
     # calculate ML features
@@ -83,7 +83,7 @@ def _gen_ml_a_feature(all_cand_form_arr, dbe_arr, mass_arr) -> np.array:
 
     # normalize each col using mean_arr and std_arr in global dependencies
     for i in range(out.shape[1]):
-        out[:, i] = (out[:, i] - dependencies['model_a_mean_arr'][i]) / dependencies['model_a_std_arr'][i]
+        out[:, i] = (out[:, i] - gd['model_a_mean_arr'][i]) / gd['model_a_std_arr'][i]
 
     # for columns 16-21, fill inf and nan with 0
     out[:, 16:22] = np.nan_to_num(out[:, 16:22], nan=0, posinf=0, neginf=0)
@@ -91,30 +91,32 @@ def _gen_ml_a_feature(all_cand_form_arr, dbe_arr, mass_arr) -> np.array:
     return out
 
 
-def _predict_ml_a(feature_arr: np.array) -> np.array:
+def _predict_ml_a(feature_arr: np.array, gd) -> np.array:
     """
     predict formula feasibility using model a
     :param feature_arr: numpy array of ML features
+    :param gd: global dependencies
     :return: numpy array of prediction results
     """
     # model A should be loaded in global dependencies
-    prob_arr = dependencies['model_a'].predict_proba(feature_arr)
+    prob_arr = gd['model_a'].predict_proba(feature_arr)
 
     return prob_arr[:, 1]
 
 
-def pred_formula_feasibility(buddy_data):
+def pred_formula_feasibility(buddy_data, gd):
     """
     predict formula feasibility using ML model a, retain top 500 candidate formulas
     :param buddy_data: buddy data
+    :param gd: global dependencies
     :return: fill in ml_a_prob in candidate formula objects
     """
     # generate three arrays from buddy data
     cand_form_arr, dbe_arr, mass_arr = _gen_ml_a_feature_from_buddy_data(buddy_data)
     # generate ML feature array
-    feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
+    feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr, gd)
     # predict formula feasibility
-    prob_arr = _predict_ml_a(feature_arr)
+    prob_arr = _predict_ml_a(feature_arr, gd)
 
     # add prediction results to candidate formula objects in the list
     cnt = 0
@@ -203,7 +205,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
 
 
 def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: float,
-                     ppm: bool, ms2_tol: float) -> np.array:
+                     ppm: bool, ms2_tol: float, gd) -> np.array:
     """
     generate MS/MS-related features for a single candidate formula
     :param meta_feature: MetaFeature object
@@ -212,6 +214,7 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
     :param pre_h2c: precursor H/C ratio
     :param ppm: whether to use ppm error
     :param ms2_tol: m/z tolerance for MS2
+    :param gd: global dependencies
     :return: numpy array of MS/MS-related features
     """
     # valid MS2 explanation
@@ -233,7 +236,7 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
         frag_form_arr = ms2_explanation.explanation_array  # array of fragment formulas, Formula objects
 
         # subformula count: how many frags are subformula of other frags
-        subform_score, subform_common_loss_score = _calc_subformula_score(frag_form_arr)
+        subform_score, subform_common_loss_score = _calc_subformula_score(frag_form_arr, gd)
 
         # radical ion count percentage (out of all explained fragment ions)
         radical_cnt_pct = np.sum([1 for frag_form in frag_form_arr if frag_form.dbe % 1 == 0]) / len(frag_form_arr)
@@ -272,7 +275,7 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
     return out_arr
 
 
-def _calc_subformula_score(frag_form_arr) -> (float, float):
+def _calc_subformula_score(frag_form_arr, gd) -> (float, float):
     """
     calculate how many formulas are subformula of other formulas, generate corresponding scores
     :param frag_form_arr: list of Formula objects
@@ -296,7 +299,7 @@ def _calc_subformula_score(frag_form_arr) -> (float, float):
         return 0, 0
 
     # subformula check & subformula common loss check
-    subform_cnt, subform_common_loss_cnt = _subformula_check(all_frag_arr, dependencies['common_loss_db'])
+    subform_cnt, subform_common_loss_cnt = _subformula_check(all_frag_arr, gd['common_loss_db'])
 
     # generate scores, normalized by the number of all possible combinations
     subform_score = 2 * subform_cnt / (exp_frag_cnt * (exp_frag_cnt - 1))
@@ -345,7 +348,7 @@ def _calc_log_p_norm(arr: np.array, sigma: float) -> np.array:
     return log_p_arr
 
 
-def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2_tol: float) -> np.array:
+def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
     """
     predict using model b
     :param meta_feature_list: List of MetaFeature objects
@@ -353,6 +356,7 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     :param ppm: whether to use ppm error
     :param ms1_tol: m/z tolerance for MS1
     :param ms2_tol: m/z tolerance for MS2
+    :param gd: global dependencies
     :return: numpy array of prediction results
     """
     # generate feature array
@@ -360,15 +364,15 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
 
     # load model
     if group_no == 0:
-        model = dependencies['model_b_ms1_ms2']
+        model = gd['model_b_ms1_ms2']
     elif group_no == 1:
-        model = dependencies['model_b_ms1_noms2']
+        model = gd['model_b_ms1_noms2']
         X_arr = X_arr[:, :-10]  # remove MS2-related features
     elif group_no == 2:
-        model = dependencies['model_b_noms1_ms2']
+        model = gd['model_b_noms1_ms2']
         X_arr = np.delete(X_arr, 1, axis=1)  # remove MS1 isotope similarity
     else:
-        model = dependencies['model_b_noms1_noms2']
+        model = gd['model_b_noms1_noms2']
         X_arr = np.delete(X_arr, 1, axis=1)  # remove MS1 isotope similarity
         X_arr = X_arr[:, :-10]  # remove MS2-related features
 
@@ -377,13 +381,14 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     return prob_arr[:, 1]
 
 
-def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float):
+def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float, gd):
     """
     predict formula probability using ML model b
     :param buddy_data: buddy data
     :param ppm: whether to use ppm error
     :param ms1_tol: m/z tolerance for MS1
     :param ms2_tol: m/z tolerance for MS2
+    :param gd: global dependencies
     :return: fill in estimated_prob in candidate formula objects
     """
 
@@ -411,7 +416,7 @@ def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float):
         if not group_dict[i]:
             continue
         # predict formula probability
-        prob_arr = _predict_ml_b([buddy_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol)
+        prob_arr = _predict_ml_b([buddy_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
         # add prediction results to candidate formula objects in the list
         cnt = 0
         for j in group_dict[i]:

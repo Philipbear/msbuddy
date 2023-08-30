@@ -3,44 +3,45 @@ from typing import List, Tuple
 from msbuddy.base import Adduct, Formula
 from math import ceil
 from numba import njit
-from msbuddy.utils import dependencies
+# from msbuddy.utils import dependencies
 
 # constants
 na_h_delta = 22.989769 - 1.007825
 k_h_delta = 38.963707 - 1.007825
 
 
-def _get_formula_db_idx(start_idx, end_idx, db_mode: int) -> Tuple[int, int]:
+def _get_formula_db_idx(start_idx, end_idx, db_mode: int, gd) -> Tuple[int, int]:
     """
     get formula database index
     :param start_idx: start index of candidate space
     :param end_idx: end index of candidate space
     :param db_mode: database label (0: basic, 1: halogen)
+    :param gd: global dependencies dictionary
     :return: database start index, database end index
     """
     if db_mode == 0:
         if start_idx >= 15000:
-            db_start_idx = dependencies['basic_db_idx'][-1]
+            db_start_idx = gd['basic_db_idx'][-1]
         else:
-            db_start_idx = dependencies['basic_db_idx'][start_idx]
+            db_start_idx = gd['basic_db_idx'][start_idx]
         if end_idx >= 15000:
-            db_end_idx = len(dependencies['basic_db_idx']) - 1
+            db_end_idx = len(gd['basic_db_idx']) - 1
         else:
-            db_end_idx = dependencies['basic_db_idx'][end_idx]
+            db_end_idx = gd['basic_db_idx'][end_idx]
     else:
         if start_idx >= 15000:
-            db_start_idx = dependencies['halogen_db_idx'][-1]
+            db_start_idx = gd['halogen_db_idx'][-1]
         else:
-            db_start_idx = dependencies['halogen_db_idx'][start_idx]
+            db_start_idx = gd['halogen_db_idx'][start_idx]
         if end_idx >= 15000:
-            db_end_idx = len(dependencies['halogen_db_idx']) - 1
+            db_end_idx = len(gd['halogen_db_idx']) - 1
         else:
-            db_end_idx = dependencies['halogen_db_idx'][end_idx]
+            db_end_idx = gd['halogen_db_idx'][end_idx]
 
     return int(db_start_idx), int(db_end_idx)
 
 
-def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float, ppm: bool, db_mode: int) \
+def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float, ppm: bool, db_mode: int, gd) \
         -> List[Formula]:
     """
     search precursor mass in neutral database
@@ -49,6 +50,7 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float, ppm: bool, 
     :param mz_tol: mass tolerance
     :param ppm: whether ppm is used
     :param db_mode: database label (0: basic, 1: halogen)
+    :param gd: global dependencies dictionary
     :return: list of Formula
     """
     # calculate mass tolerance
@@ -64,16 +66,16 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float, ppm: bool, 
     start_idx = int((target_mass - mass_tol) * 10)
     end_idx = ceil((target_mass + mass_tol) * 10)
 
-    db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 0)
-    results_basic_mass = dependencies['basic_db_mass'][db_start_idx:db_end_idx]
-    results_basic_formula = dependencies['basic_db_formula'][db_start_idx:db_end_idx]
+    db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 0, gd)
+    results_basic_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
+    results_basic_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
     forms_basic = _func_a(results_basic_mass, results_basic_formula, target_mass, mass_tol, adduct.loss_formula)
     formulas.extend(forms_basic)
 
     if db_mode > 0:
-        db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1)
-        results_halogen_mass = dependencies['halogen_db_mass'][db_start_idx:db_end_idx]
-        results_halogen_formula = dependencies['halogen_db_formula'][db_start_idx:db_end_idx]
+        db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
+        results_halogen_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
+        results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
         forms_halogen = _func_a(results_halogen_mass, results_halogen_formula,
                                 target_mass, mass_tol, adduct.loss_formula)
         formulas.extend(forms_halogen)
@@ -82,7 +84,7 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float, ppm: bool, 
 
 
 def query_fragnl_mass(mass: float, fragment: bool, pos_mode: bool, na_contain: bool, k_contain: bool,
-                      mz_tol: float, ppm: bool, db_mode: int) -> List[Formula]:
+                      mz_tol: float, ppm: bool, db_mode: int, gd) -> List[Formula]:
     """
     search fragment or neutral loss mass in neutral database
     by default, both radical and non-radical formulas are searched
@@ -95,6 +97,7 @@ def query_fragnl_mass(mass: float, fragment: bool, pos_mode: bool, na_contain: b
     :param mz_tol: mass tolerance
     :param ppm: whether ppm is used
     :param db_mode: database label (0: basic, 1: halogen)
+    :param gd: global dependencies dictionary
     :return: list of Formula
     """
     # calculate mass tolerance
@@ -106,34 +109,41 @@ def query_fragnl_mass(mass: float, fragment: bool, pos_mode: bool, na_contain: b
     # search in database
     # consider non-radical ions (even-electron)
     t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, False, 0, pos_mode, mass_tol)
-    formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False, False, False, pos_mode, db_mode))
+    formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False,
+                            False, False, pos_mode, db_mode, gd))
 
     # consider radical ions (odd-electron)
     t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, True, 0, pos_mode, mass_tol)
-    formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True, False, False, pos_mode, db_mode))
+    formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True,
+                            False, False, pos_mode, db_mode, gd))
 
     # consider Na and K
     if na_contain:
         t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, False, na_h_delta, pos_mode, mass_tol)
-        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False, True, False, pos_mode, db_mode))
+        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False,
+                                True, False, pos_mode, db_mode, gd))
 
         t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, True, na_h_delta, pos_mode, mass_tol)
-        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True, True, False, pos_mode, db_mode))
+        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True,
+                                True, False, pos_mode, db_mode, gd))
 
     if k_contain:
         t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, False, k_h_delta, pos_mode, mass_tol)
-        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False, False, True, pos_mode, db_mode))
+        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False,
+                                False, True, pos_mode, db_mode, gd))
 
         t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, True, k_h_delta, pos_mode, mass_tol)
-        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True, False, True, pos_mode, db_mode))
+        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True,
+                                False, True, pos_mode, db_mode, gd))
 
     return formulas
 
 
-def check_common_frag(formula: Formula) -> bool:
+def check_common_frag(formula: Formula, gd) -> bool:
     """
     check whether this formula is a common fragment in Buddy.common_frag_db (C=0)
     :param formula: formula to check
+    :param gd: global dependencies dictionary
     :return: True if this formula is a common fragment
     """
     form_arr = formula.array
@@ -143,20 +153,21 @@ def check_common_frag(formula: Formula) -> bool:
 
     # Na, K => H
     form_arr_1 = convert_na_k(form_arr)
-    return common_frag_from_array(form_arr_1, dependencies['common_frag_db'])
+    return common_frag_from_array(form_arr_1, gd['common_frag_db'])
 
 
-def check_common_nl(formula: Formula) -> bool:
+def check_common_nl(formula: Formula, gd) -> bool:
     """
     check whether this formula is a common neutral loss in Buddy.common_nl_db
     :param formula: formula to check
+    :param gd: global dependencies dictionary
     :return: True if this formula is a common neutral loss
     """
     form_arr = formula.array
 
     # Na, K => H
     form_arr_1 = convert_na_k(form_arr)
-    return common_nl_from_array(form_arr_1, dependencies['common_loss_db'])
+    return common_nl_from_array(form_arr_1, gd['common_loss_db'])
 
 
 def _calc_t_mass_db_idx(mass: float, fragment: bool, radical: bool, convert_mass: float, pos_mode: bool,
@@ -221,7 +232,7 @@ def _func_a(results_mass, results_formula, target_mass: float, mass_tol: float, 
 
 
 def _func_b(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: bool,
-            na_contain: bool, k_contain: bool, pos_mode: bool, db_mode: int) -> List[Formula]:
+            na_contain: bool, k_contain: bool, pos_mode: bool, db_mode: int, gd) -> List[Formula]:
     """
     a helper function for "query_fragnl_mass"
     first query the database, then convert the results to Formula objects
@@ -235,22 +246,23 @@ def _func_b(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
     :param k_contain: whether K is contained in the adduct form
     :param pos_mode: whether this is a frag in positive ion mode
     :param db_mode: database label (0: basic, 1: halogen, 2: all)
+    :param gd: global dependencies dictionary
     :return: list of Formula
     """
 
     forms = []
     forms_basic = _func_c(target_mass, mass_tol, start_idx, end_idx, fragment, radical, na_contain,
-                          k_contain, pos_mode, 0)
+                          k_contain, pos_mode, 0, gd)
     forms.extend(forms_basic)
     if db_mode > 0:
         forms_halogen = _func_c(target_mass, mass_tol, start_idx, end_idx, fragment, radical, na_contain,
-                                k_contain, pos_mode, 1)
+                                k_contain, pos_mode, 1, gd)
         forms.extend(forms_halogen)
     return forms
 
 
 def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: bool,
-            na_contain: bool, k_contain: bool, pos_mode: bool, db_mode: int) -> List[Formula]:
+            na_contain: bool, k_contain: bool, pos_mode: bool, db_mode: int, gd) -> List[Formula]:
     """
     a helper function for _func_b
     query the database
@@ -264,15 +276,16 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
     :param k_contain: whether K is contained in the adduct form
     :param pos_mode: whether this is a frag in positive ion mode
     :param db_mode: database label (0: basic, 1: halogen)
+    :param gd: global dependencies dictionary
     :return: list of Formula
     """
-    db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, db_mode)
+    db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, db_mode, gd)
     if db_mode == 0:
-        results_mass = dependencies['basic_db_mass'][db_start_idx:db_end_idx]
-        results_formula = dependencies['basic_db_formula'][db_start_idx:db_end_idx]
+        results_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
+        results_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
     else:
-        results_mass = dependencies['halogen_db_mass'][db_start_idx:db_end_idx]
-        results_formula = dependencies['halogen_db_formula'][db_start_idx:db_end_idx]
+        results_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
+        results_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
 
     all_idx = np.where(np.abs(results_mass - target_mass) <= mass_tol)[0]
 

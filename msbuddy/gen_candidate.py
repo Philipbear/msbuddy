@@ -1,7 +1,7 @@
 from typing import Union, List
 import numpy as np
 from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature
-from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass, convert_na_k
+from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
 from brainpy import isotopic_variants
 from numba import njit
 
@@ -33,10 +33,11 @@ class FragExplanation:
     def __len__(self):
         return len(self.frag_list)
 
-    def refine_explanation(self, raw_ms2_mz_arr: np.array):
+    def refine_explanation(self, raw_ms2_mz_arr: np.array, gd):
         """
         Refine the MS2 explanation by selecting the most reasonable explanation.
         :param raw_ms2_mz_arr: raw MS2 m/z array
+        :param gd: global dictionary
         :return: fill in self.optim_frag, self.optim_nl
         """
         if len(self) == 1:
@@ -49,7 +50,7 @@ class FragExplanation:
         # 2. select the closest to the raw MS2 m/z
 
         # either common frag or common nl is True
-        common_bool = [check_common_frag(frag) or check_common_nl(nl) for frag, nl in zip(self.frag_list, self.nl_list)]
+        common_bool = [check_common_frag(frag, gd) or check_common_nl(nl, gd) for frag, nl in zip(self.frag_list, self.nl_list)]
         # if only one common frag/nl, select it
         if sum(common_bool) == 1:
             idx = common_bool.index(True)
@@ -92,20 +93,21 @@ class CandidateSpace:
         return len(self.frag_exp_list)
 
     def refine_explanation(self, meta_feature: MetaFeature,
-                           ms2_iso_tol: float) -> CandidateFormula:
+                           ms2_iso_tol: float, gd) -> CandidateFormula:
         """
         Refine the MS2 explanation by selecting the most reasonable explanation.
         Explain other fragments as isotope peaks.
         Convert into a CandidateFormula.
         :param meta_feature: MetaFeature object
         :param ms2_iso_tol: MS2 tolerance for isotope peaks, in Da
+        :param gd: global dictionary
         :return: CandidateFormula
         """
         ms2_raw = meta_feature.ms2_raw
         ms2_processed = meta_feature.ms2_processed
         # for each frag_exp, refine the explanation, select the most reasonable frag/nl
         for frag_exp in self.frag_exp_list:
-            frag_exp.refine_explanation(ms2_raw.mz_array)
+            frag_exp.refine_explanation(ms2_raw.mz_array, gd)
 
         # consider to further explain other fragments as isotope peaks
         explained_idx = [f.idx for f in self.frag_exp_list]
@@ -196,7 +198,7 @@ def calc_isotope_similarity(int_arr_x, int_arr_y,
 
 def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
                           db_mode: int, element_lower_limit: np.array, element_upper_limit: np.array,
-                          max_isotope_cnt: int):
+                          max_isotope_cnt: int, gd: dict) -> MetaFeature:
     """
     Generate candidate formulas for a metabolic feature.
     :param meta_feature: MetaFeature object
@@ -207,6 +209,7 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
     :param element_lower_limit: lower limit of each element
     :param element_upper_limit: upper limit of each element
     :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern matching
+    :param gd: global dictionary
     :return: fill in list of candidate formulas (CandidateFormula) in metaFeature
     """
 
@@ -214,14 +217,14 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
     if not meta_feature.ms2_processed or abs(meta_feature.adduct.charge) > 1:
         meta_feature.candidate_formula_list = _gen_candidate_formula_from_mz(meta_feature, ppm, ms1_tol,
                                                                              element_lower_limit,
-                                                                             element_upper_limit, db_mode)
+                                                                             element_upper_limit, db_mode, gd)
 
     else:
         # if MS2 data available, generate candidate space with MS2 data
         ms2_cand_form_list = _gen_candidate_formula_from_ms2(meta_feature, ppm, ms1_tol, ms2_tol,
-                                                             element_lower_limit, element_upper_limit, db_mode)
+                                                             element_lower_limit, element_upper_limit, db_mode, gd)
         ms1_cand_form_list = _gen_candidate_formula_from_mz(meta_feature, ppm, ms1_tol,
-                                                            element_lower_limit, element_upper_limit, db_mode)
+                                                            element_lower_limit, element_upper_limit, db_mode, gd)
         # merge candidate formulas
         meta_feature.candidate_formula_list = _merge_cand_form_list(ms1_cand_form_list, ms2_cand_form_list)
 
@@ -230,6 +233,8 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
         for candidate_form in meta_feature.candidate_formula_list:
             candidate_form.ms1_isotope_similarity = \
                 _calc_ms1_iso_sim(candidate_form, meta_feature, max_isotope_cnt)
+
+    return meta_feature
 
 
 # @njit
@@ -325,7 +330,7 @@ def _calc_ms1_iso_sim(cand_form, meta_feature, max_isotope_cnt) -> float:
 def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
                                    ppm: bool, ms1_tol: float,
                                    lower_limit: np.array, upper_limit: np.array,
-                                   db_mode: int) -> List[CandidateFormula]:
+                                   db_mode: int, gd: dict) -> List[CandidateFormula]:
     """
     Generate candidate formulas for a metabolic feature with precursor mz only
     :param meta_feature: MetaFeature object
@@ -334,10 +339,11 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     :param lower_limit: lower limit of each element
     :param upper_limit: upper limit of each element
     :param db_mode: database mode
+    :param gd: global dictionary
     :return: list of candidate formulas (CandidateFormula)
     """
     # query precursor mz
-    formulas = query_precursor_mass(meta_feature.mz, meta_feature.adduct, ms1_tol, ppm, db_mode)
+    formulas = query_precursor_mass(meta_feature.mz, meta_feature.adduct, ms1_tol, ppm, db_mode, gd)
     # filter out formulas that exceed element limits
     forms = [f for f in formulas if _element_check(f.array, lower_limit, upper_limit)
              and _senior_rules(f.array) and _o_p_check(f.array) and _dbe_check(f.array)]
@@ -349,7 +355,7 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
 def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
                                     ppm: bool, ms1_tol: float, ms2_tol: float,
                                     lower_limit: np.array, upper_limit: np.array,
-                                    db_mode: int) -> List[CandidateFormula]:
+                                    db_mode: int, gd) -> List[CandidateFormula]:
     """
     Generate candidate formulas for a metabolic feature with MS2 data, then apply element limits
     :param meta_feature: MetaFeature object
@@ -359,6 +365,7 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
     :param lower_limit: lower limit of each element
     :param upper_limit: upper limit of each element
     :param db_mode: database mode
+    :param gd: global dictionary
     :return: list of candidate formulas (CandidateFormula)
     """
 
@@ -389,18 +396,18 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
         if nl_mz < frag_mz:
             # search neutral loss first, for faster search
             nl_form_list = query_fragnl_mass(nl_mz, False, meta_feature.adduct.pos_mode, na_bool, k_bool,
-                                             ms2_tol, ppm, db_mode)
+                                             ms2_tol, ppm, db_mode, gd)
             if nl_form_list:
                 frag_form_list = query_fragnl_mass(frag_mz, True, meta_feature.adduct.pos_mode,
-                                                   na_bool, k_bool, ms2_tol, ppm, db_mode)
+                                                   na_bool, k_bool, ms2_tol, ppm, db_mode, gd)
             else:
                 continue
         else:
             frag_form_list = query_fragnl_mass(frag_mz, True, meta_feature.adduct.pos_mode, na_bool, k_bool,
-                                               ms2_tol, ppm, db_mode)
+                                               ms2_tol, ppm, db_mode, gd)
             if frag_form_list:
                 nl_form_list = query_fragnl_mass(nl_mz, False, meta_feature.adduct.pos_mode, na_bool, k_bool,
-                                                 ms2_tol, ppm, db_mode)
+                                                 ms2_tol, ppm, db_mode, gd)
             else:
                 continue
 
@@ -467,7 +474,7 @@ def _gen_candidate_formula_from_ms2(meta_feature: MetaFeature,
     # generate CandidateFormula object, refine MS2 explanation
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * meta_feature.mz * 1e-6
     # common frag/nl + mz diff, consider isotopes
-    candidate_formula_list = [cs.refine_explanation(meta_feature, ms2_iso_tol) for cs in candidate_list]
+    candidate_formula_list = [cs.refine_explanation(meta_feature, ms2_iso_tol, gd) for cs in candidate_list]
 
     return candidate_formula_list
 

@@ -1,3 +1,5 @@
+import logging
+import sys
 import numpy as np
 from tqdm import tqdm
 from typing import Tuple, Union, List
@@ -6,21 +8,28 @@ from msbuddy.base import MetaFeature
 from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
-import logging
-import sys
+from multiprocessing import Pool, cpu_count
+
+import time
 
 logging.basicConfig(level=logging.INFO)
+
+# global variable containing shared data
+global shared_data_dict
 
 
 class BuddyParamSet:
     """
     Buddy parameter set
     """
+
     def __init__(self,
                  ppm: bool = True,
                  ms1_tol: float = 5,
                  ms2_tol: float = 10,
                  halogen: bool = False,
+                 parallel: bool = False,
+                 process_num: int = -1,
                  timeout_secs: float = 300,
                  c_range: Tuple[int, int] = (0, 80),
                  h_range: Tuple[int, int] = (0, 150),
@@ -43,6 +52,8 @@ class BuddyParamSet:
         :param ms1_tol: MS1 m/z tolerance
         :param ms2_tol: MS2 m/z tolerance
         :param halogen: whether to include halogen atoms; if False, ranges of F, Cl, Br, I will be set to (0, 0)
+        :param parallel: whether to use parallel processing
+        :param process_num: number of processes used for parallel processing
         :param timeout_secs: timeout in seconds
         :param c_range: C range
         :param h_range: H range
@@ -68,6 +79,12 @@ class BuddyParamSet:
         self.ms1_tol = ms1_tol
         self.ms2_tol = ms2_tol
         self.db_mode = 0 if not halogen else 1
+        self.parallel = parallel
+        if process_num > cpu_count() or process_num <= 0:
+            self.process_num = cpu_count() - 1
+            logging.info(f"Processing core number is set to {self.process_num}.")
+        else:
+            self.process_num = process_num
 
         if timeout_secs <= 0:
             logging.warning("Timeout is set to 300 seconds.")
@@ -90,24 +107,44 @@ class BuddyParamSet:
 
         # check valid param set
         if isotope_bin_mztol <= 0:
-            raise ValueError("Isotope bin m/z tolerance must be positive.")
-        if max_isotope_cnt <= 0:
-            raise ValueError("Maximum isotope count must be positive.")
-        if max_noise_frag_ratio <= 0 or max_noise_frag_ratio >= 1:
-            raise ValueError("Maximum noise fragment ratio must be in the range of 0 to 1.")
-        if max_noise_rsd <= 0:
-            raise ValueError("Maximum noise RSD must be positive.")
-        if max_frag_reserved <= 0:
-            raise ValueError("Top N fragment must be positive.")
+            self.isotope_bin_mztol = 0.02
+            logging.warning(f"Isotope bin m/z tolerance is set to {self.isotope_bin_mztol}.")
+        else:
+            self.isotope_bin_mztol = isotope_bin_mztol
 
-        self.isotope_bin_mztol = isotope_bin_mztol
-        self.max_isotope_cnt = max_isotope_cnt
+        if max_isotope_cnt <= 0:
+            self.max_isotope_cnt = 4
+            logging.warning(f"Maximum isotope count is set to {self.max_isotope_cnt}.")
+        else:
+            self.max_isotope_cnt = max_isotope_cnt
+
         self.ms2_denoise = ms2_denoise
         self.rel_int_denoise = rel_int_denoise
-        self.rel_int_denoise_cutoff = rel_int_denoise_cutoff
-        self.max_noise_frag_ratio = max_noise_frag_ratio
-        self.max_noise_rsd = max_noise_rsd
-        self.max_frag_reserved = max_frag_reserved
+
+        if rel_int_denoise_cutoff <= 0 or rel_int_denoise_cutoff >= 1:
+            self.rel_int_denoise_cutoff = 0.01
+            logging.warning(f"Relative intensity denoise cutoff is set to {self.rel_int_denoise_cutoff}.")
+        else:
+            self.rel_int_denoise_cutoff = rel_int_denoise_cutoff
+
+        if max_noise_frag_ratio <= 0 or max_noise_frag_ratio >= 1:
+            self.max_noise_frag_ratio = 0.85
+            logging.warning(f"Maximum noise fragment ratio is set to {self.max_noise_frag_ratio}.")
+        else:
+            self.max_noise_frag_ratio = max_noise_frag_ratio
+
+        if max_noise_rsd <= 0 or max_noise_rsd >= 1:
+            self.max_noise_rsd = 0.20
+            logging.warning(f"Maximum noise RSD is set to {self.max_noise_rsd}.")
+        else:
+            self.max_noise_rsd = max_noise_rsd
+
+        if max_frag_reserved <= 0:
+            self.max_frag_reserved = 50
+            logging.warning(f"Maximum fragment reserved is set to {self.max_frag_reserved}.")
+        else:
+            self.max_frag_reserved = max_frag_reserved
+
         self.use_all_frag = use_all_frag
 
 
@@ -131,7 +168,9 @@ class Buddy:
         else:
             self.param_set = param_set  # customized parameter set
 
-        self.db_loaded = init_db(self.param_set.db_mode)  # database initialization
+        global shared_data_dict  # Declare it as a global variable
+        shared_data_dict = init_db(self.param_set.db_mode)  # database initialization
+
         self.data = None  # List[MetabolicFeature]
 
     def load_usi(self, usi: Union[str, List[str]],
@@ -159,29 +198,70 @@ class Buddy:
             raise ValueError("No data loaded.")
 
         param_set = self.param_set
+        modified_mf_ls = []  # modified metabolic feature list, containing annotated results
 
         @timeout(param_set.timeout_secs)
-        def _preprocess_and_gen_cand(meta_feature: MetaFeature, ps: BuddyParamSet):
+        def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
             """
             a wrapper function for data preprocessing and candidate formula space generation
+            :param meta_feature: MetaFeature object
+            :param ps: Buddy parameter set
+            :return: MetaFeature object
             """
-            generate_candidate_formula(meta_feature, ps)
+            mf = generate_candidate_formula(meta_feature, ps, shared_data_dict)
+            return mf
 
-        # main loop, with progress bar and timeout
-        for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
-                       file=sys.stdout, colour="green"):
-            # data preprocessing and candidate space generation
-            try:
-                _preprocess_and_gen_cand(mf, param_set)
-            except:
-                logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
-                continue
+        start_time = time.time()
+        # data preprocessing and candidate space generation
+        if param_set.parallel:
+            logging.info(f"Parallel processing with {param_set.process_num} processes.")
+            with Pool(processes=int(param_set.process_num), initializer=init_pool,
+                      initargs=(shared_data_dict,)) as pool:
+
+                async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel, (mf, param_set)) for mf in self.data]
+
+                for i, async_result in enumerate(async_results):
+                    try:
+                        modified_mf = async_result.get(timeout=param_set.timeout_secs)  # get the result or timeout
+                        modified_mf_ls.append(modified_mf)
+                    except:
+                        mf = self.data[i]
+                        logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
+                        modified_mf_ls.append(mf)
+                        continue
+
+            del async_results
+
+            # # parallel processing
+            # logging.info(f"Parallel processing with {param_set.process_num} processes.")
+            # with Pool(processes=int(param_set.process_num), initializer=init_pool,
+            #           initargs=(shared_data_dict,)) as pool:
+            #     modified_mf_ls = pool.starmap(_preprocess_and_gen_cand_parallel,
+            #                                   [(mf, param_set) for mf in self.data])
+
+        else:
+            # main loop, with progress bar and timeout
+            for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
+                           file=sys.stdout, colour="green"):
+                try:
+                    modified_mf = _preprocess_and_gen_cand_nonparallel(mf, param_set)
+                    modified_mf_ls.append(modified_mf)
+                except:
+                    logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
+                    modified_mf_ls.append(mf)
+                    continue
+
+        end_time = time.time()
+        print(f"Data preprocessing & candidate space generation time: {end_time - start_time} seconds.")
+
+        self.data = modified_mf_ls
+        del modified_mf_ls
 
         # ml_a feature generation + prediction
-        pred_formula_feasibility(self.data)
+        pred_formula_feasibility(self.data, shared_data_dict)
 
         # ml_b feature generation + prediction
-        pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol)
+        pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
 
         # FDR calculation
         calc_fdr(self.data)
@@ -201,45 +281,55 @@ class Buddy:
         return result_summary_list
 
 
-def generate_candidate_formula(meta_feature: MetaFeature, ps: BuddyParamSet):
+def init_pool(the_dict):
     """
-    preprocess data and generate candidate formula space
-    :param meta_feature: MetaFeature object
-    :param ps: Buddy parameter set
+    initialize pool for parallel processing
+    :param the_dict: global dictionary containing shared data
     :return: None
     """
-    meta_feature.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                                 ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
-                                 ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
-                                 ps.max_frag_reserved, ps.use_all_frag)
+    global shared_data_dict
+    shared_data_dict = the_dict
 
-    gen_candidate_formula(meta_feature, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
-                          ps.max_isotope_cnt)
+
+def _preprocess_and_gen_cand_parallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
+    """
+    a wrapper function for data preprocessing and candidate formula space generation
+    :param meta_feature: MetaFeature object
+    :param ps: Buddy parameter set
+    :return: MetaFeature object
+    """
+    mf = generate_candidate_formula(meta_feature, ps, shared_data_dict)
+    return mf
+
+
+def generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) -> MetaFeature:
+    """
+    preprocess data and generate candidate formula space
+    :param mf: MetaFeature object
+    :param ps: Buddy parameter set
+    :param global_dict: global dictionary containing shared data
+    :return: MetaFeature object
+    """
+    # data preprocessing
+    mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
+                       ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
+                       ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
+                       ps.max_frag_reserved, ps.use_all_frag)
+    # generate candidate formula space
+    gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
+                          ps.max_isotope_cnt, global_dict)
+    return mf
 
 
 # test
 if __name__ == '__main__':
-    # # create parameter set
-    # buddy_param_set = BuddyParamSet(
-    #     ppm=True, ms1_tol=5, ms2_tol=10, halogen=False,
-    #     c_range=(0, 80), h_range=(0, 150), n_range=(0, 20),
-    #     o_range=(0, 30), p_range=(0, 10), s_range=(0, 15))
-    # # initiate a Buddy project with the given parameter set
-    # buddy = Buddy(buddy_param_set)
-    # # load data
-    # # buddy.load_usi(["mzspec:GNPS:TASK-c95481f0c53d42e78a61bf899e9f9adb-spectra/specs_ms.mgf:scan:1943"])
-    # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
-    # # annotate formula
-    # # buddy.annotate_formula()
-    # # # result summary
-    # result_summary = buddy.get_summary()
-    #
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20, timeout_secs=30, halogen=True, max_frag_reserved=10)
-    # use default parameter set
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, process_num=8,
+                                    timeout_secs=2, halogen=True, max_frag_reserved=50)
+
     buddy = Buddy(buddy_param_set)
-    # buddy.load_mgf("/Users/philip/Documents/test_data/test.mgf")
-    # buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")
+    buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
 
@@ -252,7 +342,9 @@ if __name__ == '__main__':
     #                                  int_array=np.array([100, 25]))
 
     # test adduct
-    buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
+    # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
+
+    # buddy.data = buddy.data[:50]
 
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()
