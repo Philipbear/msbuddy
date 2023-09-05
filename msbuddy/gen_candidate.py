@@ -196,7 +196,7 @@ def calc_isotope_similarity(int_arr_x, int_arr_y,
 
 def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
                           db_mode: int, element_lower_limit: np.array, element_upper_limit: np.array,
-                          max_isotope_cnt: int, gen_space_ver: int, gd: dict) -> MetaFeature:
+                          max_isotope_cnt: int, gd: dict) -> MetaFeature:
     """
     Generate candidate formulas for a metabolic feature.
     :param meta_feature: MetaFeature object
@@ -207,7 +207,6 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
     :param element_lower_limit: lower limit of each element
     :param element_upper_limit: upper limit of each element
     :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern matching
-    :param gen_space_ver: version of candidate space generation; 1: raw explanation; 2: subformula reassignment
     :param gd: global dictionary
     :return: fill in list of candidate formulas (CandidateFormula) in metaFeature
     """
@@ -220,9 +219,9 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
 
     else:
         # if MS2 data available, generate candidate space with MS2 data
-        ms2_cand_form_list = _gen_candidate_formula_from_ms2_v2(meta_feature, ppm, ms1_tol, ms2_tol,
-                                                                element_lower_limit, element_upper_limit,
-                                                                db_mode, gd)
+        ms2_cand_form_list = _gen_candidate_formula_from_ms2(meta_feature, ppm, ms1_tol, ms2_tol,
+                                                             element_lower_limit, element_upper_limit,
+                                                             db_mode, gd)
         ms1_cand_form_list = _gen_candidate_formula_from_mz(meta_feature, ppm, ms1_tol,
                                                             element_lower_limit, element_upper_limit, db_mode, gd)
         # merge candidate formulas
@@ -481,10 +480,10 @@ def _gen_candidate_formula_from_ms2_v1(mf: MetaFeature,
     return candidate_formula_list
 
 
-def _gen_candidate_formula_from_ms2_v2(mf: MetaFeature,
-                                       ppm: bool, ms1_tol: float, ms2_tol: float,
-                                       lower_limit: np.array, upper_limit: np.array,
-                                       db_mode: int, gd) -> List[CandidateFormula]:
+def _gen_candidate_formula_from_ms2(mf: MetaFeature,
+                                    ppm: bool, ms1_tol: float, ms2_tol: float,
+                                    lower_limit: np.array, upper_limit: np.array,
+                                    db_mode: int, gd) -> List[CandidateFormula]:
     """
     Generate candidate formulas for a metabolic feature with MS2 data, then apply element limits
     :param mf: MetaFeature object

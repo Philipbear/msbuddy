@@ -385,7 +385,7 @@ def generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) 
                        ps.max_frag_reserved, ps.use_all_frag)
     # generate candidate formula space
     gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
-                          ps.max_isotope_cnt, 2, global_dict)
+                          ps.max_isotope_cnt, global_dict)
     return mf
 
 
