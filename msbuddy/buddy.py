@@ -252,6 +252,7 @@ class Buddy:
                     modified_mf_ls.append(mf)
                     continue
 
+        # update data
         self.data = modified_mf_ls
         del modified_mf_ls
 
@@ -262,7 +263,7 @@ class Buddy:
         modified_mf_ls = []  # modified metabolic feature list
         if param_set.parallel:
             # parallel processing
-            logging.info("Subformula generation with parallel processing.")
+            logging.info("Subformula generation & assignment with parallel processing.")
             with Pool(processes=int(param_set.process_num), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
                 modified_mf_ls = pool.starmap(_gen_subformula,
@@ -274,6 +275,10 @@ class Buddy:
                            file=sys.stdout, colour="green"):
                 modified_mf = _gen_subformula(mf, param_set)
                 modified_mf_ls.append(modified_mf)
+
+        # update data
+        self.data = modified_mf_ls
+        del modified_mf_ls
 
         # ml_b feature generation + prediction
         pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)

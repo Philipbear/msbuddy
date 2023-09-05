@@ -665,7 +665,7 @@ def assign_subformula(mf: MetaFeature, ppm: bool, ms2_tol: float, gd) -> MetaFea
         pre_charged_arr = cf.formula.array * mf.adduct.m + mf.adduct.net_formula.array
         subform_arr = _enumerate_subformula(pre_charged_arr)
 
-        # dbe filter (DBE >= -2)
+        # dbe filter (DBE >= -1)
         subform_arr = _dbe_subform_filter(subform_arr)
 
         # SENIOR rules filter, a soft version
@@ -726,7 +726,7 @@ def _dbe_subform_filter(subform_arr: np.array) -> np.array:
     dbe_arr = subform_arr[:, 0] + 1 - (subform_arr[:, 1] + subform_arr[:, 4] + subform_arr[:, 3] + subform_arr[:, 2]
                                        + subform_arr[:, 5] + subform_arr[:, 8] + subform_arr[:, 6]) / 2 + \
               (subform_arr[:, 7] + subform_arr[:, 10]) / 2
-    dbe_bool_arr = dbe_arr >= -2
+    dbe_bool_arr = dbe_arr >= -1
     return subform_arr[dbe_bool_arr, :]
 
 
@@ -818,9 +818,10 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     # refine MS2 explanation
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * mf.mz * 1e-6
     ms2_iso_tol = max(ms2_iso_tol, 0.02)
-    ms2_explanation = candidate_space.refine_explanation(mf, ms2_iso_tol, gd)
+    candidate_form = candidate_space.refine_explanation(mf, ms2_iso_tol, gd)
+    candidate_form.ml_a_prob = cf.ml_a_prob
 
-    return ms2_explanation
+    return candidate_form
 
 
 # test
