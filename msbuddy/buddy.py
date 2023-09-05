@@ -6,8 +6,8 @@ from typing import Tuple, Union, List
 from timeout_decorator import timeout
 from msbuddy.base import MetaFeature
 from msbuddy.load import init_db, load_usi, load_mgf
-from msbuddy.gen_candidate import gen_candidate_formula
-from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
+from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula
+from msbuddy.ml import pred_formula_feasibility, pred_formula_prob
 from multiprocessing import Pool, cpu_count
 
 logging.basicConfig(level=logging.INFO)
@@ -192,6 +192,9 @@ class Buddy:
         -> ml_b feature generation (ms2) -> ml_a model B -> formula annotation -> FDR calculation
         :return: None
         """
+        # select MetaFeatures with precursor mass < 1500, > 1
+        self.data = [mf for mf in self.data if 1 < mf.mz < 1500]
+
         if not self.data:
             raise ValueError("No data loaded.")
 
@@ -230,7 +233,7 @@ class Buddy:
                         continue
             del async_results
 
-            # # parallel processing
+            # # parallel processing, no timeout
             # logging.info(f"Parallel processing with {param_set.process_num} processes.")
             # with Pool(processes=int(param_set.process_num), initializer=init_pool,
             #           initargs=(shared_data_dict,)) as pool:
@@ -252,14 +255,68 @@ class Buddy:
         self.data = modified_mf_ls
         del modified_mf_ls
 
-        # ml_a feature generation + prediction
+        # ml_a feature generation + prediction, retain top 500 candidates
         pred_formula_feasibility(self.data, shared_data_dict)
+
+        # subformula generation
+        modified_mf_ls = []  # modified metabolic feature list
+        if param_set.parallel:
+            # parallel processing
+            logging.info("Subformula generation with parallel processing.")
+            with Pool(processes=int(param_set.process_num), initializer=init_pool,
+                      initargs=(shared_data_dict,)) as pool:
+                modified_mf_ls = pool.starmap(_gen_subformula,
+                                              [(mf, param_set) for mf in self.data])
+
+        else:
+            # normal loop, with progress bar
+            for mf in tqdm(self.data, desc="Subformula generation & assignment",
+                           file=sys.stdout, colour="green"):
+                modified_mf = _gen_subformula(mf, param_set)
+                modified_mf_ls.append(modified_mf)
 
         # ml_b feature generation + prediction
         pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
 
         # FDR calculation
-        calc_fdr(self.data)
+        self.calc_fdr()
+
+    def calc_fdr(self):
+        """
+        calculate FDR for loaded data
+        :return: fill in estimated_fdr in MetaFeature objects
+        """
+        # calculate FDR
+        # sort candidate formula list for each metabolic feature
+        for meta_feature in self.data:
+            if not meta_feature.candidate_formula_list:
+                continue
+            # sort candidate formula list by estimated probability, in descending order
+            meta_feature.candidate_formula_list.sort(key=lambda x: x.estimated_prob, reverse=True)
+
+            # sum of estimated probabilities
+            prob_sum = np.sum([cand_form.estimated_prob for cand_form in meta_feature.candidate_formula_list])
+
+            if prob_sum > 0.1:
+                # calculate normed estimated prob and FDR considering all candidate formulas
+                sum_normed_estimated_prob = 0
+                for i, cand_form in enumerate(meta_feature.candidate_formula_list):
+                    this_normed_estimated_prob = cand_form.estimated_prob / prob_sum
+                    sum_normed_estimated_prob += this_normed_estimated_prob
+
+                    cand_form.normed_estimated_prob = this_normed_estimated_prob
+                    cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
+            else:
+                # scale estimated prob using sqrt, to reduce the effect of very small probs
+                prob_sum = np.sum(
+                    [np.sqrt(cand_form.estimated_prob) for cand_form in meta_feature.candidate_formula_list])
+                sum_normed_estimated_prob = 0
+                for i, cand_form in enumerate(meta_feature.candidate_formula_list):
+                    this_normed_estimated_prob = np.sqrt(cand_form.estimated_prob) / prob_sum
+                    sum_normed_estimated_prob += this_normed_estimated_prob
+
+                    cand_form.normed_estimated_prob = this_normed_estimated_prob
+                    cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
 
     def get_summary(self) -> List[dict]:
         """
@@ -297,6 +354,17 @@ def _preprocess_and_gen_cand_parallel(meta_feature: MetaFeature, ps: BuddyParamS
     return mf
 
 
+def _gen_subformula(mf: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
+    """
+    a wrapper function for subformula generation
+    :param mf: MetaFeature object
+    :param ps: Buddy parameter set
+    :return: MetaFeature object
+    """
+    mf = assign_subformula(mf, ps.ppm, ps.ms2_tol, shared_data_dict)
+    return mf
+
+
 def generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) -> MetaFeature:
     """
     preprocess data and generate candidate formula space
@@ -312,21 +380,21 @@ def generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) 
                        ps.max_frag_reserved, ps.use_all_frag)
     # generate candidate formula space
     gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
-                          ps.max_isotope_cnt, global_dict)
+                          ps.max_isotope_cnt, 2, global_dict)
     return mf
 
 
 # test
 if __name__ == '__main__':
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=8,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=8,
                                     timeout_secs=2, halogen=True, max_frag_reserved=50)
 
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")
-    buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
-    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    # buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
 
     # add ms1 data
     from msbuddy.base import Spectrum

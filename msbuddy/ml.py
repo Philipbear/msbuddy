@@ -135,13 +135,14 @@ def pred_formula_feasibility(buddy_data, gd):
             meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:500]
 
 
-def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float) -> np.array:
+def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
     """
     generate ML features for model B, for all metabolic features
     :param meta_feature_list: List of MetaFeature objects
     :param ppm: whether to use ppm error
     :param ms1_tol: m/z tolerance for MS1
     :param ms2_tol: m/z tolerance for MS2
+    :param gd: global dependencies
     :return: numpy array of ML features
     """
     # generate feature array
@@ -153,7 +154,7 @@ def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: floa
         # generate ML features for each candidate formula
         for candidate_formula in meta_feature.candidate_formula_list:
             # get ML features
-            ml_feature_arr = gen_ml_b_feature_single(meta_feature, candidate_formula, ppm, ms1_tol, ms2_tol)
+            ml_feature_arr = gen_ml_b_feature_single(meta_feature, candidate_formula, ppm, ms1_tol, ms2_tol, gd)
             # add to feature array
             if total_feature_arr.size == 0:
                 total_feature_arr = ml_feature_arr
@@ -163,7 +164,7 @@ def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: floa
     return total_feature_arr
 
 
-def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float) -> np.array:
+def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
     """
     generate ML features for model B for a single candidate formula
     :param meta_feature: MetaFeature object
@@ -171,6 +172,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     :param ppm: whether to use ppm error
     :param ms1_tol: m/z tolerance for MS1
     :param ms2_tol: m/z tolerance for MS2
+    :param gd: global dependencies
     :return: numpy array of ML features
     """
 
@@ -192,7 +194,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     ms1_iso_sim = cand_form.ms1_isotope_similarity if cand_form.ms1_isotope_similarity else 0
 
     # MS/MS-related features
-    ms2_feature_arr = _gen_ms2_feature(meta_feature, cand_form.ms2_raw_explanation, pre_dbe, pre_h2c, ppm, ms2_tol)
+    ms2_feature_arr = _gen_ms2_feature(meta_feature, cand_form.ms2_raw_explanation, pre_dbe, pre_h2c, ppm, ms2_tol, gd)
 
     # pos mode bool
     pos_mode = 1 if this_adduct.charge > 0 else 0
@@ -360,7 +362,7 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     :return: numpy array of prediction results
     """
     # generate feature array
-    X_arr = gen_ml_b_feature(meta_feature_list, ppm, ms1_tol, ms2_tol)
+    X_arr = gen_ml_b_feature(meta_feature_list, ppm, ms1_tol, ms2_tol, gd)
 
     # load model
     if group_no == 0:
@@ -424,40 +426,3 @@ def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float, gd)
                 candidate_formula.estimated_prob = prob_arr[cnt]
                 cnt += 1
 
-
-def calc_fdr(buddy_data):
-    """
-    calculate FDR
-    :param buddy_data: buddy data, list of MetaFeature objects
-    :return: fill in estimated_fdr in MetaFeature objects
-    """
-    # calculate FDR
-    # sort candidate formula list for each metabolic feature
-    for meta_feature in buddy_data:
-        if not meta_feature.candidate_formula_list:
-            continue
-        # sort candidate formula list by estimated probability, in descending order
-        meta_feature.candidate_formula_list.sort(key=lambda x: x.estimated_prob, reverse=True)
-
-        # sum of estimated probabilities
-        prob_sum = np.sum([cand_form.estimated_prob for cand_form in meta_feature.candidate_formula_list])
-
-        if prob_sum > 0.1:
-            # calculate normed estimated prob and FDR considering all candidate formulas
-            sum_normed_estimated_prob = 0
-            for i, cand_form in enumerate(meta_feature.candidate_formula_list):
-                this_normed_estimated_prob = cand_form.estimated_prob / prob_sum
-                sum_normed_estimated_prob += this_normed_estimated_prob
-
-                cand_form.normed_estimated_prob = this_normed_estimated_prob
-                cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
-        else:
-            # scale estimated prob using sqrt, to reduce the effect of very small probs
-            prob_sum = np.sum([np.sqrt(cand_form.estimated_prob) for cand_form in meta_feature.candidate_formula_list])
-            sum_normed_estimated_prob = 0
-            for i, cand_form in enumerate(meta_feature.candidate_formula_list):
-                this_normed_estimated_prob = np.sqrt(cand_form.estimated_prob) / prob_sum
-                sum_normed_estimated_prob += this_normed_estimated_prob
-
-                cand_form.normed_estimated_prob = this_normed_estimated_prob
-                cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
