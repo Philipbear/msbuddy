@@ -10,6 +10,8 @@ from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob
 from multiprocessing import Pool, cpu_count
 
+import time
+
 logging.basicConfig(level=logging.INFO)
 
 # global variable containing shared data
@@ -192,11 +194,13 @@ class Buddy:
         -> ml_b feature generation (ms2) -> ml_a model B -> formula annotation -> FDR calculation
         :return: None
         """
-        # select MetaFeatures with precursor mass < 1500, > 1
+        # select MetaFeatures with precursor 1 < mass < 1500
         self.data = [mf for mf in self.data if 1 < mf.mz < 1500]
 
         if not self.data:
             raise ValueError("No data loaded.")
+
+        logging.info(f"Total {len(self.data)} spectra loaded.")
 
         param_set = self.param_set
         modified_mf_ls = []  # modified metabolic feature list, containing annotated results
@@ -212,10 +216,12 @@ class Buddy:
             mf = generate_candidate_formula(meta_feature, ps, shared_data_dict)
             return mf
 
+        start_time = time.time()
         # data preprocessing and candidate space generation
         if param_set.parallel:
             # parallel processing, no progress bar
             logging.info(f"Parallel processing with {param_set.n_cpu} processes.")
+            logging.info("Candidate space generation...")
             with Pool(processes=int(param_set.n_cpu), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
 
@@ -235,7 +241,7 @@ class Buddy:
 
             # # parallel processing, no timeout
             # logging.info(f"Parallel processing with {param_set.process_num} processes.")
-            # with Pool(processes=int(param_set.process_num), initializer=init_pool,
+            # with Pool(processes=int(param_set.n_cpu), initializer=init_pool,
             #           initargs=(shared_data_dict,)) as pool:
             #     modified_mf_ls = pool.starmap(_preprocess_and_gen_cand_parallel,
             #                                   [(mf, param_set) for mf in self.data])
@@ -252,6 +258,9 @@ class Buddy:
                     modified_mf_ls.append(mf)
                     continue
 
+        logging.info(f"Data preprocessing & candidate space generation finished: {time.time() - start_time} seconds.")
+        start_time_2 = time.time()
+
         # update data
         self.data = modified_mf_ls
         del modified_mf_ls
@@ -263,19 +272,21 @@ class Buddy:
         modified_mf_ls = []  # modified metabolic feature list
         if param_set.parallel:
             # parallel processing
-            logging.info("Subformula generation & assignment with parallel processing.")
-            with Pool(processes=int(param_set.process_num), initializer=init_pool,
+            logging.info("Subformula assignment...")
+            with Pool(processes=int(param_set.n_cpu), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
                 modified_mf_ls = pool.starmap(_gen_subformula,
                                               [(mf, param_set) for mf in self.data])
 
         else:
             # normal loop, with progress bar
-            for mf in tqdm(self.data, desc="Subformula generation & assignment",
+            for mf in tqdm(self.data, desc="Subformula assignment",
                            file=sys.stdout, colour="green"):
+                logging.info(f"Subformula assignment for {mf.identifier}...")
                 modified_mf = _gen_subformula(mf, param_set)
                 modified_mf_ls.append(modified_mf)
 
+        logging.info(f"Subformula assignment finished: {time.time() - start_time_2} seconds.")
         # update data
         self.data = modified_mf_ls
         del modified_mf_ls
@@ -391,15 +402,16 @@ def generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) 
 
 # test
 if __name__ == '__main__':
+
     #########################################
     buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=8,
-                                    timeout_secs=2, halogen=True, max_frag_reserved=50)
+                                    timeout_secs=20, halogen=True, max_frag_reserved=50)
 
     buddy = Buddy(buddy_param_set)
-    # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")
+    buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")
     # buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
-    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
 
     # add ms1 data
     from msbuddy.base import Spectrum

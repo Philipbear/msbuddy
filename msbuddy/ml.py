@@ -67,26 +67,29 @@ def _gen_ml_a_feature(all_cand_form_arr, dbe_arr, mass_arr, gd) -> np.array:
     p_bool_arr = all_cand_form_arr[:, 10] > 0
     o_p_arr[p_bool_arr] = all_cand_form_arr[p_bool_arr, 9] / all_cand_form_arr[p_bool_arr, 10] / 3
 
-    # DBE binary, 1 if DBE > 0, 0 if DBE = 0
-    dbe_binary_arr = np.clip(dbe_arr, 0, 1)
+    # # DBE binary, 1 if DBE > 0, 0 if DBE = 0
+    # dbe_binary_arr = np.clip(dbe_arr, 0, 1)
 
     # generate output array
     out = np.array(
-        [all_cand_form_arr[:, 0] / ta_arr, all_cand_form_arr[:, 1] / ta_arr, all_cand_form_arr[:, 7] / ta_arr,
+        [all_cand_form_arr[:, 0], all_cand_form_arr[:, 1], all_cand_form_arr[:, 7],
+         all_cand_form_arr[:, 9], all_cand_form_arr[:, 10], all_cand_form_arr[:, 11],
+         hal_arr, ta_arr,
+         all_cand_form_arr[:, 0] / ta_arr, all_cand_form_arr[:, 1] / ta_arr, all_cand_form_arr[:, 7] / ta_arr,
          all_cand_form_arr[:, 9] / ta_arr, all_cand_form_arr[:, 10] / ta_arr, all_cand_form_arr[:, 11] / ta_arr,
-         hal_arr / ta_arr, senior_1_1_arr, senior_1_2_arr, 2 * ta_arr - 1, dbe_arr, dbe_binary_arr,
-         np.sqrt(dbe_arr / mass_arr), dbe_arr / np.power(mass_arr / 100, 2 / 3), hal_two, hal_three,
+         hal_arr / ta_arr, senior_1_1_arr, senior_1_2_arr, 2 * ta_arr - 1, dbe_arr,
+         np.sqrt(dbe_arr / mass_arr), dbe_arr / np.power(mass_arr / 100, 2 / 3),
          all_cand_form_arr[:, 1] / all_cand_form_arr[:, 0], all_cand_form_arr[:, 7] / all_cand_form_arr[:, 0],
          all_cand_form_arr[:, 9] / all_cand_form_arr[:, 0], all_cand_form_arr[:, 10] / all_cand_form_arr[:, 0],
          all_cand_form_arr[:, 11] / all_cand_form_arr[:, 0], hal_arr / all_cand_form_arr[:, 0],
-         hal_h_arr, o_p_arr]).T
+         hal_h_arr, o_p_arr, hal_two, hal_three]).T
 
-    # normalize each col using mean_arr and std_arr in global dependencies
-    for i in range(out.shape[1]):
+    # for columns 21-27, fill inf and nan with 0
+    out[:, 21:28] = np.nan_to_num(out[:, 21:28], nan=0, posinf=0, neginf=0)
+
+    # normalize each col using mean_arr and std_arr in global dependencies, except the last two
+    for i in range(out.shape[1] - 2):
         out[:, i] = (out[:, i] - gd['model_a_mean_arr'][i]) / gd['model_a_std_arr'][i]
-
-    # for columns 16-21, fill inf and nan with 0
-    out[:, 16:22] = np.nan_to_num(out[:, 16:22], nan=0, posinf=0, neginf=0)
 
     return out
 

@@ -305,6 +305,19 @@ def _dbe_check(form: np.array) -> bool:
     return True
 
 
+# @njit
+def _adduct_loss_check(form: np.array, adduct_loss_arr: np.array) -> bool:
+    """
+    check whether a precursor neutral formula contains the adduct loss
+    :param form: 12-dim array
+    :param adduct_loss_arr: 12-dim array
+    :return: True if contains, False otherwise
+    """
+    if np.any(form - adduct_loss_arr < 0):
+        return False
+    return True
+
+
 def _calc_ms1_iso_sim(cand_form, meta_feature, max_isotope_cnt) -> float:
     """
     calculate isotope similarity for a neutral precursor formula (CandidateFormula object)
@@ -571,7 +584,8 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature,
     candidate_list = [cs for cs in candidate_space_list
                       if _element_check(cs.pre_neutral_array, lower_limit, upper_limit)
                       and _senior_rules(cs.pre_neutral_array) and _o_p_check(cs.pre_neutral_array)
-                      and _dbe_check(cs.pre_neutral_array)]
+                      and _dbe_check(cs.pre_neutral_array)
+                      and _adduct_loss_check(cs.pre_neutral_array, mf.adduct.loss_formula.array)]
 
     # remove candidate space variable to save memory
     del candidate_space_list
@@ -657,6 +671,9 @@ def assign_subformula(mf: MetaFeature, ppm: bool, ms2_tol: float, gd) -> MetaFea
     :return: MetaFeature object
     """
     if not mf.ms2_processed:
+        return mf
+
+    if not mf.candidate_formula_list:
         return mf
 
     for k, cf in enumerate(mf.candidate_formula_list):
