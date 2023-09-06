@@ -698,6 +698,7 @@ class CandidateFormula:
     def __init__(self, formula: Formula,
                  ms1_isotope_similarity: Union[float, None] = None,
                  ms2_raw_explanation: Union[MS2Explanation, None] = None,
+                 db_existed: bool = False,
                  optimal_formula: bool = False,
                  ms2_refined_explanation: Union[MS2Explanation, None] = None):
         self.formula = formula  # neutral formula
@@ -707,12 +708,14 @@ class CandidateFormula:
         self.estimated_fdr = None  # estimated FDR
         self.ms1_isotope_similarity = ms1_isotope_similarity
         self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during precursor formula annotation
+        self.db_existed = db_existed  # whether this formula is in the formula database
         # self.optimal_formula = optimal_formula
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
 
     def __str__(self):
         return f'{self.formula.__str__()}' + "  ml_a_prob: " + str(self.ml_a_prob) + \
-            "  estimated_prob: " + str(self.estimated_prob) + "  estimated_fdr: " + str(self.estimated_fdr)
+            "  ms2_raw_exp: " + str(len(self.ms2_raw_explanation)) + \
+            "  est_prob: " + str(self.estimated_prob) + "  est_fdr: " + str(self.estimated_fdr)
 
 
 class MetaFeature:

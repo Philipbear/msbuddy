@@ -42,7 +42,7 @@ def init_db(db_mode: int) -> dict:
     global_dict['model_a'] = j_load(root_path / 'data' / 'model_a.joblib')
     global_dict['model_a_mean_arr'] = j_load(root_path / 'data' / 'mean_arr.joblib')
     global_dict['model_a_std_arr'] = j_load(root_path / 'data' / 'std_arr.joblib')
-    global_dict['model_b_noms1_ms2'] = j_load(root_path / 'data' / 'model_b_noms1_ms2_2.joblib')
+    # global_dict['model_b_noms1_ms2'] = j_load(root_path / 'data' / 'model_b_noms1_ms2_2.joblib')
 
     # check existence of basic_db_mass.joblib, basic_db_formula.joblib
     check_and_download('https://drive.google.com/uc?id=1obPMk9lcfkUpRkeGSkM1s4C9Bzatm1li',

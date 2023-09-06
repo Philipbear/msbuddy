@@ -229,9 +229,8 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if meta_feature.ms1_processed and len(meta_feature.ms1_processed) > 1:
-        for candidate_form in meta_feature.candidate_formula_list:
-            candidate_form.ms1_isotope_similarity = \
-                _calc_ms1_iso_sim(candidate_form, meta_feature, max_isotope_cnt)
+        for cf in meta_feature.candidate_formula_list:
+            cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, meta_feature, max_isotope_cnt)
 
     return meta_feature
 
@@ -361,7 +360,7 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
              and _senior_rules(f.array) and _o_p_check(f.array) and _dbe_check(f.array)]
 
     # convert neutral formulas into CandidateFormula objects
-    return [CandidateFormula(form) for form in forms]
+    return [CandidateFormula(form, db_existed=True) for form in forms]
 
 
 def _gen_candidate_formula_from_ms2_v1(mf: MetaFeature,
@@ -633,14 +632,15 @@ def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula],
                           ms2_cand_list: List[CandidateFormula]) -> List[CandidateFormula]:
     """
     Merge MS1 and MS2 candidate formula lists.
+    Map MS2 candidate formulas to MS1 candidate formulas (db_existed=True)
     :param ms1_cand_list: candidate formula list from MS1 mz search
     :param ms2_cand_list: candidate formula list from MS2 interrogation
     :return: merged candidate formula list, remove duplicates
     """
-    out_list = ms2_cand_list.copy()
-    for cf in ms1_cand_list:
+    out_list = ms1_cand_list.copy()
+    for cf in ms2_cand_list:
         found = False
-        for cf2 in ms2_cand_list:
+        for cf2 in ms1_cand_list:
             if _form_array_equal(cf.formula.array, cf2.formula.array):
                 found = True
                 break

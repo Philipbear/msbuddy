@@ -5,7 +5,7 @@ Classes
 ~~~~~~~~~~~~~~~
 .. class:: msbuddy.Buddy (param_set: Union[BuddyParamSet, None] = None)
 
-   Buddy main class.
+   Buddy main class. Note that the Buddy class is singleton, which means only one Buddy object can be created.
 
    :param param1: :class:`msbuddy.BuddyParamSet` object. Default is None.
 
@@ -20,6 +20,13 @@ Classes
    .. attribute:: db_loaded
 
       bool. True if the database is loaded.
+
+   .. method:: update_param_set (param_set: BuddyParamSet)
+
+      Update the parameter set for the :class:`msbuddy.Buddy` object.
+
+      :param param_set: :class:`msbuddy.BuddyParamSet` object. The parameter set to be updated.
+      :returns: None. The ``param_set`` attribute of the :class:`Buddy` object will be updated.
 
    .. method:: load_usi (usi_list: Union[str, List[str]], adduct_list: Union[None, str, List[str]] = None)
 
@@ -43,11 +50,23 @@ Classes
       :param data: A list of :class:`msbuddy.base.MetaFeature` objects. The data to be added.
       :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
 
-   .. method:: clear_data ()
+   .. method:: clear_data
 
       Clear the ``data`` attribute of the :class:`msbuddy.Buddy` object.
 
       :returns: None. The ``data`` attribute of the :class:`Buddy` object will be cleared to None.
+
+   .. method:: preprocess_and_generate_candidate_formula
+
+      Preprocess the loaded data and generate candidate formulas.
+
+      :returns: None. The ``candidate_formula_list`` attribute of each :class:`msbuddy.base.MetaFeature` object in the ``data`` attribute of the :class:`Buddy` object will be updated.
+
+   .. method:: assign_subformula_annotation
+
+      Assign subformula annotation for MS/MS spectra in loaded data (MetaFeature.candidate_formula_list - CandidateFormula.ms2_raw_explanation).
+
+      :returns: None. The ``candidate_formula_list`` attribute of each :class:`msbuddy.base.MetaFeature` object in the ``data`` attribute of the :class:`Buddy` object will be updated.
 
    .. method:: annotate_formula
 
@@ -60,6 +79,29 @@ Classes
       Summarize the annotation results.
 
       :returns: A list of Python dictionaries. Each dictionary contains the summary information for a single :class:`msbuddy.base.MetaFeature` object.
+
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy import Buddy, BuddyParamSet
+
+   # create a parameter set and a Buddy object
+   param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20, halogen=True, parallel=True, n_cpu=-1)
+   buddy = Buddy(param_set)
+
+   # load some data here
+   buddy.load_mgf("qtof_ms2_data.mgf")
+   # or add custom data (List[MetaFeature])
+   buddy.add_data(...)
+
+   # generate candidate formulas for all metabolic features based on the given parameter set
+   buddy.preprocess_and_generate_candidate_formula()
+
+   # assign subformula annotation for MS/MS spectra if available
+   # Buddy.data - MetaFeature.candidate_formula_list - CandidateFormula.ms2_raw_explanation
+   buddy.assign_subformula_annotation()
 
 
 
@@ -338,6 +380,10 @@ Example usage:
 
       float. The estimated FDR of the candidate formula.
 
+   .. attribute:: db_existed
+
+      bool. Whether this candidate formula exists in the chemical database.
+
 
 
 .. class:: msbuddy.base.MetaFeature (identifier: Union[str, int], mz: float, charge: int, rt: Union[float, None] = None, adduct: Union[str, None] = None, ms1: Union[Spectrum, None] = None, ms2: Union[Spectrum, None] = None)
@@ -397,28 +443,6 @@ Example usage:
 
 Functions
 ~~~~~~~~~~~~~~~
-.. function:: generate_candidate_formula (meta_feature: MetaFeature, param_set: BuddyParamSet)
-
-   Generate candidate formula for a given metabolic feature based on the given parameter set.
-
-   :param meta_feature: :class:`msbuddy.base.MetaFeature` object.
-   :param param_set: :class:`msbuddy.BuddyParamSet` object.
-   :returns: :class:`msbuddy.base.MetaFeature` object, with :class:`msbuddy.base.CandidateFormula` objects updated.
-
-Example Usage:
-
-.. code-block:: python
-
-   from msbuddy import generate_candidate_formula
-
-   # generate candidate formulas for a given metabolic feature based on the given parameter set
-   mf = generate_candidate_formula(meta_feature, param_set)
-
-   # print all the candidate formula strings and their estimated FDRs
-   for candidate_formula in mf.candidate_formula_list:
-      print(candidate_formula.formula.__str__() + "\t" + str(candidate_formula.estimated_fdr))
-
-
 .. function:: read_formula (formula_string: str)
 
    Read a neutral formula string and return a numpy array, return None if invalid

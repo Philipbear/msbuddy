@@ -10,8 +10,6 @@ from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob
 from multiprocessing import Pool, cpu_count
 
-import time
-
 logging.basicConfig(level=logging.INFO)
 
 # global variable containing shared data
@@ -81,7 +79,7 @@ class BuddyParamSet:
         self.db_mode = 0 if not halogen else 1
         self.parallel = parallel
         if n_cpu > cpu_count() or n_cpu <= 0:
-            self.process_num = cpu_count()
+            self.n_cpu = cpu_count()
             logging.info(f"Processing core number is set to {self.n_cpu}.")
         else:
             self.n_cpu = n_cpu
@@ -214,7 +212,7 @@ class Buddy:
             :param ps: Buddy parameter set
             :return: MetaFeature object
             """
-            mf = generate_candidate_formula(meta_feature, ps, shared_data_dict)
+            mf = _generate_candidate_formula(meta_feature, ps, shared_data_dict)
             return mf
 
         # data preprocessing and candidate space generation
@@ -381,7 +379,7 @@ def _preprocess_and_gen_cand_parallel(meta_feature: MetaFeature, ps: BuddyParamS
     :param ps: Buddy parameter set
     :return: MetaFeature object
     """
-    mf = generate_candidate_formula(meta_feature, ps, shared_data_dict)
+    mf = _generate_candidate_formula(meta_feature, ps, shared_data_dict)
     return mf
 
 
@@ -396,7 +394,7 @@ def _gen_subformula(mf: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
     return mf
 
 
-def generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) -> MetaFeature:
+def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) -> MetaFeature:
     """
     preprocess data and generate candidate formula space
     :param mf: MetaFeature object
@@ -419,8 +417,8 @@ def generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) 
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=8,
-                                    timeout_secs=20, halogen=True, max_frag_reserved=50)
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=4,
+                                    timeout_secs=10, halogen=True, max_frag_reserved=50)
 
     buddy = Buddy(buddy_param_set)
     buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")
