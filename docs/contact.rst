@@ -3,7 +3,7 @@ Contact
 
 To contribute to **msbuddy**, please feel free to file an issue at `GitHub <https://github.com/Philipbear/msbuddy/issues>`_, or submit a `pull request <https://github.com/Philipbear/msbuddy>`_ with improvements.
 
-You can also directly contact the maintainer Shipei Xing (philipxsp@hotmail.com).
+You can also directly contact the maintainer Shipei Xing (philipxsp@hotmail.com / s1xing@health.ucsd.edu).
 
 Contributors
 ~~~~~~~~~~~~

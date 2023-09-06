@@ -46,7 +46,7 @@ When using **msbuddy**, please cite:
 Contact
 -------
 
-Shipei Xing: philipxsp@hotmail.com
+Shipei Xing: philipxsp@hotmail.com  /  s1xing@health.ucsd.edu
 
 License
 -------
