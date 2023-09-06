@@ -43,6 +43,12 @@ Classes
       :param data: A list of :class:`msbuddy.base.MetaFeature` objects. The data to be added.
       :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
 
+   .. method:: clear_data ()
+
+      Clear the ``data`` attribute of the :class:`msbuddy.Buddy` object.
+
+      :returns: None. The ``data`` attribute of the :class:`Buddy` object will be cleared to None.
+
    .. method:: annotate_formula
 
       Perform formula annotation for loaded data.

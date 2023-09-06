@@ -173,6 +173,11 @@ class Buddy:
 
         self.data = None  # List[MetabolicFeature]
 
+    def update_param_set(self, new_param_set: BuddyParamSet):
+        self.param_set = new_param_set
+        global shared_data_dict  # Declare it as a global variable
+        shared_data_dict = init_db(self.param_set.db_mode)  # database initialization
+
     def load_usi(self, usi_list: Union[str, List[str]],
                  adduct_list: Union[None, str, List[str]] = None):
         self.data = load_usi(usi_list, adduct_list)
@@ -187,25 +192,21 @@ class Buddy:
         """
         self.data = data
 
-    def annotate_formula(self):
+    def clear_data(self):
         """
-        annotate formula for loaded data
-        pipeline: data preprocessing -> formula candidate space generation -> ml_a feature generation (ms1) -> ml_a model A
-        -> ml_b feature generation (ms2) -> ml_a model B -> formula annotation -> FDR calculation
+        clear loaded data
         :return: None
         """
-        # select MetaFeatures with precursor 1 < mass < 1500
-        self.data = [mf for mf in self.data if 1 < mf.mz < 1500]
+        self.data = None
 
-        if not self.data:
-            raise ValueError("No data loaded.")
-
-        logging.info(f"Total {len(self.data)} spectra loaded.")
-
-        param_set = self.param_set
+    def preprocess_and_generate_candidate_formula(self):
+        """
+        preprocess data and generate candidate formula space
+        :return: None. Update self.data
+        """
         modified_mf_ls = []  # modified metabolic feature list, containing annotated results
 
-        @timeout(param_set.timeout_secs)
+        @timeout(self.param_set.timeout_secs)
         def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
             """
             a wrapper function for data preprocessing and candidate formula space generation
@@ -216,21 +217,20 @@ class Buddy:
             mf = generate_candidate_formula(meta_feature, ps, shared_data_dict)
             return mf
 
-        start_time = time.time()
         # data preprocessing and candidate space generation
-        if param_set.parallel:
+        if self.param_set.parallel:
             # parallel processing, no progress bar
-            logging.info(f"Parallel processing with {param_set.n_cpu} processes.")
+            logging.info(f"Parallel processing with {self.param_set.n_cpu} processes.")
             logging.info("Candidate space generation...")
-            with Pool(processes=int(param_set.n_cpu), initializer=init_pool,
+            with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
 
                 async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
-                                                  (mf, param_set)) for mf in self.data]
+                                                  (mf, self.param_set)) for mf in self.data]
 
                 for i, async_result in enumerate(async_results):
                     try:
-                        modified_mf = async_result.get(timeout=param_set.timeout_secs)  # get the result or timeout
+                        modified_mf = async_result.get(timeout=self.param_set.timeout_secs)  # get the result or timeout
                         modified_mf_ls.append(modified_mf)
                     except:
                         mf = self.data[i]
@@ -238,64 +238,48 @@ class Buddy:
                         modified_mf_ls.append(mf)
                         continue
             del async_results
-
-            # # parallel processing, no timeout
-            # logging.info(f"Parallel processing with {param_set.process_num} processes.")
-            # with Pool(processes=int(param_set.n_cpu), initializer=init_pool,
-            #           initargs=(shared_data_dict,)) as pool:
-            #     modified_mf_ls = pool.starmap(_preprocess_and_gen_cand_parallel,
-            #                                   [(mf, param_set) for mf in self.data])
-
         else:
             # normal loop, with progress bar, timeout implemented using timeout_decorator
             for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
                            file=sys.stdout, colour="green"):
                 try:
-                    modified_mf = _preprocess_and_gen_cand_nonparallel(mf, param_set)
+                    modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
                     modified_mf_ls.append(modified_mf)
                 except:
                     logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
                     modified_mf_ls.append(mf)
                     continue
 
-        logging.info(f"Data preprocessing & candidate space generation finished: {time.time() - start_time} seconds.")
-        start_time_2 = time.time()
-
         # update data
         self.data = modified_mf_ls
         del modified_mf_ls
 
-        # ml_a feature generation + prediction, retain top 500 candidates
-        pred_formula_feasibility(self.data, shared_data_dict)
-
+    def assign_subformula_annotation(self):
+        """
+        assign subformula annotation for loaded data
+        :return: None. Update self.data
+        """
         # subformula generation
         modified_mf_ls = []  # modified metabolic feature list
-        if param_set.parallel:
+        if self.param_set.parallel:
             # parallel processing
             logging.info("Subformula assignment...")
-            with Pool(processes=int(param_set.n_cpu), initializer=init_pool,
+            with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
                 modified_mf_ls = pool.starmap(_gen_subformula,
-                                              [(mf, param_set) for mf in self.data])
+                                              [(mf, self.param_set) for mf in self.data])
 
         else:
             # normal loop, with progress bar
             for mf in tqdm(self.data, desc="Subformula assignment",
                            file=sys.stdout, colour="green"):
-                logging.info(f"Subformula assignment for {mf.identifier}...")
-                modified_mf = _gen_subformula(mf, param_set)
+                # logging.info(f"Subformula assignment for {mf.identifier}...")
+                modified_mf = _gen_subformula(mf, self.param_set)
                 modified_mf_ls.append(modified_mf)
 
-        logging.info(f"Subformula assignment finished: {time.time() - start_time_2} seconds.")
         # update data
         self.data = modified_mf_ls
         del modified_mf_ls
-
-        # ml_b feature generation + prediction
-        pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
-
-        # FDR calculation
-        self.calc_fdr()
 
     def calc_fdr(self):
         """
@@ -333,6 +317,37 @@ class Buddy:
 
                     cand_form.normed_estimated_prob = this_normed_estimated_prob
                     cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
+
+    def annotate_formula(self):
+        """
+        annotate formula for loaded data
+        pipeline: data preprocessing -> formula candidate space generation -> ml model A
+        -> subformula annotation -> ml model B -> formula annotation -> FDR calculation
+        :return: None. Update self.data
+        """
+        # select MetaFeatures with precursor 1 < mass < 1500
+        self.data = [mf for mf in self.data if 1 < mf.mz < 1500]
+
+        if not self.data:
+            raise ValueError("No data loaded.")
+
+        logging.info(f"Total {len(self.data)} spectra loaded.")
+
+        param_set = self.param_set
+        # data preprocessing and candidate space generation
+        self.preprocess_and_generate_candidate_formula()
+
+        # ml_a feature generation + prediction, retain top 500 candidates
+        pred_formula_feasibility(self.data, shared_data_dict)
+
+        # assign subformula annotation
+        self.assign_subformula_annotation()
+
+        # ml_b feature generation + prediction
+        pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
+
+        # FDR calculation
+        self.calc_fdr()
 
     def get_summary(self) -> List[dict]:
         """

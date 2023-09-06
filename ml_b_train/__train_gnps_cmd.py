@@ -12,6 +12,7 @@ from scipy.stats import norm
 import argparse
 from imblearn.over_sampling import SMOTE
 import json
+from msbuddy.buddy import Buddy, BuddyParamSet
 
 
 # This MLP model is trained using GNPS library.
@@ -64,7 +65,7 @@ def sim_ms1_iso_pattern(form_arr):
     return int_arr, sim_int_arr
 
 
-def load_gnps_data(path):
+def load_gnps_data_v1(path):
     """
     load GNPS library
     :param path: path to GNPS library
@@ -98,7 +99,7 @@ def load_gnps_data(path):
             ms1_tol = 5
             ms2_tol = 10
             instru_list.append(1)
-        else:
+        else:  # FT-ICR
             ms1_tol = 2
             ms2_tol = 5
             instru_list.append(2)
@@ -122,7 +123,8 @@ def load_gnps_data(path):
         mf.ms2_processed = ProcessedMS2(mf.mz, mf.ms2_raw, ms2_tol, True,
                                         True, True, 0.01,
                                         0.85, 0.20, 50, False)
-        mf.ms1_processed = ProcessedMS1(mf.mz, mf.ms1_raw, mf.adduct.charge, ms1_tol, True, 0.02, 4)
+        mf.ms1_processed = ProcessedMS1(mf.mz, mf.ms1_raw, mf.adduct.charge, ms1_tol, True,
+                                        0.02, 4)
 
         # generate formula candidates
         gen_candidate_formula(mf, True, ms1_tol, ms2_tol, 1,
@@ -142,7 +144,103 @@ def load_gnps_data(path):
     return meta_feature_list, gt_formula_list, instru_list
 
 
-def gen_training_data(meta_feature_list, gt_formula_list, instru_list):
+def load_gnps_data(path):
+    """
+    load GNPS library
+    :param path: path to GNPS library
+    """
+    db = joblib.load(path)
+
+    qtof_mf_ls = []  # metaFeature
+    orbi_mf_ls = []
+    ft_mf_ls = []
+    qtof_gt_ls = []  # ground truth formula
+    orbi_gt_ls = []
+    ft_gt_ls = []
+    for i in range(len(db)):
+        # parse formula info
+        formula = db['formula'][i]
+        gt_form_arr = read_formula(formula)
+
+        # skip if formula is not valid
+        if gt_form_arr is None:
+            continue
+
+        # calculate theoretical mass
+        theo_mass = Formula(gt_form_arr, 0).mass
+        theo_mz = theo_mass + 1.007276 if db['ionmode'][i] == 'positive' else theo_mass - 1.007276
+
+        # simulate ms1 isotope pattern
+        ms1_gt_arr, ms1_sim_arr = sim_ms1_iso_pattern(gt_form_arr)
+        # create a numpy array of ms1 mz, with length equal to the length of ms1_sim_arr, step size = 1.003355
+        ms1_mz_arr = np.array([theo_mz + x * 1.003355 for x in range(len(ms1_sim_arr))])
+
+        # parse ms2 info
+        ms2_mz = np.array(json.loads(db['ms2mz'][i]))
+        ms2_int = np.array(json.loads(db['ms2int'][i]))
+
+        mf = MetaFeature(identifier=i,
+                         mz=theo_mz,
+                         charge=1 if db['ionmode'][i] == 'positive' else -1,
+                         ms1=Spectrum(ms1_mz_arr, ms1_sim_arr),
+                         ms2=Spectrum(ms2_mz, ms2_int))
+
+        # mz tolerance, depends on the instrument
+        if db['instrument'][i] == 'qtof':
+            qtof_gt_ls.append(gt_form_arr)  # add to ground truth formula list
+            qtof_mf_ls.append(mf)
+        elif db['instrument'][i] == 'orbitrap':
+            orbi_gt_ls.append(gt_form_arr)  # add to ground truth formula list
+            orbi_mf_ls.append(mf)
+        else:  # FT-ICR
+            ft_gt_ls.append(gt_form_arr)  # add to ground truth formula list
+            ft_mf_ls.append(mf)
+
+    # save to joblib file one by one
+    joblib.dump(qtof_mf_ls, 'gnps_qtof_mf_ls.joblib')
+    joblib.dump(orbi_mf_ls, 'gnps_orbi_mf_ls.joblib')
+    joblib.dump(ft_mf_ls, 'gnps_ft_mf_ls.joblib')
+    joblib.dump(qtof_gt_ls, 'gnps_qtof_gt_ls.joblib')
+    joblib.dump(orbi_gt_ls, 'gnps_orbi_gt_ls.joblib')
+    joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
+
+    # main
+    param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20,
+                              halogen=True,
+                              parallel=True,
+                              n_cpu=-1, timeout_secs=600)
+    buddy = Buddy(param_set)
+    shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
+    buddy.add_data(qtof_mf_ls)
+    buddy.preprocess_and_generate_candidate_formula()
+    pred_formula_feasibility(buddy.data, shared_data_dict)
+    buddy.assign_subformula_annotation()
+    joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand.joblib')
+
+    # update parameters
+    buddy.update_param_set(BuddyParamSet(ms1_tol=5, ms2_tol=10, halogen=True,
+                                         parallel=True, n_cpu=-1, timeout_secs=600))
+    buddy.clear_data()
+    buddy.add_data(orbi_mf_ls)
+    buddy.preprocess_and_generate_candidate_formula()
+    pred_formula_feasibility(buddy.data, shared_data_dict)
+    buddy.assign_subformula_annotation()
+    joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand.joblib')
+
+    # update parameters
+    buddy.update_param_set(BuddyParamSet(ms1_tol=2, ms2_tol=5, halogen=True,
+                                         parallel=True, n_cpu=-1, timeout_secs=600))
+    buddy.clear_data()
+    buddy.add_data(ft_mf_ls)
+    buddy.preprocess_and_generate_candidate_formula()
+    pred_formula_feasibility(buddy.data, shared_data_dict)
+    buddy.assign_subformula_annotation()
+    joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand.joblib')
+
+    return None
+
+
+def gen_training_data_v1(meta_feature_list, gt_formula_list, instru_list):
     """
     generate training data for ML model B, including precursor simulation
     :param meta_feature_list: meta feature list
@@ -191,6 +289,66 @@ def gen_training_data(meta_feature_list, gt_formula_list, instru_list):
             else:
                 X_arr = np.vstack((X_arr, ml_feature_arr))
                 y_arr = np.append(y_arr, 1 if this_true else 0)
+
+    print('y_arr sum: ' + str(np.sum(y_arr)))
+    joblib.dump(X_arr, 'gnps_X_arr.joblib')
+    joblib.dump(y_arr, 'gnps_y_arr.joblib')
+
+
+def gen_training_data():
+    """
+    generate training data for ML model B, including precursor simulation
+    :return: write to joblib file
+    """
+    mf_ls_ls = [joblib.load('gnps_qtof_mf_ls_cand.joblib'),
+                joblib.load('gnps_orbi_mf_ls_cand.joblib'),
+                joblib.load('gnps_ft_mf_ls_cand.joblib')]
+    gt_ls_ls = [joblib.load('gnps_qtof_gt_ls.joblib'),
+                joblib.load('gnps_orbi_gt_ls.joblib'),
+                joblib.load('gnps_ft_gt_ls.joblib')]
+
+    # generate ML features for each candidate formula, for ML model B
+    # generate feature array
+    X_arr = np.array([])
+    y_arr = np.array([])
+
+    for cnt1, mf_ls in enumerate(mf_ls_ls):
+        gt_ls = gt_ls_ls[cnt1]
+        if cnt1 == 0:  # Q-TOF
+            ms1_tol = 10
+            ms2_tol = 20
+        elif cnt1 == 1:  # Orbitrap
+            ms1_tol = 5
+            ms2_tol = 10
+        else:  # FT-ICR
+            ms1_tol = 2
+            ms2_tol = 5
+        for cnt2, mf in enumerate(mf_ls):
+            gt_form_arr = gt_ls[cnt2]
+            if not mf.candidate_formula_list:
+                continue
+            # generate ML features for each candidate formula
+            for cf in mf.candidate_formula_list:
+                this_true = False
+                if (gt_form_arr == cf.formula.array).all():
+                    this_true = True
+                # get ML features
+                ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol)
+                # if true gt, perform precursor simulation
+                if this_true:
+                    mz_shift = np.random.normal(0, ms1_tol / 5)
+                    mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
+                    mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
+                    log_p = np.log(mz_shift_p * 2)
+                    ml_feature_arr[2] = np.clip(log_p, -4, 0)
+
+                # add to feature array
+                if X_arr.size == 0:
+                    X_arr = ml_feature_arr
+                    y_arr = np.array([1 if this_true else 0])
+                else:
+                    X_arr = np.vstack((X_arr, ml_feature_arr))
+                    y_arr = np.append(y_arr, 1 if this_true else 0)
 
     print('y_arr sum: ' + str(np.sum(y_arr)))
     joblib.dump(X_arr, 'gnps_X_arr.joblib')
@@ -309,13 +467,10 @@ if __name__ == '__main__':
     #                           path='gnps_ms2db_preprocessed_20230827.joblib',
     #                           ms1=True, ms2=True)
 
-    # initiate databases
-    init_db(1)
-
     # load training data
     if args.gen:
-        meta_feature_list, gt_formula_list, instru_list = load_gnps_data('gnps_ms2db_preprocessed_20230827.joblib')
-        gen_training_data(meta_feature_list, gt_formula_list, instru_list)
+        load_gnps_data('gnps_ms2db_preprocessed_20230827.joblib')
+        gen_training_data()
         print("Done.")
         exit(0)
     else:  # train model
