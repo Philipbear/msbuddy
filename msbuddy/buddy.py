@@ -9,6 +9,7 @@ from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob
 from multiprocessing import Pool, cpu_count
+import time
 
 logging.basicConfig(level=logging.INFO)
 
@@ -42,7 +43,7 @@ class BuddyParamSet:
                  isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4,
                  ms2_denoise: bool = True,
                  rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01,
-                 max_noise_frag_ratio: float = 0.85, max_noise_rsd: float = 0.20,
+                 max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.10,
                  max_frag_reserved: int = 50,
                  use_all_frag: bool = False):
         """
@@ -87,7 +88,7 @@ class BuddyParamSet:
         if timeout_secs <= 0:
             logging.warning("Timeout is set to 300 seconds.")
             self.timeout_secs = 300
-        self.timeout_secs = timeout_secs
+        self.timeout_secs = timeout_secs  # add 15 seconds for db initialization
 
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
                                    0, n_range[0], 0, o_range[0], p_range[0], s_range[0]])
@@ -126,13 +127,13 @@ class BuddyParamSet:
             self.rel_int_denoise_cutoff = rel_int_denoise_cutoff
 
         if max_noise_frag_ratio <= 0 or max_noise_frag_ratio >= 1:
-            self.max_noise_frag_ratio = 0.85
+            self.max_noise_frag_ratio = 0.90
             logging.warning(f"Maximum noise fragment ratio is set to {self.max_noise_frag_ratio}.")
         else:
             self.max_noise_frag_ratio = max_noise_frag_ratio
 
         if max_noise_rsd <= 0 or max_noise_rsd >= 1:
-            self.max_noise_rsd = 0.20
+            self.max_noise_rsd = 0.10
             logging.warning(f"Maximum noise RSD is set to {self.max_noise_rsd}.")
         else:
             self.max_noise_rsd = max_noise_rsd
@@ -217,24 +218,26 @@ class Buddy:
 
         # data preprocessing and candidate space generation
         if self.param_set.parallel:
-            # parallel processing, no progress bar
+            # parallel processing
             logging.info(f"Parallel processing with {self.param_set.n_cpu} processes.")
             logging.info("Candidate space generation...")
+
             with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
-
                 async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
                                                   (mf, self.param_set)) for mf in self.data]
 
+                pbar = tqdm(total=len(self.data), colour="green")  # Initialize tqdm progress bar
                 for i, async_result in enumerate(async_results):
+                    pbar.update(1)  # Update tqdm progress bar
                     try:
-                        modified_mf = async_result.get(timeout=self.param_set.timeout_secs)  # get the result or timeout
+                        modified_mf = async_result.get(timeout=self.param_set.timeout_secs)
                         modified_mf_ls.append(modified_mf)
                     except:
                         mf = self.data[i]
                         logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
                         modified_mf_ls.append(mf)
-                        continue
+            pbar.close()  # Close tqdm progress bar
             del async_results
         else:
             # normal loop, with progress bar, timeout implemented using timeout_decorator
@@ -246,7 +249,6 @@ class Buddy:
                 except:
                     logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
                     modified_mf_ls.append(mf)
-                    continue
 
         # update data
         self.data = modified_mf_ls
@@ -259,19 +261,35 @@ class Buddy:
         """
         # subformula generation
         modified_mf_ls = []  # modified metabolic feature list
+
         if self.param_set.parallel:
             # parallel processing
             logging.info("Subformula assignment...")
+            # with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
+            #           initargs=(shared_data_dict,)) as pool:
+            #     modified_mf_ls = pool.starmap(_gen_subformula,
+            #                                   [(mf, self.param_set) for mf in self.data])
             with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
-                modified_mf_ls = pool.starmap(_gen_subformula,
-                                              [(mf, self.param_set) for mf in self.data])
+                async_results = [pool.apply_async(_gen_subformula,
+                                                  (mf, self.param_set)) for mf in self.data]
 
+                pbar = tqdm(total=len(self.data), colour="green")  # Initialize tqdm progress bar
+                for i, async_result in enumerate(async_results):
+                    pbar.update(1)  # Update tqdm progress bar
+                    try:
+                        modified_mf = async_result.get(timeout=self.param_set.timeout_secs)
+                        modified_mf_ls.append(modified_mf)
+                    except:
+                        mf = self.data[i]
+                        logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
+                        modified_mf_ls.append(mf)
+            pbar.close()  # Close tqdm progress bar
+            del async_results
         else:
             # normal loop, with progress bar
             for mf in tqdm(self.data, desc="Subformula assignment",
                            file=sys.stdout, colour="green"):
-                # logging.info(f"Subformula assignment for {mf.identifier}...")
                 modified_mf = _gen_subformula(mf, self.param_set)
                 modified_mf_ls.append(modified_mf)
 
@@ -332,14 +350,22 @@ class Buddy:
         logging.info(f"Total {len(self.data)} spectra loaded.")
 
         param_set = self.param_set
+
+        cand_gen_start_time = time.time()
         # data preprocessing and candidate space generation
         self.preprocess_and_generate_candidate_formula()
+        logging.info(f"Data preprocessing & candidate space generation finished in {time.time() - cand_gen_start_time} seconds.")
 
         # ml_a feature generation + prediction, retain top 500 candidates
-        pred_formula_feasibility(self.data, shared_data_dict)
+        cand_form_available = pred_formula_feasibility(self.data, shared_data_dict)
 
+        if not cand_form_available:
+            raise ValueError("No feasible candidate formula.")
+
+        assign_subform_start_time = time.time()
         # assign subformula annotation
         self.assign_subformula_annotation()
+        logging.info(f"Subformula assignment finished in {time.time() - assign_subform_start_time} seconds.")
 
         # ml_b feature generation + prediction
         pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
@@ -417,18 +443,18 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=4,
-                                    timeout_secs=10, halogen=True, max_frag_reserved=50)
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=7,
+                                    timeout_secs=30, halogen=True, max_frag_reserved=50)
 
     buddy = Buddy(buddy_param_set)
-    buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")
-    # buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")
+    buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
-
-    # add ms1 data
-    from msbuddy.base import Spectrum
-
+    #
+    # # add ms1 data
+    # from msbuddy.base import Spectrum
+    #
     # buddy.data[0].ms1_raw = Spectrum(mz_array=np.array([540.369, 541.369]),
     #                                  int_array=np.array([100, 28]))
     # buddy.data[1].ms1_raw = Spectrum(mz_array=np.array([buddy.data[1].mz, buddy.data[1].mz + 1]),
@@ -437,7 +463,7 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    # buddy.data = buddy.data[:50]
+    buddy.data = buddy.data[:300]
 
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()

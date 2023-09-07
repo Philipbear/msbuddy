@@ -305,11 +305,11 @@ def _dbe_check(form: np.array) -> bool:
 
 
 # @njit
-def _adduct_loss_check(form: np.array, adduct_loss_form: Formula) -> bool:
+def _adduct_loss_check(form: np.array, adduct_loss_form) -> bool:
     """
     check whether a precursor neutral formula contains the adduct loss
     :param form: 12-dim array
-    :param adduct_loss_arr: 12-dim array
+    :param adduct_loss_form: Formula object or None
     :return: True if contains, False otherwise
     """
     if adduct_loss_form is None:

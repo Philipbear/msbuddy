@@ -128,9 +128,9 @@ def main():
                         help='Whether to use relative intensity for MS2 denoise.')
     parser.add_argument('--rel_int_denoise_cutoff', type=float, default=0.01,
                         help='Relative intensity cutoff, used for MS2 denoise.')
-    parser.add_argument('--max_noise_frag_ratio', type=float, default=0.85,
+    parser.add_argument('--max_noise_frag_ratio', type=float, default=0.90,
                         help='Maximum noise fragment ratio, used for MS2 denoise.')
-    parser.add_argument('--max_noise_rsd', type=float, default=0.20,
+    parser.add_argument('--max_noise_rsd', type=float, default=0.10,
                         help='Maximum noise RSD, used for MS2 denoise.')
     parser.add_argument('--max_frag_reserved', type=int, default=50,
                         help='Max fragment number reserved, used for MS2 data.')

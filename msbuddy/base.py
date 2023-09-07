@@ -143,13 +143,17 @@ class Spectrum:
 
 
 class Adduct:
-    # string: str
-    # pos_mode: bool
-    # charge: int
-    # m: int
-    # net_formula: Formula
-    # loss_formula: Formula  # the sum loss formula within the adduct
-    # # for example, [M+H-H2O]+ has loss formula H2O; [M+Na]+ has no loss formula;
+    """
+    Adduct class
+    :attr string: str
+    :attr pos_mode: bool
+    :attr charge: int
+    :attr m: int
+    :attr net_formula: Formula
+    :attr loss_formula: Formula, the sum loss formula within the adduct
+    """
+
+    # for example, [M+H-H2O]+ has loss formula H2O; [M+Na]+ has no loss formula;
     # [M - 2H2O - Cl] - has loss formula H4O2Cl
 
     def __init__(self,
@@ -404,12 +408,14 @@ class Adduct:
 
 
 class ProcessedMS1:
-    # MS1 preprocessing, find MS1 isotope pattern
-    # mz_tol: float
-    # ppm: bool
-    # idx_array: np.array # for retrieving raw indices of peaks, record raw indices of selected peaks e.g., [3,5,6]
-    # mz_array: np.array
-    # int_array: np.array
+    """
+    Processed MS1 class
+    :attr mz_tol: float
+    :attr ppm: bool
+    :attr idx_array: np.array, for retrieving raw indices of peaks, record raw indices of selected peaks e.g., [3,5,6]
+    :attr mz_array: np.array
+    :attr int_array: np.array
+    """
 
     def __init__(self, mz: float, raw_spec: Spectrum, charge: int,
                  mz_tol: float, ppm: bool,
@@ -447,7 +453,7 @@ class ProcessedMS1:
         tmp_mz_diff = mz * self.mz_tol * 1e-6 if self.ppm else self.mz_tol
 
         # find the closest peak to the precursor mz
-        m0_found, idx = _func_a(mz, raw_spec.mz_array, tmp_mz_diff)
+        m0_found, idx = _find_m0(mz, raw_spec.mz_array, tmp_mz_diff)
         if not m0_found:
             self.idx_array = np.array([])
             self.mz_array = np.array([])
@@ -460,17 +466,16 @@ class ProcessedMS1:
         self.int_array = np.array([raw_spec.int_array[idx]])
 
         # find other isotope peaks
-        idx_arr = _func_b(mz, raw_spec.mz_array, charge, isotope_bin_mztol, max_isotope_cnt)
+        idx_arr = _find_iso_peaks(mz, raw_spec.mz_array, charge, isotope_bin_mztol, max_isotope_cnt)
 
         self.idx_array = np.concatenate((self.idx_array, idx_arr))
         self.mz_array = np.concatenate((self.mz_array, raw_spec.mz_array[idx_arr]))
         self.int_array = np.concatenate((self.int_array, raw_spec.int_array[idx_arr]))
 
 
-# @njit
-def _func_a(mz: float, mz_array: np.array, mz_diff: float) -> Tuple[bool, int]:
+def _find_m0(mz: float, mz_array: np.array, mz_diff: float) -> Tuple[bool, int]:
     """
-    helper function a for find ms1 isotope (for class ProcessedMS1)
+    find ms1 isotope M0 peak (for class ProcessedMS1)
     :param mz: float
     :param mz_array: np.array
     :param mz_diff: float
@@ -487,11 +492,10 @@ def _func_a(mz: float, mz_array: np.array, mz_diff: float) -> Tuple[bool, int]:
     return m0_found, idx
 
 
-# @njit
-def _func_b(mz: float, mz_arr: np.array, charge: int,
-            isotope_bin_mztol: float, max_isotope_cnt: int) -> np.array:
+def _find_iso_peaks(mz: float, mz_arr: np.array, charge: int,
+                    isotope_bin_mztol: float, max_isotope_cnt: int) -> np.array:
     """
-    helper function b for find ms1 isotope (for class ProcessedMS1)
+    find ms1 isotope M1, M2, ... peaks (for class ProcessedMS1)
     :param mz: float
     :param mz_arr: np.array
     :param charge: int
@@ -514,13 +518,14 @@ def _func_b(mz: float, mz_arr: np.array, charge: int,
 
 
 class ProcessedMS2:
-    # MS2 preprocessing, de-precursor, denoise, top n fragments
-    # mz_tol: float
-    # ppm: bool
-    # idx_array: np.array  # for retrieving raw indices of peaks
-    # mz_array: np.array
-    # int_array: np.array
-
+    """
+    Processed MS2 class
+    :attr mz_tol: float
+    :attr ppm: bool
+    :attr idx_array: np.array, for retrieving raw indices of peaks, record raw indices of selected peaks e.g., [3,5,6]
+    :attr mz_array: np.array
+    :attr int_array: np.array
+    """
     def __init__(self, mz: float, raw_spec: Spectrum,
                  mz_tol: float, ppm: bool,
                  denoise: bool,
@@ -599,18 +604,18 @@ class ProcessedMS2:
         if rel_int_denoise:
             final_int_threshold = rel_int_denoise_cutoff * sorted_int[-1]
         else:
-            # at least 3 peaks are used to estimate RSD, step 0.05, round to 0.05 to determine m_start
-            m_start = round(3.0 / len(self.mz_array) * 20.0)
-            m_end = math.floor(max_noise_frag_ratio / 0.05) + 1
+            # at least 3 peaks are used to estimate RSD, step 0.02, round to 0.02 to determine m_start
+            m_start = round(3.0 / len(self.mz_array) * 50.0)
+            m_end = math.floor(max_noise_frag_ratio / 0.02) + 1
             if m_end <= m_start:
                 return
 
             final_int_threshold = 0.0
             max_int_threshold = sorted_int[round(max_noise_frag_ratio * len(self.mz_array)) - 1]
             for m in range(m_start, m_end):
-                if round(m * 0.05 * len(self.mz_array)) < 3:
+                if round(m * 0.02 * len(self.mz_array)) < 3:
                     continue
-                sub_sorted_int = sorted_int[0:round(m * 0.05 * len(self.mz_array))]
+                sub_sorted_int = sorted_int[0:round(m * 0.02 * len(self.mz_array))]
                 noise_mean = np.mean(sub_sorted_int)
                 noise_sd = np.std(sub_sorted_int, ddof=1)
                 noise_rsd = noise_sd / noise_mean
@@ -714,7 +719,7 @@ class CandidateFormula:
 
     def __str__(self):
         return f'{self.formula.__str__()}' + "  ml_a_prob: " + str(self.ml_a_prob) + \
-            "  ms2_raw_exp: " + str(len(self.ms2_raw_explanation)) + \
+            "  ms2_raw_exp: " + str(len(self.ms2_raw_explanation)) if self.ms2_raw_explanation else "None" + \
             "  est_prob: " + str(self.estimated_prob) + "  est_fdr: " + str(self.estimated_fdr)
 
 
