@@ -305,14 +305,16 @@ def _dbe_check(form: np.array) -> bool:
 
 
 # @njit
-def _adduct_loss_check(form: np.array, adduct_loss_arr: np.array) -> bool:
+def _adduct_loss_check(form: np.array, adduct_loss_form: Formula) -> bool:
     """
     check whether a precursor neutral formula contains the adduct loss
     :param form: 12-dim array
     :param adduct_loss_arr: 12-dim array
     :return: True if contains, False otherwise
     """
-    if np.any(form - adduct_loss_arr < 0):
+    if adduct_loss_form is None:
+        return True
+    if np.any(form - adduct_loss_form.array < 0):
         return False
     return True
 
@@ -525,8 +527,6 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature,
 
     candidate_space_list = []
     for i in range(len(mf.ms2_processed.mz_array)):
-        # fragment ion index
-        frag_idx = mf.ms2_processed.idx_array[i]
         # fragment ion m/z
         frag_mz = mf.ms2_processed.mz_array[i]
         # neutral loss m/z
@@ -584,7 +584,7 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature,
                       if _element_check(cs.pre_neutral_array, lower_limit, upper_limit)
                       and _senior_rules(cs.pre_neutral_array) and _o_p_check(cs.pre_neutral_array)
                       and _dbe_check(cs.pre_neutral_array)
-                      and _adduct_loss_check(cs.pre_neutral_array, mf.adduct.loss_formula.array)]
+                      and _adduct_loss_check(cs.pre_neutral_array, mf.adduct.loss_formula)]
 
     # remove candidate space variable to save memory
     del candidate_space_list
