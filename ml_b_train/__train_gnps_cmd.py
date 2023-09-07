@@ -208,7 +208,7 @@ def load_gnps_data(path):
     param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20,
                               halogen=True,
                               parallel=True,
-                              n_cpu=-1, timeout_secs=600)
+                              n_cpu=-1, timeout_secs=2000)
     buddy = Buddy(param_set)
     shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
     buddy.add_data(qtof_mf_ls)
@@ -219,7 +219,7 @@ def load_gnps_data(path):
 
     # update parameters
     buddy.update_param_set(BuddyParamSet(ms1_tol=5, ms2_tol=10, halogen=True,
-                                         parallel=True, n_cpu=-1, timeout_secs=600))
+                                         parallel=True, n_cpu=-1, timeout_secs=2000))
     buddy.clear_data()
     buddy.add_data(orbi_mf_ls)
     buddy.preprocess_and_generate_candidate_formula()
@@ -229,7 +229,7 @@ def load_gnps_data(path):
 
     # update parameters
     buddy.update_param_set(BuddyParamSet(ms1_tol=2, ms2_tol=5, halogen=True,
-                                         parallel=True, n_cpu=-1, timeout_secs=600))
+                                         parallel=True, n_cpu=-1, timeout_secs=2000))
     buddy.clear_data()
     buddy.add_data(ft_mf_ls)
     buddy.preprocess_and_generate_candidate_formula()
@@ -460,12 +460,10 @@ def parse_args():
 if __name__ == '__main__':
     __package__ = "msbuddy"
     # parse arguments
-    args = parse_args()
+    # args = parse_args()
 
-    # # test here
-    # args = argparse.Namespace(gen=True,
-    #                           path='gnps_ms2db_preprocessed_20230827.joblib',
-    #                           ms1=True, ms2=True)
+    # test here
+    args = argparse.Namespace(gen=True, ms1=True, ms2=True)
 
     # load training data
     if args.gen:
