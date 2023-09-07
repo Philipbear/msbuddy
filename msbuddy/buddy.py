@@ -88,7 +88,9 @@ class BuddyParamSet:
         if timeout_secs <= 0:
             logging.warning("Timeout is set to 300 seconds.")
             self.timeout_secs = 300
-        self.timeout_secs = timeout_secs  # add 15 seconds for db initialization
+        self.timeout_secs = timeout_secs
+        if self.parallel:
+            self.timeout_secs += 20  # add 20 seconds for db initialization
 
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
                                    0, n_range[0], 0, o_range[0], p_range[0], s_range[0]])
@@ -240,7 +242,7 @@ class Buddy:
             pbar.close()  # Close tqdm progress bar
             del async_results
         else:
-            # normal loop, with progress bar, timeout implemented using timeout_decorator
+            # normal loop, timeout implemented using timeout_decorator
             for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
                            file=sys.stdout, colour="green"):
                 try:
@@ -256,7 +258,7 @@ class Buddy:
 
     def assign_subformula_annotation(self):
         """
-        assign subformula annotation for loaded data
+        assign subformula annotation for loaded data, no timeout implemented
         :return: None. Update self.data
         """
         # subformula generation
@@ -265,10 +267,7 @@ class Buddy:
         if self.param_set.parallel:
             # parallel processing
             logging.info("Subformula assignment...")
-            # with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
-            #           initargs=(shared_data_dict,)) as pool:
-            #     modified_mf_ls = pool.starmap(_gen_subformula,
-            #                                   [(mf, self.param_set) for mf in self.data])
+
             with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
                       initargs=(shared_data_dict,)) as pool:
                 async_results = [pool.apply_async(_gen_subformula,
@@ -277,17 +276,12 @@ class Buddy:
                 pbar = tqdm(total=len(self.data), colour="green")  # Initialize tqdm progress bar
                 for i, async_result in enumerate(async_results):
                     pbar.update(1)  # Update tqdm progress bar
-                    try:
-                        modified_mf = async_result.get(timeout=self.param_set.timeout_secs)
-                        modified_mf_ls.append(modified_mf)
-                    except:
-                        mf = self.data[i]
-                        logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
-                        modified_mf_ls.append(mf)
+                    modified_mf = async_result.get()
+                    modified_mf_ls.append(modified_mf)
             pbar.close()  # Close tqdm progress bar
             del async_results
         else:
-            # normal loop, with progress bar
+            # normal loop
             for mf in tqdm(self.data, desc="Subformula assignment",
                            file=sys.stdout, colour="green"):
                 modified_mf = _gen_subformula(mf, self.param_set)
