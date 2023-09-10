@@ -3,7 +3,6 @@ from typing import List, Tuple
 from msbuddy.base import Adduct, Formula
 from math import ceil
 from numba import njit
-# from msbuddy.utils import dependencies
 
 # constants
 na_h_delta = 22.989769 - 1.007825
@@ -41,8 +40,8 @@ def _get_formula_db_idx(start_idx, end_idx, db_mode: int, gd) -> Tuple[int, int]
     return int(db_start_idx), int(db_end_idx)
 
 
-def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float, ppm: bool, db_mode: int, gd) \
-        -> List[Formula]:
+def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
+                         ppm: bool, db_mode: int, gd) -> List[Formula]:
     """
     search precursor mass in neutral database
     :param mass: mass to search

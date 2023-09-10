@@ -437,7 +437,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=7,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=7,
                                     timeout_secs=30, halogen=True, max_frag_reserved=50)
 
     buddy = Buddy(buddy_param_set)

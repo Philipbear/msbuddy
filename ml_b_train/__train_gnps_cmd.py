@@ -144,12 +144,16 @@ def load_gnps_data_v1(path):
     return meta_feature_list, gt_formula_list, instru_list
 
 
-def load_gnps_data(path):
+def load_gnps_data(path, n_cpu, timeout_secs):
     """
     load GNPS library
     :param path: path to GNPS library
     """
     db = joblib.load(path)
+
+    # test
+    print('db size: ' + str(len(db)))
+    db = db[:100]
 
     qtof_mf_ls = []  # metaFeature
     orbi_mf_ls = []
@@ -208,7 +212,7 @@ def load_gnps_data(path):
     param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20,
                               halogen=True,
                               parallel=True,
-                              n_cpu=-1, timeout_secs=2000)
+                              n_cpu=n_cpu, timeout_secs=timeout_secs)
     buddy = Buddy(param_set)
     shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
     buddy.add_data(qtof_mf_ls)
@@ -219,7 +223,7 @@ def load_gnps_data(path):
 
     # update parameters
     buddy.update_param_set(BuddyParamSet(ms1_tol=5, ms2_tol=10, halogen=True,
-                                         parallel=True, n_cpu=-1, timeout_secs=2000))
+                                         parallel=True, n_cpu=n_cpu, timeout_secs=timeout_secs))
     buddy.clear_data()
     buddy.add_data(orbi_mf_ls)
     buddy.preprocess_and_generate_candidate_formula()
@@ -229,7 +233,7 @@ def load_gnps_data(path):
 
     # update parameters
     buddy.update_param_set(BuddyParamSet(ms1_tol=2, ms2_tol=5, halogen=True,
-                                         parallel=True, n_cpu=-1, timeout_secs=2000))
+                                         parallel=True, n_cpu=n_cpu, timeout_secs=timeout_secs))
     buddy.clear_data()
     buddy.add_data(ft_mf_ls)
     buddy.preprocess_and_generate_candidate_formula()
@@ -237,7 +241,7 @@ def load_gnps_data(path):
     buddy.assign_subformula_annotation()
     joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand.joblib')
 
-    return None
+    return shared_data_dict
 
 
 def gen_training_data_v1(meta_feature_list, gt_formula_list, instru_list):
@@ -295,9 +299,10 @@ def gen_training_data_v1(meta_feature_list, gt_formula_list, instru_list):
     joblib.dump(y_arr, 'gnps_y_arr.joblib')
 
 
-def gen_training_data():
+def gen_training_data(gd):
     """
     generate training data for ML model B, including precursor simulation
+    :param gd: global data
     :return: write to joblib file
     """
     mf_ls_ls = [joblib.load('gnps_qtof_mf_ls_cand.joblib'),
@@ -333,7 +338,7 @@ def gen_training_data():
                 if (gt_form_arr == cf.formula.array).all():
                     this_true = True
                 # get ML features
-                ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol)
+                ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol, gd)
                 # if true gt, perform precursor simulation
                 if this_true:
                     mz_shift = np.random.normal(0, ms1_tol / 5)
@@ -449,9 +454,11 @@ def parse_args():
     :return: parsed arguments
     """
     parser = argparse.ArgumentParser(description='ML model B training')
-    parser.add_argument('--gen', action='store_true', help='generate training data')
-    parser.add_argument('--ms1', action='store_true', help='ms1 iso similarity included')
-    parser.add_argument('--ms2', action='store_true', help='MS/MS spec included')
+    parser.add_argument('-gen', action='store_true', help='generate training data')
+    parser.add_argument('-n_cpu', type=int, default=24, help='number of CPU cores to use')
+    parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
+    parser.add_argument('-ms1', action='store_true', help='ms1 iso similarity included')
+    parser.add_argument('-ms2', action='store_true', help='MS/MS spec included')
     args = parser.parse_args()
     return args
 
@@ -463,12 +470,14 @@ if __name__ == '__main__':
     # args = parse_args()
 
     # test here
-    args = argparse.Namespace(gen=True, ms1=True, ms2=True)
+    args = argparse.Namespace(gen=True, n_cpu=-1, to=20,
+                              ms1=True, ms2=True)
 
     # load training data
     if args.gen:
-        load_gnps_data('gnps_ms2db_preprocessed_20230827.joblib')
-        gen_training_data()
+        gd = load_gnps_data('/Users/philip/Documents/projects/ms2/gnps/gnps_ms2db_preprocessed_20230910.joblib',
+                            args.n_cpu, args.to)
+        gen_training_data(gd)
         print("Done.")
         exit(0)
     else:  # train model

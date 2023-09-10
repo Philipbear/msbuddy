@@ -6,7 +6,6 @@ from typing import List, Union
 from gdown import download as download
 from pathlib import Path
 from joblib import load as j_load
-from msbuddy.utils import set_dependency
 from msbuddy.base import MetaFeature, Spectrum
 
 

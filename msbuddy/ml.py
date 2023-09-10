@@ -137,13 +137,23 @@ def pred_formula_feasibility(buddy_data, gd) -> bool:
             candidate_formula.ml_a_prob = prob_arr[cnt]
             cnt += 1
 
+        top_n = _calc_top_n_candidate(meta_feature.mz)
         # sort candidate formula list by formula feasibility, descending
-        # retain top 500 candidate formulas
+        # retain top candidate formulas
         meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
-        if len(meta_feature.candidate_formula_list) > 500:
-            meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:500]
+        if len(meta_feature.candidate_formula_list) > top_n:
+            meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:top_n]
 
     return True
+
+
+def _calc_top_n_candidate(mz: float) -> int:
+    """
+    calculate the number of top candidate formulas to retain
+    :param mz: precursor m/z
+    :return: number of top candidate formulas to retain
+    """
+    return min(500, 10 * int(mz * mz / 1e4) + 10)
 
 
 def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:

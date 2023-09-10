@@ -222,10 +222,13 @@ def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, 
         ms2_cand_form_list = _gen_candidate_formula_from_ms2(meta_feature, ppm, ms1_tol, ms2_tol,
                                                              element_lower_limit, element_upper_limit,
                                                              db_mode, gd)
-        ms1_cand_form_list = _gen_candidate_formula_from_mz(meta_feature, ppm, ms1_tol,
-                                                            element_lower_limit, element_upper_limit, db_mode, gd)
-        # merge candidate formulas
-        meta_feature.candidate_formula_list = _merge_cand_form_list(ms1_cand_form_list, ms2_cand_form_list)
+        if len(ms2_cand_form_list) <= 5:
+            ms1_cand_form_list = _gen_candidate_formula_from_mz(meta_feature, ppm, ms1_tol,
+                                                                element_lower_limit, element_upper_limit, db_mode, gd)
+            # merge candidate formulas
+            meta_feature.candidate_formula_list = _merge_cand_form_list(ms1_cand_form_list, ms2_cand_form_list)
+        else:
+            meta_feature.candidate_formula_list = ms2_cand_form_list
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if meta_feature.ms1_processed and len(meta_feature.ms1_processed) > 1:
@@ -515,12 +518,8 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature,
     mf.ms2_processed.normalize_intensity(method='sum')
 
     # check whether Na and K are contained in the adduct
-    na_bool = False
-    k_bool = False
-    if mf.adduct.net_formula.array[8] > 0:
-        na_bool = True
-    if mf.adduct.net_formula.array[6] > 0:
-        k_bool = True
+    na_bool = True if mf.adduct.net_formula.array[8] > 0 else False
+    k_bool = True if mf.adduct.net_formula.array[6] > 0 else False
 
     # calculate absolute MS1 tolerance
     ms1_abs_tol = ms1_tol if not ppm else ms1_tol * mf.mz * 1e-6
@@ -596,9 +595,9 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature,
     # presort candidate list by mz difference (increasing)
     candidate_list.sort(key=lambda x: abs(x.neutral_mass - t_neutral_mass))
 
-    # # retain top 2000 candidate spaces
-    # if len(candidate_list) > 2000:
-    #     candidate_list = candidate_list[:2000]
+    # retain top 500 candidate spaces
+    if len(candidate_list) > 500:
+        candidate_list = candidate_list[:500]
 
     # generate CandidateFormula object
     candidate_formula_list = [CandidateFormula(formula=Formula(cs.pre_neutral_array, 0, cs.neutral_mass),
