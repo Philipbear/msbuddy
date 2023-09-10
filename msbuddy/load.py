@@ -1,13 +1,14 @@
 import logging
-import numpy as np
-from requests import get
 from json import loads as loads
-from typing import List, Union
-from gdown import download as download
 from pathlib import Path
-from joblib import load as j_load
-from msbuddy.base import MetaFeature, Spectrum
+from typing import List, Union
 
+import numpy as np
+from gdown import download as download
+from joblib import load as j_load
+from requests import get
+
+from msbuddy.base import MetaFeature, Spectrum
 
 logging.basicConfig(level=logging.INFO)
 

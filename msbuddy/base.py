@@ -1,7 +1,8 @@
 import logging
 import math
-import numpy as np
 from typing import Union, Tuple, List
+
+import numpy as np
 from chemparse import parse_formula
 
 mass_i = 1.0033548  # mass of isotope

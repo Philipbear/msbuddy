@@ -1,9 +1,11 @@
 from typing import Union, List
+
 import numpy as np
-from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature
-from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
 from brainpy import isotopic_variants
 from numba import njit
+
+from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature
+from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
 
 
 class FragExplanation:
@@ -841,8 +843,6 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
 
 # test
 if __name__ == '__main__':
-    from time import time
-
     subform_array = _enumerate_subformula(np.array([12, 22, 0, 0, 0, 0, 0, 0, 0, 5, 0, 2]))
     # print(subform_array)
     print(subform_array.shape)

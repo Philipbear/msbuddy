@@ -1,9 +1,10 @@
-import numpy as np
-from numba import njit
-from msbuddy.query import common_nl_from_array
-from scipy.stats import norm
 import warnings
 
+import numpy as np
+from numba import njit
+from scipy.stats import norm
+
+from msbuddy.query import common_nl_from_array
 
 # ignore warnings
 warnings.filterwarnings('ignore')
