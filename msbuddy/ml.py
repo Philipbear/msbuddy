@@ -205,7 +205,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     theo_mass = (this_form.mass * this_adduct.m + this_adduct.net_formula.mass -
                  this_adduct.charge * 0.0005486) / abs(this_adduct.charge)
     mz_error = (meta_feature.mz - theo_mass) / theo_mass * 1e6 if ppm else meta_feature.mz - theo_mass
-    mz_error_feature = _calc_log_p_norm(mz_error, ms1_tol/3)
+    mz_error_log_p = _calc_log_p_norm(mz_error, ms1_tol / 3)
 
     # precursor charged formula
     pre_charged_arr = this_form.array * this_adduct.m + this_adduct.net_formula.array
@@ -222,7 +222,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     pos_mode = 1 if this_adduct.charge > 0 else 0
 
     # generate output array
-    out = np.array([pos_mode, ms1_iso_sim, cand_form.ml_a_prob, mz_error_feature, pre_dbe, pre_h2c])
+    out = np.array([pos_mode, ms1_iso_sim, cand_form.ml_a_prob, mz_error_log_p, pre_dbe, pre_h2c])
     out = np.append(out, ms2_feature_arr)
 
     return out
@@ -294,7 +294,7 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
                             radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
                             len(valid_idx_arr)])
     else:
-        out_arr = np.array([0] * 9)
+        out_arr = np.array([0] * 10)
 
     return out_arr
 

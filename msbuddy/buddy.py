@@ -82,7 +82,8 @@ class BuddyParamSet:
         self.parallel = parallel
         if n_cpu > cpu_count() or n_cpu <= 0:
             self.n_cpu = cpu_count()
-            logging.info(f"Processing core number is set to {self.n_cpu}.")
+            if self.parallel:
+                logging.info(f"Processing core number is set to {self.n_cpu}.")
         else:
             self.n_cpu = n_cpu
 
@@ -438,7 +439,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=7,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=7,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
                                     i_range=(1, 20))
 

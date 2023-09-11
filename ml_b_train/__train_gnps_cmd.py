@@ -14,7 +14,7 @@ from msbuddy.base import read_formula, MetaFeature, Spectrum, Formula
 from msbuddy.buddy import Buddy, BuddyParamSet
 from msbuddy.load import init_db
 from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
-
+from msbuddy.gen_candidate import _calc_ms1_iso_sim
 
 # This MLP model is trained using GNPS library.
 # 4 models will be generated in total: ms1 iso similarity included or not, MS/MS spec included or not.
@@ -74,8 +74,8 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     db = joblib.load(path)
 
     # # test
-    # print('db size: ' + str(len(db)))
-    # db = db[:100]
+    print('db size: ' + str(len(db)))
+    db = db[:100]
 
     qtof_mf_ls = []  # metaFeature
     orbi_mf_ls = []
@@ -166,61 +166,6 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     return shared_data_dict
 
 
-def gen_training_data_v1(meta_feature_list, gt_formula_list, instru_list):
-    """
-    generate training data for ML model B, including precursor simulation
-    :param meta_feature_list: meta feature list
-    :param gt_formula_list: ground truth formula list
-    :param instru_list: instrument list; 0: Q-TOF, 1: Orbitrap, 2: FT-ICR
-    :return: write to joblib file
-    """
-    # generate ML features for each candidate formula, for ML model B
-    # generate feature array
-    X_arr = np.array([])
-    y_arr = np.array([])
-
-    for cnt, mf in enumerate(meta_feature_list):
-        gt_form_arr = gt_formula_list[cnt]
-        if instru_list[cnt] == 0:  # Q-TOF
-            ms1_tol = 10
-            ms2_tol = 20
-        elif instru_list[cnt] == 1:  # Orbitrap
-            ms1_tol = 5
-            ms2_tol = 10
-        else:  # FT-ICR
-            ms1_tol = 2
-            ms2_tol = 5
-
-        if not mf.candidate_formula_list:
-            continue
-        # generate ML features for each candidate formula
-        for cf in mf.candidate_formula_list:
-            this_true = False
-            if (gt_form_arr == cf.formula.array).all():
-                this_true = True
-            # get ML features
-            ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol)
-            # if true gt, perform precursor simulation
-            if this_true:
-                mz_shift = np.random.normal(0, ms1_tol / 5)
-                mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
-                mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
-                log_p = np.log(mz_shift_p * 2)
-                ml_feature_arr[2] = np.clip(log_p, -4, 0)
-
-            # add to feature array
-            if X_arr.size == 0:
-                X_arr = ml_feature_arr
-                y_arr = np.array([1 if this_true else 0])
-            else:
-                X_arr = np.vstack((X_arr, ml_feature_arr))
-                y_arr = np.append(y_arr, 1 if this_true else 0)
-
-    print('y_arr sum: ' + str(np.sum(y_arr)))
-    joblib.dump(X_arr, 'gnps_X_arr.joblib')
-    joblib.dump(y_arr, 'gnps_y_arr.joblib')
-
-
 def gen_training_data(gd):
     """
     generate training data for ML model B, including precursor simulation
@@ -256,11 +201,18 @@ def gen_training_data(gd):
                 continue
             # generate ML features for each candidate formula
             for cf in mf.candidate_formula_list:
+                # calc ms1 iso similarity
+                cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, 4)
                 this_true = False
                 if (gt_form_arr == cf.formula.array).all():
                     this_true = True
                 # get ML features
                 ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol, gd)
+
+                # debug
+                if len(ml_feature_arr) != 15:
+                    print('error')
+
                 # if true gt, perform precursor simulation
                 if this_true:
                     mz_shift = np.random.normal(0, ms1_tol / 5)
@@ -390,19 +342,21 @@ def parse_args():
 if __name__ == '__main__':
     __package__ = "msbuddy"
     # parse arguments
-    args = parse_args()
+    # args = parse_args()
 
     # test here
-    # args = argparse.Namespace(gen=True, n_cpu=-1, to=20, parallel=False,
-    #                           ms1=True, ms2=True)
+    args = argparse.Namespace(gen=True, n_cpu=-1, to=1000, parallel=False,
+                              ms1=True, ms2=True)
 
     # /Users/philip/Documents/projects/ms2/gnps/
 
     # load training data
     if args.gen:
-        gd = load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib',
-                            args.parallel,
-                            args.n_cpu, args.to)
+        # gd = load_gnps_data('/Users/philip/Documents/projects/ms2/gnps/gnps_ms2db_preprocessed_20230910.joblib',
+        #                     args.parallel,
+        #                     args.n_cpu, args.to)
+        buddy = Buddy(BuddyParamSet(halogen=True))
+        gd = init_db(buddy.param_set.db_mode)
         gen_training_data(gd)
         print("Done.")
         exit(0)
