@@ -8,9 +8,11 @@ from timeout_decorator import timeout
 from tqdm import tqdm
 
 from msbuddy.base import MetaFeature
-from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula
+from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob
+from msbuddy.query import query_neutral_mass
+from msbuddy.api import form_arr_to_str
 
 logging.basicConfig(level=logging.INFO)
 
@@ -383,6 +385,17 @@ class Buddy:
 
         return result_summary_list
 
+    def mass_to_formula(self, mass: float, mz_tol: float, ppm: bool) -> List[str]:
+        """
+        convert mass to formula, return list of formula strings
+        :param mass: target mass, should be <1500
+        :param mz_tol: mz tolerance
+        :param ppm: whether mz_tol is in ppm
+        :return: list of formula strings
+        """
+        formulas = query_neutral_mass(mass, mz_tol, ppm, shared_data_dict)
+        return [form_arr_to_str(f.array) for f in formulas]
+
 
 def init_pool(the_dict):
     """
@@ -412,7 +425,13 @@ def _gen_subformula(mf: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
     :param ps: Buddy parameter set
     :return: MetaFeature object
     """
-    mf = assign_subformula(mf, ps.ppm, ps.ms2_tol, shared_data_dict)
+    if not mf.ms2_processed:
+        return mf
+
+    if not mf.candidate_formula_list:
+        return mf
+
+    mf = assign_subformula_cand_form(mf, ps.ppm, ps.ms2_tol, shared_data_dict)
     return mf
 
 
@@ -439,7 +458,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=7,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=7,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
                                     i_range=(1, 20))
 

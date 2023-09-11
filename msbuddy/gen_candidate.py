@@ -4,8 +4,9 @@ import numpy as np
 from brainpy import isotopic_variants
 from numba import njit
 
-from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature, form_arr_to_str
+from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature
 from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
+from msbuddy.api import form_arr_to_str
 
 
 class FragExplanation:
@@ -579,7 +580,7 @@ def _form_array_equal(arr1: np.array, arr2: np.array) -> bool:
     return True if np.equal(arr1, arr2).all() else False
 
 
-def assign_subformula(mf: MetaFeature, ppm: bool, ms2_tol: float, gd) -> MetaFeature:
+def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float, gd) -> MetaFeature:
     """
     Assign subformula to all candidate formulas in a MetaFeature object.
     :param mf: MetaFeature object
@@ -588,11 +589,6 @@ def assign_subformula(mf: MetaFeature, ppm: bool, ms2_tol: float, gd) -> MetaFea
     :param gd: global dictionary
     :return: MetaFeature object
     """
-    if not mf.ms2_processed:
-        return mf
-
-    if not mf.candidate_formula_list:
-        return mf
 
     for k, cf in enumerate(mf.candidate_formula_list):
         # enumerate all subformulas

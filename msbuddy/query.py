@@ -1,5 +1,5 @@
 from math import ceil
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
 from numba import njit
@@ -40,6 +40,46 @@ def _get_formula_db_idx(start_idx, end_idx, db_mode: int, gd) -> Tuple[int, int]
             db_end_idx = gd['halogen_db_idx'][end_idx]
 
     return int(db_start_idx), int(db_end_idx)
+
+
+def query_neutral_mass(mass: float, mz_tol: float,
+                       ppm: bool, gd) -> List[Formula]:
+    """
+    search precursor mass in neutral database
+    :param mass: mass to search
+    :param adduct: adduct type
+    :param mz_tol: mass tolerance
+    :param ppm: whether ppm is used
+    :param db_mode: database label (0: basic, 1: halogen)
+    :param gd: global dependencies dictionary
+    :return: list of Formula
+    """
+    # calculate mass tolerance
+    mass_tol = mass * mz_tol / 1e6 if ppm else mz_tol
+    # search in database
+    target_mass = mass
+    # formulas to return
+    formulas = []
+
+    # query database, quick filter by in-memory index array
+    # quick filter by in-memory index array
+    start_idx = int((target_mass - mass_tol) * 10)
+    end_idx = ceil((target_mass + mass_tol) * 10)
+
+    db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 0, gd)
+    results_basic_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
+    results_basic_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
+    forms_basic = _func_a(results_basic_mass, results_basic_formula, target_mass, mass_tol, None)
+    formulas.extend(forms_basic)
+
+    db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
+    results_halogen_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
+    results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
+    forms_halogen = _func_a(results_halogen_mass, results_halogen_formula,
+                            target_mass, mass_tol, None)
+    formulas.extend(forms_halogen)
+
+    return formulas
 
 
 def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
@@ -199,8 +239,8 @@ def _calc_t_mass_db_idx(mass: float, fragment: bool, radical: bool, convert_mass
     return t_mass, start_idx, end_idx
 
 
-def _func_a(results_mass, results_formula, target_mass: float, mass_tol: float, adduct_loss_form: Formula)\
-        -> List[Formula]:
+def _func_a(results_mass, results_formula, target_mass: float, mass_tol: float,
+            adduct_loss_form: Union[Formula, None]) -> List[Formula]:
     """
     a helper function for query_precursor_mass
     filter and convert the sql query results to Formula objects
