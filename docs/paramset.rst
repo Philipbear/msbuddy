@@ -5,6 +5,7 @@ All **msbuddy** parameters are stored in a single class called :class:`msbuddy.B
 
 Here is a quick example of how to create a :class:`msbuddy.BuddyParamSet` object and pass it to a :class:`msbuddy.Buddy` object.
 Of note, parallel processing is available for **msbuddy**. To use it, set ``parallel=True`` and specify the number of CPUs to use with ``n_cpu``.
+We would recommend considering parallel processing for large datasets (e.g. >2000 query metabolic features).
 
 .. code-block:: python
 
@@ -22,6 +23,10 @@ Of note, parallel processing is available for **msbuddy**. To use it, set ``para
 
     # create a Buddy object with the specified parameter set
     buddy = Buddy(buddy_param_set)
+
+
+Note that the ``halogen`` parameter is set to ``False`` by default. If you are working with halogenated compounds, you will need to set this to ``True`` to enable halgoen atoms in molecular formula annotation.
+
 
 
 For more information on the parameters, see :class:`msbuddy.BuddyParamSet`.
