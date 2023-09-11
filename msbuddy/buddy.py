@@ -1,6 +1,5 @@
 import logging
 import sys
-import time
 from multiprocessing import Pool, cpu_count
 from typing import Tuple, Union, List
 
@@ -342,32 +341,32 @@ class Buddy:
 
         if not self.data:
             raise ValueError("No data loaded.")
-
         logging.info(f"Total {len(self.data)} spectra loaded.")
 
         param_set = self.param_set
 
-        cand_gen_start_time = time.time()
         # data preprocessing and candidate space generation
         self.preprocess_and_generate_candidate_formula()
-        logging.info(f"Data preprocessing & candidate space generation finished in {time.time() - cand_gen_start_time} seconds.")
 
-        # ml_a feature generation + prediction, retain top 500 candidates
+        # ml_a feature generation + prediction, retain top candidates
+        logging.info("Formula feasibility assessment...")
         cand_form_available = pred_formula_feasibility(self.data, shared_data_dict)
 
         if not cand_form_available:
             raise ValueError("No feasible candidate formula.")
 
-        assign_subform_start_time = time.time()
         # assign subformula annotation
         self.assign_subformula_annotation()
-        logging.info(f"Subformula assignment finished in {time.time() - assign_subform_start_time} seconds.")
 
         # ml_b feature generation + prediction
+        logging.info("Formula probability prediction...")
         pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
 
         # FDR calculation
+        logging.info("FDR calculation...")
         self.calc_fdr()
+
+        logging.info("Job finished.")
 
     def get_summary(self) -> List[dict]:
         """
@@ -440,7 +439,8 @@ if __name__ == '__main__':
 
     #########################################
     buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=7,
-                                    timeout_secs=300, halogen=True, max_frag_reserved=50)
+                                    timeout_secs=300, halogen=True, max_frag_reserved=50,
+                                    i_range=(1, 20))
 
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")
@@ -459,7 +459,7 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    buddy.data = buddy.data[:300]
+    # buddy.data = buddy.data[:300]
 
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()

@@ -1,18 +1,19 @@
-import numpy as np
-import joblib
-from sklearn import metrics
-from brainpy import isotopic_variants
-from sklearn.neural_network import MLPClassifier
-from sklearn.model_selection import train_test_split, GridSearchCV
-from scipy.stats import norm
 import argparse
-from imblearn.over_sampling import SMOTE
 import json
+
+import joblib
+import numpy as np
+from brainpy import isotopic_variants
+from imblearn.over_sampling import SMOTE
+from scipy.stats import norm
+from sklearn import metrics
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.neural_network import MLPClassifier
+
+from msbuddy.base import read_formula, MetaFeature, Spectrum, Formula
 from msbuddy.buddy import Buddy, BuddyParamSet
-from msbuddy.base import read_formula, ProcessedMS1, ProcessedMS2, MetaFeature, Spectrum, Formula
-from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
-from msbuddy.gen_candidate import gen_candidate_formula
 from msbuddy.load import init_db
+from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 
 
 # This MLP model is trained using GNPS library.
@@ -65,95 +66,16 @@ def sim_ms1_iso_pattern(form_arr):
     return int_arr, sim_int_arr
 
 
-def load_gnps_data_v1(path):
+def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     """
     load GNPS library
     :param path: path to GNPS library
     """
     db = joblib.load(path)
 
-    meta_feature_list = []
-    gt_formula_list = []
-    instru_list = []
-    for i in range(len(db)):
-        print(i)
-        # parse formula info
-        formula = db['formula'][i]
-        gt_form_arr = read_formula(formula)
-
-        # skip if formula is not valid
-        if gt_form_arr is None:
-            continue
-        gt_formula_list.append(gt_form_arr)  # add to ground truth formula list
-
-        # calculate theoretical mass
-        theo_mass = Formula(gt_form_arr, 0).mass
-        theo_mz = theo_mass + 1.007276 if db['ionmode'][i] == 'positive' else theo_mass - 1.007276
-
-        # mz tolerance, depends on the instrument
-        if db['instrument'][i] == 'qtof':
-            ms1_tol = 10
-            ms2_tol = 20
-            instru_list.append(0)
-        elif db['instrument'][i] == 'orbitrap':
-            ms1_tol = 5
-            ms2_tol = 10
-            instru_list.append(1)
-        else:  # FT-ICR
-            ms1_tol = 2
-            ms2_tol = 5
-            instru_list.append(2)
-
-        # simulate ms1 isotope pattern
-        ms1_gt_arr, ms1_sim_arr = sim_ms1_iso_pattern(gt_form_arr)
-        # create a numpy array of ms1 mz, with length equal to the length of ms1_sim_arr, step size = 1.003355
-        ms1_mz_arr = np.array([theo_mz + x * 1.003355 for x in range(len(ms1_sim_arr))])
-
-        # parse ms2 info
-        ms2_mz = np.array(json.loads(db['ms2mz'][i]))
-        ms2_int = np.array(json.loads(db['ms2int'][i]))
-
-        mf = MetaFeature(identifier=i,
-                         mz=theo_mz,
-                         charge=1 if db['ionmode'][i] == 'positive' else -1,
-                         ms1=Spectrum(ms1_mz_arr, ms1_sim_arr),
-                         ms2=Spectrum(ms2_mz, ms2_int))
-
-        # add processed ms1 and ms2
-        mf.ms2_processed = ProcessedMS2(mf.mz, mf.ms2_raw, ms2_tol, True,
-                                        True, True, 0.01,
-                                        0.85, 0.20, 50, False)
-        mf.ms1_processed = ProcessedMS1(mf.mz, mf.ms1_raw, mf.adduct.charge, ms1_tol, True,
-                                        0.02, 4)
-
-        # generate formula candidates
-        gen_candidate_formula(mf, True, ms1_tol, ms2_tol, 1,
-                              np.array([0] * 12),
-                              np.array([80, 150, 10, 15, 20, 10, 0, 20, 0, 30, 10, 15]),
-                              4)
-
-        meta_feature_list.append(mf)
-
-    # predict formula feasibility, using ML model A
-    pred_formula_feasibility(meta_feature_list)
-
-    # save to joblib file one by one
-    joblib.dump(meta_feature_list, 'gnps_meta_feature_list.joblib')
-    joblib.dump(gt_formula_list, 'gnps_gt_formula_list.joblib')
-    joblib.dump(instru_list, 'gnps_instru_list.joblib')
-    return meta_feature_list, gt_formula_list, instru_list
-
-
-def load_gnps_data(path, n_cpu, timeout_secs):
-    """
-    load GNPS library
-    :param path: path to GNPS library
-    """
-    db = joblib.load(path)
-
-    # test
-    print('db size: ' + str(len(db)))
-    db = db[:100]
+    # # test
+    # print('db size: ' + str(len(db)))
+    # db = db[:100]
 
     qtof_mf_ls = []  # metaFeature
     orbi_mf_ls = []
@@ -211,7 +133,7 @@ def load_gnps_data(path, n_cpu, timeout_secs):
     # main
     param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20,
                               halogen=True,
-                              parallel=True,
+                              parallel=parallel,
                               n_cpu=n_cpu, timeout_secs=timeout_secs)
     buddy = Buddy(param_set)
     shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
@@ -223,7 +145,7 @@ def load_gnps_data(path, n_cpu, timeout_secs):
 
     # update parameters
     buddy.update_param_set(BuddyParamSet(ms1_tol=5, ms2_tol=10, halogen=True,
-                                         parallel=True, n_cpu=n_cpu, timeout_secs=timeout_secs))
+                                         parallel=parallel, n_cpu=n_cpu, timeout_secs=timeout_secs))
     buddy.clear_data()
     buddy.add_data(orbi_mf_ls)
     buddy.preprocess_and_generate_candidate_formula()
@@ -233,7 +155,7 @@ def load_gnps_data(path, n_cpu, timeout_secs):
 
     # update parameters
     buddy.update_param_set(BuddyParamSet(ms1_tol=2, ms2_tol=5, halogen=True,
-                                         parallel=True, n_cpu=n_cpu, timeout_secs=timeout_secs))
+                                         parallel=parallel, n_cpu=n_cpu, timeout_secs=timeout_secs))
     buddy.clear_data()
     buddy.add_data(ft_mf_ls)
     buddy.preprocess_and_generate_candidate_formula()
@@ -455,6 +377,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='ML model B training')
     parser.add_argument('-gen', action='store_true', help='generate training data')
+    parser.add_argument('-parallel', action='store_true', help='parallel mode')
     parser.add_argument('-n_cpu', type=int, default=24, help='number of CPU cores to use')
     parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
     parser.add_argument('-ms1', action='store_true', help='ms1 iso similarity included')
@@ -467,15 +390,18 @@ def parse_args():
 if __name__ == '__main__':
     __package__ = "msbuddy"
     # parse arguments
-    # args = parse_args()
+    args = parse_args()
 
     # test here
-    args = argparse.Namespace(gen=True, n_cpu=-1, to=20,
-                              ms1=True, ms2=True)
+    # args = argparse.Namespace(gen=True, n_cpu=-1, to=20, parallel=False,
+    #                           ms1=True, ms2=True)
+
+    # /Users/philip/Documents/projects/ms2/gnps/
 
     # load training data
     if args.gen:
-        gd = load_gnps_data('/Users/philip/Documents/projects/ms2/gnps/gnps_ms2db_preprocessed_20230910.joblib',
+        gd = load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib',
+                            args.parallel,
                             args.n_cpu, args.to)
         gen_training_data(gd)
         print("Done.")
