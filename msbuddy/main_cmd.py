@@ -50,7 +50,8 @@ def buddy_cmd(args) -> Buddy:
 def write_summary_results(buddy: Buddy, output_path: pathlib.Path):
     # create a DataFrame object, with columns: identifier, mz, rt, formula_rank_1, estimated_fdr
     # fill in the DataFrame object one by one
-    result_df = pd.DataFrame(columns=['identifier', 'mz', 'rt', 'formula_rank_1', 'estimated_fdr'])
+    result_df = pd.DataFrame(columns=['identifier', 'mz', 'rt', 'formula_rank_1', 'estimated_fdr',
+                                      'formula_rank_2', 'formula_rank_3'])
     for mf in buddy.data:
         individual_result = mf.summarize_result()
         result_df = result_df.append({
@@ -58,7 +59,9 @@ def write_summary_results(buddy: Buddy, output_path: pathlib.Path):
             'mz': mf.mz,
             'rt': mf.rt,
             'formula_rank_1': individual_result['formula_rank_1'],
-            'estimated_fdr': individual_result['estimated_fdr']
+            'estimated_fdr': individual_result['estimated_fdr'],
+            'formula_rank_2': individual_result['formula_rank_2'],
+            'formula_rank_3': individual_result['formula_rank_3']
         }, ignore_index=True)
 
     # write the DataFrame object to the output file

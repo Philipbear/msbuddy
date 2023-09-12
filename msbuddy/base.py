@@ -673,9 +673,12 @@ class CandidateFormula:
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
 
     def __str__(self):
-        return f'{self.formula.__str__()}' + "  ml_a_prob: " + str(self.ml_a_prob) + \
-            "  ms2_raw_exp: " + str(len(self.ms2_raw_explanation)) if self.ms2_raw_explanation else "None" + \
-            "  est_prob: " + str(self.estimated_prob) + "  est_fdr: " + str(self.estimated_fdr)
+        cf_str = form_arr_to_str(self.formula.array) + "  ml_a: " + str(self.ml_a_prob) + \
+                    "  est_prob: " + str(self.estimated_prob) + "  est_fdr: " + str(self.estimated_fdr)
+        if self.ms2_raw_explanation:
+            cf_str += " ms2_raw_exp: " + str(len(self.ms2_raw_explanation))
+
+        return cf_str
 
 
 class MetaFeature:
@@ -717,7 +720,12 @@ class MetaFeature:
         self.candidate_formula_list = None  # Union[List[CandidateFormula], None]
 
     def __str__(self):
-        return "Meta feature: mz " + str(self.mz) + "  adduct: " + str(self.adduct)
+        mf_str = "mz " + str(self.mz) + "  adduct " + self.adduct.string
+        if self.candidate_formula_list:
+            mf_str += "  cf count: " + str(len(self.candidate_formula_list))
+        else:
+            mf_str += "  cf count: 0"
+        return mf_str
 
     def data_preprocess(self, ppm: bool, ms1_tol: float, ms2_tol: float,
                         isotope_bin_mztol: float, max_isotope_cnt: int,
@@ -758,8 +766,12 @@ class MetaFeature:
         :return: dict
         """
         result = {'identifier': self.identifier, 'mz': self.mz, 'rt': self.rt, 'adduct': self.adduct.string,
-                  'formula_rank_1': None, 'estimated_fdr': None}
+                  'formula_rank_1': None, 'estimated_fdr': None, 'formula_rank_2': None, 'formula_rank_3': None}
         if self.candidate_formula_list:
             result['formula_rank_1'] = form_arr_to_str(self.candidate_formula_list[0].formula.array)
             result['estimated_fdr'] = self.candidate_formula_list[0].estimated_fdr
+            if len(self.candidate_formula_list) > 1:
+                result['formula_rank_2'] = form_arr_to_str(self.candidate_formula_list[1].formula.array)
+            if len(self.candidate_formula_list) > 2:
+                result['formula_rank_3'] = form_arr_to_str(self.candidate_formula_list[2].formula.array)
         return result

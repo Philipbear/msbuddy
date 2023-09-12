@@ -2,7 +2,7 @@ Result Export
 ----------------
 
 After molecular formula annotation, you can access the result summary as demonstrated in the `Quick Start <quickstart.html>`_ session.
-All the first-ranked formulas will be included in the ``result``.
+All the top 3 formulas will be included in the ``result``.
 
 .. code-block:: python
 

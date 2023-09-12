@@ -33,66 +33,94 @@ def _gen_ml_a_feature_from_buddy_data(buddy_data) -> (np.array, np.array, np.arr
     return all_cand_form_arr, dbe_arr, mass_arr
 
 
-def _gen_ml_a_feature(all_cand_form_arr, dbe_arr, mass_arr, gd) -> np.array:
+@njit
+def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     """
     generate ML features for model A (formula feasibility)
     :param all_cand_form_arr: numpy array of all candidate formula arrays
     :param dbe_arr: numpy array of all candidate formula dbe
     :param mass_arr: numpy array of all candidate formula mass
-    :param gd: global dependencies
     :return: numpy array of ML features
     """
     # calculate ML features
-    hal_arr = np.sum(all_cand_form_arr[:, 2:6], axis=1)  # sum of halogen atoms
-    ta_arr = np.sum(all_cand_form_arr, axis=1)  # total number of atoms
-    f_exist_arr = np.clip(all_cand_form_arr[:, 4], 0, 1)  # whether F exists
-    cl_exist_arr = np.clip(all_cand_form_arr[:, 3], 0, 1)  # whether Cl exists
-    br_exist_arr = np.clip(all_cand_form_arr[:, 2], 0, 1)  # whether Br exists
-    i_exist_arr = np.clip(all_cand_form_arr[:, 5], 0, 1)  # whether I exists
+    hal_arr = np.sum(all_cf_arr[:, 2:6], axis=1)  # sum of halogen atoms
+    ta_arr = np.sum(all_cf_arr, axis=1)  # total number of atoms
+    f_exist_arr = np.clip(all_cf_arr[:, 4], 0, 1)  # whether F exists
+    cl_exist_arr = np.clip(all_cf_arr[:, 3], 0, 1)  # whether Cl exists
+    br_exist_arr = np.clip(all_cf_arr[:, 2], 0, 1)  # whether Br exists
+    i_exist_arr = np.clip(all_cf_arr[:, 5], 0, 1)  # whether I exists
     hal_ele_type_arr = f_exist_arr + cl_exist_arr + br_exist_arr + i_exist_arr  # number of halogen elements
     hal_two = np.clip(hal_ele_type_arr - 1, 0, 1)  # whether more than one halogen element exists
     hal_three = np.clip(hal_ele_type_arr - 2, 0, 1)  # whether more than two halogen elements exist
-    senior_1_1_arr = 6 * all_cand_form_arr[:, 11] + 5 * all_cand_form_arr[:, 10] + 4 * all_cand_form_arr[:, 0] + \
-        3 * all_cand_form_arr[:, 7] + 2 * all_cand_form_arr[:, 9] + all_cand_form_arr[:, 1] + hal_arr
-    senior_1_2_arr = all_cand_form_arr[:, 7] + all_cand_form_arr[:, 10] + all_cand_form_arr[:, 1] + hal_arr
+    senior_1_1_arr = 6 * all_cf_arr[:, 11] + 5 * all_cf_arr[:, 10] + 4 * all_cf_arr[:, 0] + \
+                     3 * all_cf_arr[:, 7] + 2 * all_cf_arr[:, 9] + all_cf_arr[:, 1] + hal_arr
+    senior_1_2_arr = all_cf_arr[:, 7] + all_cf_arr[:, 10] + all_cf_arr[:, 1] + hal_arr
 
     # halogen to hydrogen ratio, fill 0 if hydrogen = 0
     hal_h_arr = np.zeros(len(hal_arr))
     # if hydrogen > 0
-    h_bool_arr = all_cand_form_arr[:, 1] > 0
-    hal_h_arr[h_bool_arr] = hal_arr[h_bool_arr] / all_cand_form_arr[h_bool_arr, 1]
+    h_bool_arr = all_cf_arr[:, 1] > 0
+    hal_h_arr[h_bool_arr] = hal_arr[h_bool_arr] / all_cf_arr[h_bool_arr, 1]
 
     # O/P ratio, fill 1 if phosphorus = 0
     o_p_arr = np.ones(len(hal_arr))
     # if phosphorus > 0
-    p_bool_arr = all_cand_form_arr[:, 10] > 0
-    o_p_arr[p_bool_arr] = all_cand_form_arr[p_bool_arr, 9] / all_cand_form_arr[p_bool_arr, 10] / 3
+    p_bool_arr = all_cf_arr[:, 10] > 0
+    o_p_arr[p_bool_arr] = all_cf_arr[p_bool_arr, 9] / all_cf_arr[p_bool_arr, 10] / 3
 
     # # DBE binary, 1 if DBE > 0, 0 if DBE = 0
     # dbe_binary_arr = np.clip(dbe_arr, 0, 1)
 
     # generate output array
-    out = np.array(
-        [all_cand_form_arr[:, 0], all_cand_form_arr[:, 1], all_cand_form_arr[:, 7],
-         all_cand_form_arr[:, 9], all_cand_form_arr[:, 10], all_cand_form_arr[:, 11],
-         hal_arr, ta_arr,
-         all_cand_form_arr[:, 0] / ta_arr, all_cand_form_arr[:, 1] / ta_arr, all_cand_form_arr[:, 7] / ta_arr,
-         all_cand_form_arr[:, 9] / ta_arr, all_cand_form_arr[:, 10] / ta_arr, all_cand_form_arr[:, 11] / ta_arr,
-         hal_arr / ta_arr, senior_1_1_arr, senior_1_2_arr, 2 * ta_arr - 1, dbe_arr,
-         np.sqrt(dbe_arr / mass_arr), dbe_arr / np.power(mass_arr / 100, 2 / 3),
-         all_cand_form_arr[:, 1] / all_cand_form_arr[:, 0], all_cand_form_arr[:, 7] / all_cand_form_arr[:, 0],
-         all_cand_form_arr[:, 9] / all_cand_form_arr[:, 0], all_cand_form_arr[:, 10] / all_cand_form_arr[:, 0],
-         all_cand_form_arr[:, 11] / all_cand_form_arr[:, 0], hal_arr / all_cand_form_arr[:, 0],
-         hal_h_arr, o_p_arr, hal_two, hal_three]).T
-
-    # for columns 21-27, fill inf and nan with 0
-    out[:, 21:28] = np.nan_to_num(out[:, 21:28], nan=0, posinf=0, neginf=0)
-
-    # normalize each col using mean_arr and std_arr in global dependencies, except the last two
-    for i in range(out.shape[1] - 2):
-        out[:, i] = (out[:, i] - gd['model_a_mean_arr'][i]) / gd['model_a_std_arr'][i]
+    out = np.empty((len(all_cf_arr), 31))
+    # populate output array
+    for i in range(len(all_cf_arr)):
+        ta = ta_arr[i]
+        if all_cf_arr[i, 0] > 0:
+            out[i, :] = [all_cf_arr[i, 0], all_cf_arr[i, 1], all_cf_arr[i, 7],
+                         all_cf_arr[i, 9], all_cf_arr[i, 10], all_cf_arr[i, 11],
+                         hal_arr[i], ta,
+                         all_cf_arr[i, 0] / ta, all_cf_arr[i, 1] / ta,
+                         all_cf_arr[i, 7] / ta,
+                         all_cf_arr[i, 9] / ta, all_cf_arr[i, 10] / ta,
+                         all_cf_arr[i, 11] / ta,
+                         hal_arr[i] / ta, senior_1_1_arr[i], senior_1_2_arr[i], 2 * ta - 1, dbe_arr[i],
+                         np.sqrt(dbe_arr[i] / mass_arr[i]), dbe_arr[i] / np.power(mass_arr[i] / 100, 2 / 3),
+                         all_cf_arr[i, 1] / all_cf_arr[i, 0],
+                         all_cf_arr[i, 7] / all_cf_arr[i, 0],
+                         all_cf_arr[i, 9] / all_cf_arr[i, 0],
+                         all_cf_arr[i, 10] / all_cf_arr[i, 0],
+                         all_cf_arr[i, 11] / all_cf_arr[i, 0],
+                         hal_arr[i] / all_cf_arr[i, 0],
+                         hal_h_arr[i], o_p_arr[i], hal_two[i], hal_three[i]]
+        else:
+            out[i, :] = [all_cf_arr[i, 0], all_cf_arr[i, 1], all_cf_arr[i, 7],
+                         all_cf_arr[i, 9], all_cf_arr[i, 10], all_cf_arr[i, 11],
+                         hal_arr[i], ta,
+                         all_cf_arr[i, 0] / ta, all_cf_arr[i, 1] / ta,
+                         all_cf_arr[i, 7] / ta,
+                         all_cf_arr[i, 9] / ta, all_cf_arr[i, 10] / ta,
+                         all_cf_arr[i, 11] / ta,
+                         hal_arr[i] / ta, senior_1_1_arr[i], senior_1_2_arr[i], 2 * ta - 1, dbe_arr[i],
+                         np.sqrt(dbe_arr[i] / mass_arr[i]), dbe_arr[i] / np.power(mass_arr[i] / 100, 2 / 3),
+                         0, 0, 0, 0, 0, 0,
+                         hal_h_arr[i], o_p_arr[i], hal_two[i], hal_three[i]]
 
     return out
+
+
+def _z_norm_ml_a_feature(feature_arr: np.array, gd) -> np.array:
+    """
+    z-normalize ML features for model A
+    :param feature_arr: numpy array of ML features
+    :param gd: global dependencies
+    :return: numpy array of z-normalized ML features
+    """
+    # normalize each col using mean_arr and std_arr in global dependencies, except the last two
+    for i in range(feature_arr.shape[1] - 2):
+        feature_arr[:, i] = (feature_arr[:, i] - gd['model_a_mean_arr'][i]) / gd['model_a_std_arr'][i]
+
+    return feature_arr
 
 
 def _predict_ml_a(feature_arr: np.array, gd) -> np.array:
@@ -110,40 +138,64 @@ def _predict_ml_a(feature_arr: np.array, gd) -> np.array:
 
 def pred_formula_feasibility(buddy_data, gd) -> bool:
     """
-    predict formula feasibility using ML model a, retain top 500 candidate formulas
+    predict formula feasibility using ML model a, retain top candidate formulas
+    this function is performed in batch
     :param buddy_data: buddy data
+    :param batch_size: batch size
     :param gd: global dependencies
     :return: True if there is at least one feasible formula, False if not
     fill in ml_a_prob in candidate formula objects
     """
-    # generate three arrays from buddy data
-    cand_form_arr, dbe_arr, mass_arr = _gen_ml_a_feature_from_buddy_data(buddy_data)
+    # batch size: 100
+    n_batch = int(np.ceil(len(buddy_data) / 100))
+    # total candidate formula count
+    total_cand_form_cnt = 0
+    # loop through batches
+    for i in range(n_batch):
+        # batch start and end index
+        start_idx = i * 100
+        end_idx = min((i + 1) * 100, len(buddy_data))
 
-    # if no candidate formula, return
-    if cand_form_arr.size == 0:
-        return False
+        batch_data = buddy_data[start_idx:end_idx]
 
-    # generate ML feature array
-    feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr, gd)
-    # predict formula feasibility
-    prob_arr = _predict_ml_a(feature_arr, gd)
+        # generate three arrays from buddy data
+        cand_form_arr, dbe_arr, mass_arr = _gen_ml_a_feature_from_buddy_data(batch_data)
 
-    # add prediction results to candidate formula objects in the list
-    cnt = 0
-    for meta_feature in buddy_data:
-        if not meta_feature.candidate_formula_list:
+        # if no candidate formula, return
+        if cand_form_arr.size == 0:
             continue
-        # generate ML features for each candidate formula
-        for candidate_formula in meta_feature.candidate_formula_list:
-            candidate_formula.ml_a_prob = prob_arr[cnt]
-            cnt += 1
 
-        top_n = _calc_top_n_candidate(meta_feature.mz)
-        # sort candidate formula list by formula feasibility, descending
-        # retain top candidate formulas
-        meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
-        if len(meta_feature.candidate_formula_list) > top_n:
-            meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:top_n]
+        total_cand_form_cnt += len(cand_form_arr)
+
+        # generate ML feature array
+        feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
+        feature_arr = _z_norm_ml_a_feature(feature_arr, gd)
+        # predict formula feasibility
+        prob_arr = _predict_ml_a(feature_arr, gd)
+
+        # add prediction results to candidate formula objects in the list
+        cnt = 0
+        for meta_feature in batch_data:
+            if not meta_feature.candidate_formula_list:
+                continue
+            # generate ML features for each candidate formula
+            for candidate_formula in meta_feature.candidate_formula_list:
+                candidate_formula.ml_a_prob = prob_arr[cnt]
+                cnt += 1
+
+            top_n = _calc_top_n_candidate(meta_feature.mz)
+            # sort candidate formula list by formula feasibility, descending
+            # retain top candidate formulas
+            meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
+            if len(meta_feature.candidate_formula_list) > top_n:
+                meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:top_n]
+
+        # update buddy data
+        buddy_data[start_idx:end_idx] = batch_data
+
+    # return True if there is at least one feasible formula, False if not
+    if total_cand_form_cnt == 0:
+        return False
 
     return True
 
@@ -278,11 +330,11 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
         # weighted average of fragment m/z ppm errors
         if ppm:
             frag_mz_err_wavg = np.sum(np.array([_calc_log_p_norm((frag_form.mass - mz) / frag_form.mass * 1e6,
-                                                                 ms2_tol/3)
+                                                                 ms2_tol / 3)
                                                 for frag_form, mz in
                                                 zip(frag_form_arr, exp_mz_arr)]) * normed_exp_int_arr)
         else:
-            frag_mz_err_wavg = np.sum(np.array([_calc_log_p_norm(frag_form.mass - mz, ms2_tol/3)
+            frag_mz_err_wavg = np.sum(np.array([_calc_log_p_norm(frag_form.mass - mz, ms2_tol / 3)
                                                 for frag_form, mz in
                                                 zip(frag_form_arr, exp_mz_arr)]) * normed_exp_int_arr)
 
@@ -447,4 +499,3 @@ def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float, gd)
             for candidate_formula in buddy_data[j].candidate_formula_list:
                 candidate_formula.estimated_prob = prob_arr[cnt]
                 cnt += 1
-

@@ -6,7 +6,7 @@ from numba import njit
 
 from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature
 from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
-from msbuddy.api import form_arr_to_str
+from msbuddy.api import form_arr_to_str, enumerate_subformula
 
 
 class FragExplanation:
@@ -593,7 +593,7 @@ def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float, gd) 
     for k, cf in enumerate(mf.candidate_formula_list):
         # enumerate all subformulas
         pre_charged_arr = cf.formula.array * mf.adduct.m + mf.adduct.net_formula.array
-        subform_arr = _enumerate_subformula(pre_charged_arr)
+        subform_arr = enumerate_subformula(pre_charged_arr)
 
         # mono mass
         mass_arr = np.dot(subform_arr, Formula.mass_arr) - 0.00054858 * mf.adduct.charge
@@ -602,40 +602,6 @@ def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float, gd) 
                                                                ppm, ms2_tol, gd)
 
     return mf
-
-
-@njit
-def _enumerate_subformula(pre_charged_arr: np.array) -> np.array:
-    """
-    Enumerate all subformulas of a candidate formula. (Numba version)
-    :param pre_charged_arr: precursor charged array
-    :return: 2D array, each row is a subformula array
-    """
-    n = len(pre_charged_arr)
-    total_subform_cnt = np.prod(pre_charged_arr + 1)
-
-    subform_arr = np.zeros((total_subform_cnt, n), dtype=np.int64)
-    tempSize = 1
-
-    for i in range(n):
-        count = pre_charged_arr[i]
-        repeatSize = tempSize
-        tempSize *= (count + 1)
-
-        pattern = np.arange(count + 1)
-
-        repeated_pattern = np.empty(repeatSize * len(pattern), dtype=np.int64)
-        for j in range(len(pattern)):
-            repeated_pattern[j * repeatSize: (j + 1) * repeatSize] = pattern[j]
-
-        full_repeats = total_subform_cnt // len(repeated_pattern)
-
-        for j in range(full_repeats):
-            start_idx = j * len(repeated_pattern)
-            end_idx = (j + 1) * len(repeated_pattern)
-            subform_arr[start_idx:end_idx, i] = repeated_pattern
-
-    return subform_arr
 
 
 @njit
@@ -768,7 +734,7 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
 
 # test
 if __name__ == '__main__':
-    subform_array = _enumerate_subformula(np.array([12, 22, 0, 0, 0, 0, 0, 0, 0, 5, 0, 2]))
+    subform_array = enumerate_subformula(np.array([12, 22, 0, 0, 0, 0, 0, 0, 0, 5, 0, 2]))
     # print(subform_array)
     print(subform_array.shape)
 

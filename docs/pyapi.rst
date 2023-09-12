@@ -1,6 +1,82 @@
 Python API
 -------------
 
+Functions
+~~~~~~~~~~~~~~~
+.. function:: read_formula (formula_string: str)
+
+   Read a neutral formula string and return a numpy array, return None if invalid
+
+   :param formula_string: str. The molecular formula string.
+   :returns: A numpy array of the molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S]. None if invalid.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy.api import read_formula
+
+   formula_array = read_formula("C10H20O5")
+   print(formula_array)
+
+.. function:: form_arr_to_str (formula_array: List[int])
+
+   Read a neutral formula array and return the Hill string.
+
+   :param formula_array: List[int]. The molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S].
+   :returns: The Hill string of the molecular formula.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy.api import form_arr_to_str
+
+   formula_str = form_arr_to_str([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
+   print(formula_str)
+
+.. function:: enumerate_subform_arr (formula_array: List[int])
+
+   Enumerate all possible sub-formula arrays of a given formula array.
+
+   :param formula_array: List[int]. A list-like object (or 1D numpy array) of the molecular formula array.
+   :returns: A 2D numpy array, with each row being a sub-formula array.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy.api import enumerate_subform_arr
+
+   all_subform_arr = enumerate_subform_arr([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
+   print(all_subform_arr)
+
+.. function:: mass_to_formula (mass: float, mz_tol: float, ppm: bool)
+
+   Convert mass to formula, return list of formula strings. This function relies on the global dependencies within the :class:`msbuddy.Buddy`. It works by database searching.
+
+   :param  mass: float. Target mass, should be <1500 Da.
+   :param mz_tol: float. The mass tolerance for searching.
+   :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
+   :returns: A list of formula strings.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy.buddy import Buddy
+
+   # create a Buddy object
+   buddy = Buddy()
+
+   # convert mass to formula
+   formula_list = buddy.mass_to_formula(300, 10, True)
+   print(formula_list)
+
+
+
+
+
 Classes
 ~~~~~~~~~~~~~~~
 .. class:: msbuddy.Buddy (param_set: Union[BuddyParamSet, None] = None)
@@ -441,20 +517,3 @@ Example usage:
 
 
 
-Functions
-~~~~~~~~~~~~~~~
-.. function:: read_formula (formula_string: str)
-
-   Read a neutral formula string and return a numpy array, return None if invalid
-
-   :param formula_string: str. The molecular formula string.
-   :returns: A numpy array of the molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S]. None if invalid.
-
-Example Usage:
-
-.. code-block:: python
-
-   from msbuddy.base import read_formula
-
-   formula_array = read_formula("C10H20O5")
-   print(formula_array)

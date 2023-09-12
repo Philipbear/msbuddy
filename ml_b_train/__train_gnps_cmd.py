@@ -139,6 +139,7 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
     buddy.add_data(qtof_mf_ls)
     buddy.preprocess_and_generate_candidate_formula()
+    joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
     pred_formula_feasibility(buddy.data, shared_data_dict)
     buddy.assign_subformula_annotation()
     joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand.joblib')
@@ -149,6 +150,7 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     buddy.clear_data()
     buddy.add_data(orbi_mf_ls)
     buddy.preprocess_and_generate_candidate_formula()
+    joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
     pred_formula_feasibility(buddy.data, shared_data_dict)
     buddy.assign_subformula_annotation()
     joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand.joblib')
@@ -159,6 +161,7 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     buddy.clear_data()
     buddy.add_data(ft_mf_ls)
     buddy.preprocess_and_generate_candidate_formula()
+    joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
     pred_formula_feasibility(buddy.data, shared_data_dict)
     buddy.assign_subformula_annotation()
     joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand.joblib')
@@ -338,17 +341,17 @@ def parse_args():
 if __name__ == '__main__':
     __package__ = "msbuddy"
     # parse arguments
-    # args = parse_args()
+    args = parse_args()
 
     # # test here
-    args = argparse.Namespace(gen=True, n_cpu=-1, to=1000, parallel=False,
-                              ms1=True, ms2=True)
+    # args = argparse.Namespace(gen=True, n_cpu=-1, to=1000, parallel=False,
+    #                           ms1=True, ms2=True)
 
     # /Users/philip/Documents/projects/ms2/gnps/
 
     # load training data
     if args.gen:
-        gd = load_gnps_data('/Users/philip/Documents/projects/ms2/gnps/gnps_ms2db_preprocessed_20230910.joblib',
+        gd = load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib',
                             args.parallel,
                             args.n_cpu, args.to)
         # buddy = Buddy(BuddyParamSet(halogen=True))
