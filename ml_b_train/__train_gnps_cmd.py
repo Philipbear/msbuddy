@@ -66,7 +66,7 @@ def sim_ms1_iso_pattern(form_arr):
     return int_arr, sim_int_arr
 
 
-def load_gnps_data(path, parallel, n_cpu, timeout_secs):
+def load_gnps_data(path):
     """
     load GNPS library
     :param path: path to GNPS library
@@ -130,6 +130,13 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     joblib.dump(orbi_gt_ls, 'gnps_orbi_gt_ls.joblib')
     joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
 
+
+def calc_gnps_data(parallel, n_cpu, timeout_secs):
+
+    qtof_mf_ls = joblib.load('gnps_qtof_mf_ls.joblib')
+    orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
+    ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
+
     # main
     param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20,
                               halogen=True,
@@ -141,6 +148,7 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     buddy.preprocess_and_generate_candidate_formula()
     joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
     pred_formula_feasibility(buddy.data, shared_data_dict)
+    joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_2.joblib')
     buddy.assign_subformula_annotation()
     joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand.joblib')
 
@@ -152,6 +160,7 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     buddy.preprocess_and_generate_candidate_formula()
     joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
     pred_formula_feasibility(buddy.data, shared_data_dict)
+    joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_2.joblib')
     buddy.assign_subformula_annotation()
     joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand.joblib')
 
@@ -163,6 +172,7 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
     buddy.preprocess_and_generate_candidate_formula()
     joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
     pred_formula_feasibility(buddy.data, shared_data_dict)
+    joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_2.joblib')
     buddy.assign_subformula_annotation()
     joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand.joblib')
 
@@ -328,6 +338,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='ML model B training')
     parser.add_argument('-gen', action='store_true', help='generate training data')
+    parser.add_argument('-calc', action='store_true', help='calculate gnps data')
     parser.add_argument('-parallel', action='store_true', help='parallel mode')
     parser.add_argument('-n_cpu', type=int, default=24, help='number of CPU cores to use')
     parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
@@ -341,24 +352,23 @@ def parse_args():
 if __name__ == '__main__':
     __package__ = "msbuddy"
     # parse arguments
-    # args = parse_args()
+    args = parse_args()
 
     # # test here
-    args = argparse.Namespace(gen=True, n_cpu=-1, to=1000, parallel=False,
-                              ms1=True, ms2=True)
+    # args = argparse.Namespace(gen=True, n_cpu=-1, to=1000, parallel=False,
+    #                           ms1=True, ms2=True)
 
     # /Users/philip/Documents/projects/ms2/gnps/
 
     # load training data
     if args.gen:
-        gd = load_gnps_data('/Users/philip/Documents/projects/ms2/gnps/gnps_ms2db_preprocessed_20230910.joblib',
-                            args.parallel,
-                            args.n_cpu, args.to)
-        # buddy = Buddy(BuddyParamSet(halogen=True))
-        # gd = init_db(buddy.param_set.db_mode)
+        load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib')
+
+    elif args.calc:
+        gd = calc_gnps_data(args.parallel, args.n_cpu, args.to)
         gen_training_data(gd)
         print("Done.")
-        exit(0)
+
     else:  # train model
         X = joblib.load('gnps_X_arr.joblib')
         y = joblib.load('gnps_y_arr.joblib')
