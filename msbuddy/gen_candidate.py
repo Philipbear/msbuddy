@@ -447,8 +447,8 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature,
                 # add to candidate space list
                 candidate_space_list, existing_cand_str_list = _add_to_candidate_space_list(candidate_space_list,
                                                                                             existing_cand_str_list,
-                                                                                            pre_form_arr, frag.array,
-                                                                                            nl.array)
+                                                                                            pre_form_arr.astype(int),
+                                                                                            frag.array, nl.array)
 
     # element limit check, SENIOR rules, O/P check, DBE check
     candidate_list = [cs for cs in candidate_space_list
@@ -473,14 +473,16 @@ def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: b
                         db_mode: int, gd) -> Tuple[Union[List[Formula], None], Union[List[Formula], None]]:
     """
     query fragment and neutral loss formulas from database
-    :param frag_mz:
-    :param nl_mz:
-    :param adduct:
-    :param ms2_tol:
-    :param ppm:
-    :param db_mode:
-    :param gd:
-    :return:
+    :param frag_mz: fragment m/z
+    :param nl_mz: neutral loss m/z
+    :param pos_mode: positive mode or negative mode
+    :param na_bool: whether Na is contained in the adduct
+    :param k_bool: whether K is contained in the adduct
+    :param ms2_tol: MS2 tolerance
+    :param ppm: whether to use ppm as the unit of tolerance
+    :param db_mode: database mode
+    :param gd: global dictionary
+    :return: fragment formula list, neutral loss formula list
     """
     if nl_mz < frag_mz:
         # search neutral loss first, for faster search
@@ -574,7 +576,7 @@ def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula]) -> Lis
         return cf_list
     else:
         # sort candidate list by mz difference (increasing)
-        cf_list.sort(key=lambda x: abs(x.neutral_mass - t_mass))
+        cf_list.sort(key=lambda x: abs(x.formula.mass - t_mass))
         return cf_list[:500]
 
 
@@ -740,18 +742,3 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
 
     return candidate_form
 
-
-# test
-if __name__ == '__main__':
-    subform_array = enumerate_subformula(np.array([12, 22, 0, 0, 0, 0, 0, 0, 0, 5, 0, 2]))
-    # print(subform_array)
-    print(subform_array.shape)
-
-    _dbe_filtered = _dbe_subform_filter(subform_array)
-    print(_dbe_filtered.shape)
-    _senior_filtered = _senior_subform_filter(_dbe_filtered)
-    print(_senior_filtered.shape)
-
-    mass_ = np.dot(_senior_filtered, Formula.mass_arr)
-    # print(mass_)
-    print(mass_.shape)

@@ -181,7 +181,7 @@ Example Usage:
 
 
 
-.. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.10, max_frag_reserved: int = 50, use_all_frag: bool = False)
+.. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
 
    It is a class to store all the parameter settings for **msbuddy**.
 
@@ -208,7 +208,7 @@ Example Usage:
    :param rel_int_denoise: bool. If True, the MS/MS spectra are denoised based on relative intensity. Default is True.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising. Default is 0.01 (1%).
    :param max_noise_frag_ratio: float. The maximum ratio of noise fragments to total fragments. Default is 0.90 (90%).
-   :param max_noise_rsd: float. The maximum relative standard deviation of noise fragments. Default is 0.10 (10%).
+   :param max_noise_rsd: float. The maximum relative standard deviation of noise fragments. Default is 0.20 (20%).
    :param max_frag_reserved: int. The maximum number of fragments to reserve. Default is 50.
    :param use_all_frag: bool. If True, all fragments are used. If False, only the top fragments are used. Default is False.
 

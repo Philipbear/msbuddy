@@ -46,7 +46,7 @@ class BuddyParamSet:
                  isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4,
                  ms2_denoise: bool = True,
                  rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01,
-                 max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.10,
+                 max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20,
                  max_frag_reserved: int = 50,
                  use_all_frag: bool = False):
         """
@@ -139,7 +139,7 @@ class BuddyParamSet:
             self.max_noise_frag_ratio = max_noise_frag_ratio
 
         if max_noise_rsd <= 0 or max_noise_rsd >= 1:
-            self.max_noise_rsd = 0.10
+            self.max_noise_rsd = 0.20
             logging.warning(f"Maximum noise RSD is set to {self.max_noise_rsd}.")
         else:
             self.max_noise_rsd = max_noise_rsd
