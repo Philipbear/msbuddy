@@ -623,7 +623,7 @@ def _calc_top_n_frag(pre_mz: float, max_frag_reserved: int) -> int:
     :return: top n frag No. (int)
     """
     if pre_mz < 1000:
-        top_n = int(60 - 0.05 * pre_mz)
+        top_n = int(50 - 0.04 * pre_mz)
     else:
         top_n = int(30 - 0.02 * pre_mz)
     return min(top_n, max_frag_reserved)
