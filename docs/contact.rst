@@ -16,7 +16,7 @@ Citation
 ~~~~~~~~
 When using **msbuddy**, please cite:
 
-- Xing, S., Shen, S., Xu, B. et al. `BUDDY: molecular formula discovery via bottom-up MS/MS interrogation <https://doi.org/10.1038/s41592-023-01850-x>`_. *Nat Methods* **20**, 881–890 (2023).
+- Xing, S., Shen, S., Xu, B. et al. `BUDDY: molecular formula discovery via bottom-up MS/MS interrogation <https://doi.org/10.1038/s41592-023-01850-x>`_. *Nature Methods* **20**, 881–890 (2023).
 
 
 .. |ghi| raw:: html

@@ -83,7 +83,7 @@ Classes
 
    Buddy main class. Note that the Buddy class is singleton, which means only one Buddy object can be created.
 
-   :param param1: :class:`msbuddy.BuddyParamSet` object. Default is None.
+   :param param_set: :class:`msbuddy.BuddyParamSet` object. Default is None.
 
    .. attribute:: param_set
 
