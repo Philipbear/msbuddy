@@ -75,7 +75,7 @@ def load_gnps_data(path, parallel, n_cpu, timeout_secs):
 
     # # test
     # print('db size: ' + str(len(db)))
-    # db = db[:100]
+    db = db[:200]
 
     qtof_mf_ls = []  # metaFeature
     orbi_mf_ls = []
@@ -341,17 +341,17 @@ def parse_args():
 if __name__ == '__main__':
     __package__ = "msbuddy"
     # parse arguments
-    args = parse_args()
+    # args = parse_args()
 
     # # test here
-    # args = argparse.Namespace(gen=True, n_cpu=-1, to=1000, parallel=False,
-    #                           ms1=True, ms2=True)
+    args = argparse.Namespace(gen=True, n_cpu=-1, to=1000, parallel=False,
+                              ms1=True, ms2=True)
 
     # /Users/philip/Documents/projects/ms2/gnps/
 
     # load training data
     if args.gen:
-        gd = load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib',
+        gd = load_gnps_data('/Users/philip/Documents/projects/ms2/gnps/gnps_ms2db_preprocessed_20230910.joblib',
                             args.parallel,
                             args.n_cpu, args.to)
         # buddy = Buddy(BuddyParamSet(halogen=True))

@@ -479,7 +479,7 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    buddy.data = buddy.data[:300]
+    # buddy.data = buddy.data[:300]
 
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()

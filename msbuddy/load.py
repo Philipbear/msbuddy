@@ -33,8 +33,6 @@ def init_db(db_mode: int) -> dict:
     """
     root_path = Path(__file__).parent
 
-    logging.info('Initializing databases...')
-
     global_dict = dict()
     # load database & models into memory
     global_dict['common_loss_db'] = j_load(root_path / 'data' / 'common_loss.joblib')

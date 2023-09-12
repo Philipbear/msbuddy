@@ -3,7 +3,6 @@ from numba import njit
 import numpy as np
 from chemparse import parse_formula
 
-
 # define alphabet
 alphabet = ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
 
@@ -33,24 +32,6 @@ def read_formula(form: str) -> np.array:
         if element in parsed.keys():
             array[i] = parsed[element]
     return array
-
-
-def form_arr_to_str(form_arr: List[int]) -> str:
-    """
-    convert 12-dim formula array to Hill string
-    :param form_arr: 12-dim array
-    :return: formula string
-    """
-
-    def decode(element: str, cnt: int) -> str:
-        if not cnt:
-            return ''
-        if cnt == 1:
-            return element
-        return element + str(cnt)
-
-    formula_str = ''.join([decode(s, c) for s, c in zip(alphabet, form_arr)])
-    return formula_str
 
 
 def enumerate_subform_arr(form_arr: List[int]) -> np.ndarray:
@@ -98,3 +79,51 @@ def enumerate_subformula(pre_charged_arr: np.array) -> np.array:
             subform_arr[start_idx:end_idx, i] = repeated_pattern
 
     return subform_arr
+
+
+# for numba
+alphabet_np = np.array(
+    [ord(char) for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"] for char in word],
+    dtype=np.int32)
+word_lengths = np.array([len(word) for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]],
+                        dtype=np.int32)
+
+
+@njit
+def _form_arr_to_str(form_arr: np.array):
+    """
+    Inner func: convert formula array to string. (Numba version)
+    :param form_arr: formula array
+    :return: formula_list
+    """
+    formula_list = []
+    idx = 0
+    for i in range(len(word_lengths)):
+        if form_arr[i]:
+            for _ in range(word_lengths[i]):
+                formula_list.append(alphabet_np[idx])
+                idx += 1
+            if form_arr[i] > 1:
+                for digit in str(form_arr[i]):
+                    formula_list.append(ord(digit))
+        else:
+            idx += word_lengths[i]
+    return formula_list
+
+
+def ascii_to_str(ascii_arr) -> str:
+    """
+    Convert ASCII integer array to string
+    :param ascii_arr: ASCII array
+    :return: string
+    """
+    return ''.join(chr(i) for i in ascii_arr)
+
+
+def form_arr_to_str(form_arr) -> str:
+    """
+    Convert formula array to string. (Numba version)
+    :param form_arr: formula array
+    :return: formula string
+    """
+    return ascii_to_str(_form_arr_to_str(form_arr))

@@ -4,9 +4,9 @@ import numpy as np
 from brainpy import isotopic_variants
 from numba import njit
 
+from msbuddy.api import form_arr_to_str, enumerate_subformula
 from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature
 from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
-from msbuddy.api import form_arr_to_str, enumerate_subformula
 
 
 class FragExplanation:
@@ -197,49 +197,59 @@ def calc_isotope_similarity(int_arr_x, int_arr_y,
     return sim_score
 
 
-def gen_candidate_formula(meta_feature: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
-                          db_mode: int, element_lower_limit: np.array, element_upper_limit: np.array,
+def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
+                          db_mode: int, ele_lower_limit: np.array, ele_upper_limit: np.array,
                           max_isotope_cnt: int, gd: dict) -> MetaFeature:
     """
     Generate candidate formulas for a metabolic feature.
-    :param meta_feature: MetaFeature object
+    :param mf: MetaFeature object
     :param ppm: whether to use ppm as the unit of tolerance
     :param ms1_tol: mz tolerance for precursor ion
     :param ms2_tol: mz tolerance for fragment ions / neutral losses
     :param db_mode: database mode (int, 0: basic; 1: halogen)
-    :param element_lower_limit: lower limit of each element
-    :param element_upper_limit: upper limit of each element
+    :param ele_lower_limit: lower limit of each element
+    :param ele_upper_limit: upper limit of each element
     :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern matching
     :param gd: global dictionary
     :return: fill in list of candidate formulas (CandidateFormula) in metaFeature
     """
 
     # if MS2 data missing or non-singly charged species, query precursor mass directly
-    if not meta_feature.ms2_processed or abs(meta_feature.adduct.charge) > 1:
-        meta_feature.candidate_formula_list, _ = _gen_candidate_formula_from_mz(meta_feature, ppm, ms1_tol,
-                                                                                element_lower_limit,
-                                                                                element_upper_limit, db_mode, gd)
+    if not mf.ms2_processed or abs(mf.adduct.charge) > 1:
+        cf_list, _ = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol,
+                                                    ele_lower_limit, ele_upper_limit, db_mode, gd)
 
     else:
         # if MS2 data available, generate candidate space with MS2 data
-        ms2_cand_form_ls, ms2_cand_form_str_ls = _gen_candidate_formula_from_ms2(meta_feature, ppm, ms1_tol, ms2_tol,
-                                                                                 element_lower_limit,
-                                                                                 element_upper_limit,
+        ms2_cand_form_ls, ms2_cand_form_str_ls = _gen_candidate_formula_from_ms2(mf, ppm, ms1_tol, ms2_tol,
+                                                                                 ele_lower_limit,
+                                                                                 ele_upper_limit,
                                                                                  db_mode, gd)
 
-        ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(meta_feature, ppm, ms1_tol,
-                                                                                element_lower_limit,
-                                                                                element_upper_limit, db_mode, gd)
-        # merge candidate formulas
-        meta_feature.candidate_formula_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
-                                                                    ms1_cand_form_str_ls, ms2_cand_form_str_ls)
+        # if processed ms2 has <=10 valid peaks and ms2 candidate space <=10, query precursor mass directly
+        if len(mf.ms2_processed) <= 10 and len(ms2_cand_form_ls) <= 10:
+            ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol,
+                                                                                    ele_lower_limit,
+                                                                                    ele_upper_limit, db_mode, gd)
+            # merge candidate formulas
+            cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
+                                            ms1_cand_form_str_ls, ms2_cand_form_str_ls)
+        else:
+            # if processed ms2 has >10 valid peaks or ms2 candidate space >10, use ms2 data
+            cf_list = ms2_cand_form_ls
+
+    # retain top 500 candidate formulas
+    # calculate neutral mass of the precursor ion
+    ion_mode_int = 1 if mf.adduct.pos_mode else -1
+    t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode_int * 0.0005485799) / mf.adduct.m
+    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
-    if meta_feature.ms1_processed and len(meta_feature.ms1_processed) > 1:
-        for cf in meta_feature.candidate_formula_list:
-            cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, meta_feature, max_isotope_cnt)
+    if mf.ms1_processed and len(mf.ms1_processed) > 1:
+        for cf in mf.candidate_formula_list:
+            cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, max_isotope_cnt)
 
-    return meta_feature
+    return mf
 
 
 # @njit
@@ -304,8 +314,8 @@ def _dbe_check(form: np.array) -> bool:
     :param form: 12-dim array
     :return: True if satisfies, False otherwise
     """
-    dbe = form[0] + 1 - (form[1] + form[4] + form[3] + form[2] + form[5] + form[8] + form[6]) / 2 + \
-          (form[7] + form[10]) / 2
+    dbe = form[0] + 1 - (form[1] + form[4] + form[3] + form[2] + form[5] + form[8] +
+                         form[6]) / 2 + (form[7] + form[10]) / 2
     if dbe < 0:
         return False
     return True
@@ -429,9 +439,9 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature,
 
                 # generate precursor formula & check adduct M
                 # NOTE: pre_form_arr is in neutral form
-                pre_form_arr = _gen_precursor_array(frag.array, nl.array, mf.adduct.net_formula.array,
-                                                    mf.adduct.m)
-                if pre_form_arr is None:
+                pre_form_arr = (frag.array + nl.array - mf.adduct.net_formula.array) / mf.adduct.m
+                valid_pre_form = _valid_precursor_array(pre_form_arr)
+                if not valid_pre_form:
                     continue
 
                 # add to candidate space list
@@ -449,17 +459,6 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature,
 
     # remove candidate space variable to save memory
     del candidate_space_list
-
-    # calculate neutral mass of the precursor ion
-    ion_mode_int = 1 if mf.adduct.pos_mode else -1
-    t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode_int * 0.0005485799) / mf.adduct.m
-
-    # presort candidate list by mz difference (increasing)
-    candidate_list.sort(key=lambda x: abs(x.neutral_mass - t_neutral_mass))
-
-    # retain top 500 candidate spaces
-    if len(candidate_list) > 500:
-        candidate_list = candidate_list[:500]
 
     # generate CandidateFormula object
     candidate_formula_list = [CandidateFormula(formula=Formula(cs.pre_neutral_array, 0, cs.neutral_mass),
@@ -527,22 +526,17 @@ def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], exi
     return candidate_space_list, existing_cand_str_list
 
 
-def _gen_precursor_array(frag_arr: np.array, nl_array: np.array, adduct_array: np.array, adduct_m: int):
+@njit
+def _valid_precursor_array(pre_arr: np.array) -> bool:
     """
-    generate precursor formula array from frag array, nl array and adduct array
     check adduct M
-    :param frag_arr: fragment formula array
-    :param nl_array: neutral loss formula array
-    :param adduct_array: adduct net formula array
-    :param adduct_m: adduct M
+    :param pre_arr: precursor formula array
     :return: precursor formula array or None
     """
-    pre_array = (frag_arr + nl_array - adduct_array) / adduct_m
-    # check adduct M
-    if np.any(pre_array % 1 != 0):
-        return None
-    return pre_array.astype(np.int64)
-
+    for i in range(len(pre_arr)):
+        if pre_arr[i] < 0 or pre_arr[i] % 1 != 0:
+            return False
+    return True
 
 
 def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula], ms2_cand_list: List[CandidateFormula],
@@ -567,6 +561,21 @@ def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
             out_list.append(cf)
 
     return out_list
+
+
+def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula]) -> List[CandidateFormula]:
+    """
+    Retain top candidate formulas.
+    :param t_mass: target neutral mass of the precursor ion
+    :param cf_list: candidate formula list
+    :return: retained candidate formula list
+    """
+    if len(cf_list) <= 500:
+        return cf_list
+    else:
+        # sort candidate list by mz difference (increasing)
+        cf_list.sort(key=lambda x: abs(x.neutral_mass - t_mass))
+        return cf_list[:500]
 
 
 @njit

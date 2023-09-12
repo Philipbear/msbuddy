@@ -623,14 +623,16 @@ def _calc_top_n_frag(pre_mz: float, max_frag_reserved: int) -> int:
     :return: top n frag No. (int)
     """
     if pre_mz < 1000:
-        top_n = int(100 - 0.08 * pre_mz)
+        top_n = int(60 - 0.05 * pre_mz)
     else:
-        top_n = int(40 - 0.02 * pre_mz)
+        top_n = int(30 - 0.02 * pre_mz)
     return min(top_n, max_frag_reserved)
 
 
 class MS2Explanation:
-    # class for storing MS2 explanation
+    """
+    MS2Explanation class, used for storing MS2 explanation.
+    """
     def __init__(self, idx_array: np.array,
                  explanation_array: List[Union[Formula, None]]):
         self.idx_array = idx_array  # raw MS2 peak index, fragment index
