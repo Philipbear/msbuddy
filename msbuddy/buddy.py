@@ -274,8 +274,7 @@ class Buddy:
             # parallel processing
             logging.info("Subformula assignment...")
 
-            with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
-                      initargs=(shared_data_dict,)) as pool:
+            with Pool(processes=int(self.param_set.n_cpu)) as pool:
                 async_results = [pool.apply_async(_gen_subformula,
                                                   (mf, self.param_set)) for mf in self.data]
 
@@ -433,7 +432,7 @@ def _gen_subformula(mf: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
     if not mf.candidate_formula_list:
         return mf
 
-    mf = assign_subformula_cand_form(mf, ps.ppm, ps.ms2_tol, shared_data_dict)
+    mf = assign_subformula_cand_form(mf, ps.ppm, ps.ms2_tol)
     return mf
 
 
@@ -460,9 +459,9 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=7,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=4,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
-                                    i_range=(1, 20))
+                                    i_range=(0, 20))
 
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")

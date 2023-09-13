@@ -36,7 +36,7 @@ class FragExplanation:
     def __len__(self):
         return len(self.frag_list)
 
-    def refine_explanation(self, raw_ms2_mz_arr: np.array, gd):
+    def refine_explanation_v1(self, raw_ms2_mz_arr: np.array, gd):
         """
         Refine the MS2 explanation by selecting the most reasonable explanation.
         :param raw_ms2_mz_arr: raw MS2 m/z array
@@ -76,6 +76,36 @@ class FragExplanation:
             self.optim_nl = self.nl_list[idx]
             return
 
+    def refine_explanation(self, raw_ms2_mz_arr: np.array):
+        """
+        Refine the MS2 explanation by selecting the most reasonable explanation.
+        :param raw_ms2_mz_arr: raw MS2 m/z array
+        :return: fill in self.optim_frag, self.optim_nl
+        """
+        if len(self) == 1:
+            self.optim_frag = self.frag_list[0]
+            self.optim_nl = self.nl_list[0]
+            return
+
+        # if multiple explanations, select the closest to the raw MS2 m/z
+        idx = _find_closest_mass_idx(raw_ms2_mz_arr[self.idx], np.array([f.mass for f in self.frag_list]))
+        # idx = np.argmin(np.abs(raw_ms2_mz_arr[self.idx] - np.array([f.mass for f in self.frag_list])))
+        self.optim_frag = self.frag_list[idx]
+        self.optim_nl = self.nl_list[idx]
+        return
+
+
+@njit
+def _find_closest_mass_idx(mass: float, mass_arr: np.array) -> int:
+    """
+    find the closest mass in mass_arr to mass
+    :param mass: float
+    :param mass_arr: np.array
+    :return: index of the closest mass
+    """
+    idx = np.argmin(np.abs(mass - mass_arr))
+    return idx
+
 
 class CandidateSpace:
     """
@@ -94,7 +124,7 @@ class CandidateSpace:
         self.frag_exp_list.append(frag_exp)
 
     def refine_explanation(self, meta_feature: MetaFeature,
-                           ms2_iso_tol: float, gd) -> CandidateFormula:
+                           ms2_iso_tol: float) -> CandidateFormula:
         """
         Refine the MS2 explanation by selecting the most reasonable explanation.
         Explain other fragments as isotope peaks.
@@ -108,7 +138,7 @@ class CandidateSpace:
         ms2_processed = meta_feature.ms2_processed
         # for each frag_exp, refine the explanation, select the most reasonable frag/nl
         for frag_exp in self.frag_exp_list:
-            frag_exp.refine_explanation(ms2_raw.mz_array, gd)
+            frag_exp.refine_explanation(ms2_raw.mz_array)
 
         # consider to further explain other fragments as isotope peaks
         explained_idx = [f.idx for f in self.frag_exp_list]
@@ -591,13 +621,12 @@ def _form_array_equal(arr1: np.array, arr2: np.array) -> bool:
     return True if np.equal(arr1, arr2).all() else False
 
 
-def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float, gd) -> MetaFeature:
+def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float) -> MetaFeature:
     """
     Assign subformula to all candidate formulas in a MetaFeature object.
     :param mf: MetaFeature object
     :param ppm: whether to use ppm as the unit of tolerance
     :param ms2_tol: mz tolerance for fragment ions / neutral losses
-    :param gd: global dictionary
     :return: MetaFeature object
     """
 
@@ -610,7 +639,7 @@ def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float, gd) 
         mass_arr = np.dot(subform_arr, Formula.mass_arr) - 0.00054858 * mf.adduct.charge
         # assign ms2 explanation
         mf.candidate_formula_list[k] = _assign_ms2_explanation(mf, cf, pre_charged_arr, subform_arr, mass_arr,
-                                                               ppm, ms2_tol, gd)
+                                                               ppm, ms2_tol)
 
     return mf
 
@@ -671,7 +700,7 @@ def _valid_subform_check(subform_arr: np.array, pre_charged_arr: np.array) -> np
 
 def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_arr: np.array,
                             subform_arr: np.array, mass_arr: np.array,
-                            ppm: bool, ms2_tol: float, gd) -> CandidateFormula:
+                            ppm: bool, ms2_tol: float) -> CandidateFormula:
     """
     Assign MS2 explanation to a candidate formula.
     :param mf: MetaFeature object
@@ -681,7 +710,6 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     :param mass_arr: 1D array, mass of each subformula
     :param ppm: whether to use ppm as the unit of tolerance
     :param ms2_tol: mz tolerance for fragment ions / neutral losses
-    :param gd: global dictionary
     :return: CandidateFormula object
     """
     candidate_space = None
@@ -737,7 +765,7 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     # refine MS2 explanation
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * mf.mz * 1e-6
     ms2_iso_tol = max(ms2_iso_tol, 0.02)
-    candidate_form = candidate_space.refine_explanation(mf, ms2_iso_tol, gd)
+    candidate_form = candidate_space.refine_explanation(mf, ms2_iso_tol)
     candidate_form.ml_a_prob = cf.ml_a_prob
 
     return candidate_form

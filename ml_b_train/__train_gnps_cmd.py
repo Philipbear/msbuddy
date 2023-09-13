@@ -131,11 +131,7 @@ def load_gnps_data(path):
     joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
 
 
-def calc_gnps_data(parallel, n_cpu, timeout_secs):
-
-    qtof_mf_ls = joblib.load('gnps_qtof_mf_ls.joblib')
-    orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
-    ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
+def calc_gnps_data(parallel, n_cpu, timeout_secs, instru='qtof'):
 
     # main
     param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20,
@@ -144,37 +140,48 @@ def calc_gnps_data(parallel, n_cpu, timeout_secs):
                               n_cpu=n_cpu, timeout_secs=timeout_secs)
     buddy = Buddy(param_set)
     shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
-    buddy.add_data(qtof_mf_ls)
-    buddy.preprocess_and_generate_candidate_formula()
-    joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
-    pred_formula_feasibility(buddy.data, shared_data_dict)
-    joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_2.joblib')
-    buddy.assign_subformula_annotation()
-    joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand.joblib')
 
-    # update parameters
-    buddy.update_param_set(BuddyParamSet(ms1_tol=5, ms2_tol=10, halogen=True,
-                                         parallel=parallel, n_cpu=n_cpu, timeout_secs=timeout_secs))
-    buddy.clear_data()
-    buddy.add_data(orbi_mf_ls)
-    buddy.preprocess_and_generate_candidate_formula()
-    joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
-    pred_formula_feasibility(buddy.data, shared_data_dict)
-    joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_2.joblib')
-    buddy.assign_subformula_annotation()
-    joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand.joblib')
-
-    # update parameters
-    buddy.update_param_set(BuddyParamSet(ms1_tol=2, ms2_tol=5, halogen=True,
-                                         parallel=parallel, n_cpu=n_cpu, timeout_secs=timeout_secs))
-    buddy.clear_data()
-    buddy.add_data(ft_mf_ls)
-    buddy.preprocess_and_generate_candidate_formula()
-    joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
-    pred_formula_feasibility(buddy.data, shared_data_dict)
-    joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_2.joblib')
-    buddy.assign_subformula_annotation()
-    joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand.joblib')
+    if instru == 'qtof':
+        # qtof_mf_ls = joblib.load('gnps_qtof_mf_ls.joblib')
+        # buddy.add_data(qtof_mf_ls)
+        # buddy.preprocess_and_generate_candidate_formula()
+        # joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
+        # pred_formula_feasibility(buddy.data, shared_data_dict)
+        # joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_2.joblib')
+        data = joblib.load('gnps_qtof_mf_ls_cand_2.joblib')
+        buddy.add_data(data)
+        buddy.assign_subformula_annotation()
+        joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand.joblib')
+    elif instru == 'orbi':
+        # orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
+        # update parameters
+        buddy.update_param_set(BuddyParamSet(ms1_tol=5, ms2_tol=10, halogen=True,
+                                             parallel=parallel, n_cpu=n_cpu, timeout_secs=timeout_secs))
+        # buddy.clear_data()
+        # buddy.add_data(orbi_mf_ls)
+        # buddy.preprocess_and_generate_candidate_formula()
+        # joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
+        # pred_formula_feasibility(buddy.data, shared_data_dict)
+        # joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_2.joblib')
+        data = joblib.load('gnps_orbi_mf_ls_cand_2.joblib')
+        buddy.add_data(data)
+        buddy.assign_subformula_annotation()
+        joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand.joblib')
+    else:  # FT-ICR
+        # ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
+        # update parameters
+        buddy.update_param_set(BuddyParamSet(ms1_tol=2, ms2_tol=5, halogen=True,
+                                             parallel=parallel, n_cpu=n_cpu, timeout_secs=timeout_secs))
+        # buddy.clear_data()
+        # buddy.add_data(ft_mf_ls)
+        # buddy.preprocess_and_generate_candidate_formula()
+        # joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
+        # pred_formula_feasibility(buddy.data, shared_data_dict)
+        # joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_2.joblib')
+        data = joblib.load('gnps_ft_mf_ls_cand_2.joblib')
+        buddy.add_data(data)
+        buddy.assign_subformula_annotation()
+        joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand.joblib')
 
     return shared_data_dict
 
@@ -339,8 +346,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='ML model B training')
     parser.add_argument('-gen', action='store_true', help='generate training data')
     parser.add_argument('-calc', action='store_true', help='calculate gnps data')
+    parser.add_argument('-instru', type=str, default='qtof', help='instrument type')
     parser.add_argument('-parallel', action='store_true', help='parallel mode')
-    parser.add_argument('-n_cpu', type=int, default=24, help='number of CPU cores to use')
+    parser.add_argument('-n_cpu', type=int, default=16, help='number of CPU cores to use')
     parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
     parser.add_argument('-ms1', action='store_true', help='ms1 iso similarity included')
     parser.add_argument('-ms2', action='store_true', help='MS/MS spec included')
@@ -365,7 +373,7 @@ if __name__ == '__main__':
         load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib')
 
     elif args.calc:
-        gd = calc_gnps_data(args.parallel, args.n_cpu, args.to)
+        gd = calc_gnps_data(args.parallel, args.n_cpu, args.to, args.instru)
         gen_training_data(gd)
         print("Done.")
 
@@ -377,3 +385,13 @@ if __name__ == '__main__':
         train_model(X, y, args.ms1, args.ms2)
 
     print("Done.")
+
+    # param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20,
+    #                           halogen=True,
+    #                           parallel=False,
+    #                           n_cpu=4, timeout_secs=1000)
+    # buddy = Buddy(param_set)
+    # data = joblib.load('/Users/philip/Documents/projects/msbuddy/ml_b_train/gnps_qtof_mf_ls_cand_2.joblib')
+    # buddy.add_data(data)
+    # buddy.assign_subformula_annotation()
+    # joblib.dump(buddy.data, '/Users/philip/Documents/projects/msbuddy/ml_b_train/gnps_qtof_mf_ls_cand.joblib')
