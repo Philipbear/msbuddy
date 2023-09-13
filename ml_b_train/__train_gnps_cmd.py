@@ -134,10 +134,8 @@ def load_gnps_data(path):
 def calc_gnps_data(parallel, n_cpu, timeout_secs, instru='qtof'):
 
     # main
-    param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20,
-                              halogen=True,
-                              parallel=parallel,
-                              n_cpu=n_cpu, timeout_secs=timeout_secs)
+    param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20, parallel=parallel, n_cpu=n_cpu,
+                              halogen=True, timeout_secs=timeout_secs)
     buddy = Buddy(param_set)
     shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
 
@@ -155,8 +153,9 @@ def calc_gnps_data(parallel, n_cpu, timeout_secs, instru='qtof'):
     elif instru == 'orbi':
         # orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
         # update parameters
-        buddy.update_param_set(BuddyParamSet(ms1_tol=5, ms2_tol=10, halogen=True,
-                                             parallel=parallel, n_cpu=n_cpu, timeout_secs=timeout_secs))
+        buddy.update_param_set(BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=parallel, n_cpu=n_cpu,
+                                             halogen=True,
+                                             timeout_secs=timeout_secs))
         # buddy.clear_data()
         # buddy.add_data(orbi_mf_ls)
         # buddy.preprocess_and_generate_candidate_formula()
@@ -170,8 +169,9 @@ def calc_gnps_data(parallel, n_cpu, timeout_secs, instru='qtof'):
     else:  # FT-ICR
         # ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
         # update parameters
-        buddy.update_param_set(BuddyParamSet(ms1_tol=2, ms2_tol=5, halogen=True,
-                                             parallel=parallel, n_cpu=n_cpu, timeout_secs=timeout_secs))
+        buddy.update_param_set(BuddyParamSet(ms1_tol=2, ms2_tol=5, parallel=parallel, n_cpu=n_cpu,
+                                             halogen=True,
+                                             timeout_secs=timeout_secs))
         # buddy.clear_data()
         # buddy.add_data(ft_mf_ls)
         # buddy.preprocess_and_generate_candidate_formula()
@@ -358,13 +358,14 @@ def parse_args():
 
 # test
 if __name__ == '__main__':
-    __package__ = "msbuddy"
+    # __package__ = "msbuddy"
     # parse arguments
-    args = parse_args()
+    # args = parse_args()
 
     # # test here
-    # args = argparse.Namespace(gen=True, n_cpu=-1, to=1000, parallel=False,
-    #                           ms1=True, ms2=True)
+    args = argparse.Namespace(gen=False, calc=True, instru='ft',
+                              parallel=False, n_cpu=1, to=1000,
+                              ms1=True, ms2=True)
 
     # /Users/philip/Documents/projects/ms2/gnps/
 
