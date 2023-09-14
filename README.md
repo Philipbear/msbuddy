@@ -32,12 +32,20 @@ pip install msbuddy
 
 ### Quick Start ([link](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 
-As a quick start, we here load a mgf file and annotate the molecular formula for each MS/MS spectrum:
+As a quick start, we here load a mgf file and annotate the molecular formula for each MS/MS spectrum.
+All the parameter settings are specified in the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.BuddyParamSet) object.
+**Parallel computing** is also supported.
+
 ```python
-from msbuddy import Buddy
+from msbuddy import Buddy, BuddyParamSet
+
+# instantiate a BuddyParamSet object
+param = BuddyParamSet(ppm=True, ms1_tol=5, ms2_tol=10,
+                      halogen=False, timeout_secs=300,
+                      parallel=True, n_cpu=8)
 
 # instantiate a Buddy object
-buddy = Buddy()
+buddy = Buddy(param)
 
 # load data, here we use a mgf file as an example
 buddy.load_mgf('input_file.mgf')
@@ -48,21 +56,6 @@ buddy.annotate_formula()
 # retrieve the annotation result summary
 result = buddy.get_summary()
 ```
-
-To specify the parameter settings, you can use the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.BuddyParamSet) object.
-**Parallel computing** is also supported.
-```python
-from msbuddy import Buddy, BuddyParamSet
-
-# instantiate a BuddyParamSet object
-param = BuddyParamSet(ppm = True, ms1_tol = 5, ms2_tol = 10,
-                      halogen = False, timeout_secs = 300,
-                      parallel = True, n_cpu = 8)
-                      
-# instantiate a Buddy object with the specified parameter settings
-buddy = Buddy(param)
-```
-
 
 MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
 ```python
@@ -75,9 +68,10 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 
 ## Command-line API ([link](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
 
-**msbuddy** can also be used as a command-line tool:
+**msbuddy** can also be used as a command-line tool. Top 3 formula candidates will be reported for each query.
+The annotation details can be output with the `--details` option.
 ```bash
-msbuddy --mgf <mgf file> --output <output folder>
+msbuddy --mgf <mgf file> --output <output folder> --details
 ```
 or for a csv file containing USI strings (one USI per line):
 ```bash

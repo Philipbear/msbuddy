@@ -206,7 +206,7 @@ def _calc_top_n_candidate(mz: float) -> int:
     :param mz: precursor m/z
     :return: number of top candidate formulas to retain
     """
-    return min(500, int(mz * mz / 1e3) + 10)
+    return min(800, int(mz * mz / 800) + 10)
 
 
 def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:

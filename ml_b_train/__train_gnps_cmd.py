@@ -15,6 +15,8 @@ from msbuddy.buddy import Buddy, BuddyParamSet, _gen_subformula
 from msbuddy.load import init_db
 from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from msbuddy.gen_candidate import _calc_ms1_iso_sim
+from msbuddy.api import form_arr_to_str
+
 
 # This MLP model is trained using GNPS library.
 # 4 models will be generated in total: ms1 iso similarity included or not, MS/MS spec included or not.
@@ -276,51 +278,68 @@ def assign_subform_gen_training_data(instru):
     data_name = 'gnps_' + instru + '_mf_ls_cand_2.joblib'
     data = joblib.load(data_name)
     buddy.add_data(data)
+    del data
 
     gt_name = 'gnps_' + instru + '_gt_ls.joblib'
     gt_ls = joblib.load(gt_name)
 
+    gt_in_cf_cnt = 0
     for k, meta_feature in enumerate(buddy.data):
         print('k: ' + str(k) + ' out of ' + str(len(buddy.data)))
         gt_form_arr = gt_ls[k]
+        gt_form_str = form_arr_to_str(gt_form_arr)
         if not meta_feature.candidate_formula_list:
             continue
-        mf = _gen_subformula(meta_feature, buddy.param_set)
 
-        # generate ML features for each candidate formula
-        for cf in mf.candidate_formula_list:
-            # calc ms1 iso similarity
-            cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, 4)
-            this_true = False
-            if (gt_form_arr == cf.formula.array).all():
-                this_true = True
-            # get ML features
-            ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol, shared_data_dict)
+        # whether the ground truth formula is in the candidate formula list
+        gt_in_cf = False
+        for cf in meta_feature.candidate_formula_list:
+            if gt_form_str == form_arr_to_str(cf.formula.array):
+                gt_in_cf = True
+                gt_in_cf_cnt += 1
+                break
+        if not gt_in_cf:
+            continue
 
-            # if true gt, perform precursor simulation
-            if this_true:
-                mz_shift = np.random.normal(0, ms1_tol / 5)
-                mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
-                mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
-                log_p = np.log(mz_shift_p * 2)
-                ml_feature_arr[3] = np.clip(log_p, -4, 0)
+    print('gt_in_cf_cnt: ' + str(gt_in_cf_cnt) + ' out of ' + str(len(buddy.data)))
 
-            # add to feature array
-            if X_arr.size == 0:
-                X_arr = ml_feature_arr
-                y_arr = np.array([1 if this_true else 0])
-            else:
-                X_arr = np.vstack((X_arr, ml_feature_arr))
-                y_arr = np.append(y_arr, 1 if this_true else 0)
-
-        del mf
-        buddy.data[k] = None
-
-    print('y_arr sum: ' + str(np.sum(y_arr)))
-    X_arr_name = 'gnps_X_arr_' + instru + '.joblib'
-    y_arr_name = 'gnps_y_arr_' + instru + '.joblib'
-    joblib.dump(X_arr, X_arr_name)
-    joblib.dump(y_arr, y_arr_name)
+    #     # assign subformula annotation
+    #     mf = _gen_subformula(meta_feature, buddy.param_set)
+    #
+    #     # generate ML features for each candidate formula
+    #     for cf in mf.candidate_formula_list:
+    #         # calc ms1 iso similarity
+    #         cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, 4)
+    #         this_true = False
+    #         if gt_form_str == form_arr_to_str(cf.formula.array):
+    #             this_true = True
+    #         # get ML features
+    #         ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol, shared_data_dict)
+    #
+    #         # if true gt, perform precursor simulation
+    #         if this_true:
+    #             mz_shift = np.random.normal(0, ms1_tol / 5)
+    #             mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
+    #             mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
+    #             log_p = np.log(mz_shift_p * 2)
+    #             ml_feature_arr[3] = np.clip(log_p, -4, 0)
+    #
+    #         # add to feature array
+    #         if X_arr.size == 0:
+    #             X_arr = ml_feature_arr
+    #             y_arr = np.array([1 if this_true else 0])
+    #         else:
+    #             X_arr = np.vstack((X_arr, ml_feature_arr))
+    #             y_arr = np.append(y_arr, 1 if this_true else 0)
+    #
+    #     del mf
+    #     buddy.data[k] = None
+    #
+    # print('y_arr sum: ' + str(np.sum(y_arr)))
+    # X_arr_name = 'gnps_X_arr_' + instru + '.joblib'
+    # y_arr_name = 'gnps_y_arr_' + instru + '.joblib'
+    # joblib.dump(X_arr, X_arr_name)
+    # joblib.dump(y_arr, y_arr_name)
 
 
 def train_model(ms1_iso, ms2_spec):
@@ -439,16 +458,16 @@ def parse_args():
 
 # test
 if __name__ == '__main__':
-    # __package__ = "msbuddy"
+    __package__ = "msbuddy"
     # parse arguments
-    args = parse_args()
+    # args = parse_args()
 
     # test here
-    # args = argparse.Namespace(gen=False, calc=True, instru='ft',
-    #                           parallel=False, n_cpu=1, to=1000,
-    #                           ms1=True, ms2=True)
+    args = argparse.Namespace(gen=False, calc=True, instru='ft',
+                              parallel=False, n_cpu=1, to=1000,
+                              ms1=True, ms2=True)
 
-    # /Users/philip/Documents/projects/ms2/gnps/
+    # /Users/shipei/Documents/projects/ms2/gnps/
 
     # load training data
     if args.gen:
