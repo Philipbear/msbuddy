@@ -459,13 +459,13 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=4,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=8,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
                                     i_range=(0, 20))
 
     buddy = Buddy(buddy_param_set)
-    # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/test.mgf")
-    buddy.load_mgf('/Users/philip/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
+    buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     #

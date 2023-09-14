@@ -313,6 +313,9 @@ def assign_subform_gen_training_data(instru):
                 X_arr = np.vstack((X_arr, ml_feature_arr))
                 y_arr = np.append(y_arr, 1 if this_true else 0)
 
+        del mf
+        buddy.data[k] = None
+
     print('y_arr sum: ' + str(np.sum(y_arr)))
     X_arr_name = 'gnps_X_arr_' + instru + '.joblib'
     y_arr_name = 'gnps_y_arr_' + instru + '.joblib'
