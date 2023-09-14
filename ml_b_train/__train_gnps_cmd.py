@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.neural_network import MLPClassifier
 
 from msbuddy.base import read_formula, MetaFeature, Spectrum, Formula
-from msbuddy.buddy import Buddy, BuddyParamSet
+from msbuddy.buddy import Buddy, BuddyParamSet, _gen_subformula
 from msbuddy.load import init_db
 from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from msbuddy.gen_candidate import _calc_ms1_iso_sim
@@ -250,15 +250,93 @@ def gen_training_data(gd):
     joblib.dump(y_arr, 'gnps_y_arr.joblib')
 
 
-def train_model(X_arr, y_arr, ms1_iso, ms2_spec):
+def assign_subform_gen_training_data(instru):
+    """
+    assign subformula annotation and generate training data; reduce memory usage
+    """
+    # generate ML features for each candidate formula, for ML model B
+    # generate feature array
+    X_arr = np.array([])
+    y_arr = np.array([])
+
+    if instru == 'qtof':
+        ms1_tol = 10
+        ms2_tol = 20
+    elif instru == 'orbi':
+        ms1_tol = 5
+        ms2_tol = 10
+    else:  # FT-ICR
+        ms1_tol = 2
+        ms2_tol = 5
+
+    param_set = BuddyParamSet(ms1_tol=ms1_tol, ms2_tol=ms2_tol, halogen=True)
+    buddy = Buddy(param_set)
+    shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
+
+    data_name = 'gnps_' + instru + '_mf_ls_cand_2.joblib'
+    data = joblib.load(data_name)
+    buddy.add_data(data)
+
+    gt_name = 'gnps_' + instru + '_gt_ls.joblib'
+    gt_ls = joblib.load(gt_name)
+
+    for k, meta_feature in enumerate(buddy.data):
+        print('k: ' + str(k) + ' out of ' + str(len(buddy.data)))
+        gt_form_arr = gt_ls[k]
+        if not meta_feature.candidate_formula_list:
+            continue
+        mf = _gen_subformula(meta_feature, buddy.param_set)
+
+        # generate ML features for each candidate formula
+        for cf in mf.candidate_formula_list:
+            # calc ms1 iso similarity
+            cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, 4)
+            this_true = False
+            if (gt_form_arr == cf.formula.array).all():
+                this_true = True
+            # get ML features
+            ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol, shared_data_dict)
+
+            # if true gt, perform precursor simulation
+            if this_true:
+                mz_shift = np.random.normal(0, ms1_tol / 5)
+                mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
+                mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
+                log_p = np.log(mz_shift_p * 2)
+                ml_feature_arr[3] = np.clip(log_p, -4, 0)
+
+            # add to feature array
+            if X_arr.size == 0:
+                X_arr = ml_feature_arr
+                y_arr = np.array([1 if this_true else 0])
+            else:
+                X_arr = np.vstack((X_arr, ml_feature_arr))
+                y_arr = np.append(y_arr, 1 if this_true else 0)
+
+    print('y_arr sum: ' + str(np.sum(y_arr)))
+    X_arr_name = 'gnps_X_arr_' + instru + '.joblib'
+    y_arr_name = 'gnps_y_arr_' + instru + '.joblib'
+    joblib.dump(X_arr, X_arr_name)
+    joblib.dump(y_arr, y_arr_name)
+
+
+def train_model(ms1_iso, ms2_spec):
     """
     train ML model B
-    :param X_arr: feature array
-    :param y_arr: label array
     :param ms1_iso: True for ms1 iso similarity included, False for not included
     :param ms2_spec: True for MS/MS spec included, False for not included
     :return: trained model
     """
+    # load training data
+    X_arr_qtof = joblib.load('gnps_X_arr_qtof.joblib')
+    y_arr_qtof = joblib.load('gnps_y_arr_qtof.joblib')
+    X_arr_orbi = joblib.load('gnps_X_arr_orbi.joblib')
+    y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
+    X_arr_ft = joblib.load('gnps_X_arr_ft.joblib')
+    y_arr_ft = joblib.load('gnps_y_arr_ft.joblib')
+
+    X_arr = np.vstack((X_arr_qtof, X_arr_orbi, X_arr_ft))
+    y_arr = np.append(y_arr_qtof, np.append(y_arr_orbi, y_arr_ft))
 
     print('SMOTE...')
     # Apply SMOTE to the training data
@@ -360,12 +438,12 @@ def parse_args():
 if __name__ == '__main__':
     # __package__ = "msbuddy"
     # parse arguments
-    # args = parse_args()
+    args = parse_args()
 
-    # # test here
-    args = argparse.Namespace(gen=False, calc=True, instru='ft',
-                              parallel=False, n_cpu=1, to=1000,
-                              ms1=True, ms2=True)
+    # test here
+    # args = argparse.Namespace(gen=False, calc=True, instru='ft',
+    #                           parallel=False, n_cpu=1, to=1000,
+    #                           ms1=True, ms2=True)
 
     # /Users/philip/Documents/projects/ms2/gnps/
 
@@ -374,25 +452,13 @@ if __name__ == '__main__':
         load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib')
 
     elif args.calc:
-        gd = calc_gnps_data(args.parallel, args.n_cpu, args.to, args.instru)
-        gen_training_data(gd)
+        # gd = calc_gnps_data(args.parallel, args.n_cpu, args.to, args.instru)
+        # gen_training_data(gd)
+        assign_subform_gen_training_data(args.instru)
         print("Done.")
 
     else:  # train model
-        X = joblib.load('gnps_X_arr.joblib')
-        y = joblib.load('gnps_y_arr.joblib')
-
         # train models
-        train_model(X, y, args.ms1, args.ms2)
+        train_model(args.ms1, args.ms2)
 
     print("Done.")
-
-    # param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20,
-    #                           halogen=True,
-    #                           parallel=False,
-    #                           n_cpu=4, timeout_secs=1000)
-    # buddy = Buddy(param_set)
-    # data = joblib.load('/Users/philip/Documents/projects/msbuddy/ml_b_train/gnps_qtof_mf_ls_cand_2.joblib')
-    # buddy.add_data(data)
-    # buddy.assign_subformula_annotation()
-    # joblib.dump(buddy.data, '/Users/philip/Documents/projects/msbuddy/ml_b_train/gnps_qtof_mf_ls_cand.joblib')
