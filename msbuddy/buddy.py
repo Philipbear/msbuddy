@@ -214,9 +214,11 @@ class Buddy:
         """
         self.data = None
 
-    def preprocess_and_generate_candidate_formula(self):
+    def preprocess_and_generate_candidate_formula(self, batch_start_idx: int = 0, batch_end_idx: int = None):
         """
         preprocess data and generate candidate formula space
+        :param batch_start_idx: start index of batch
+        :param batch_end_idx: end index of batch
         :return: None. Update self.data
         """
 
@@ -231,88 +233,75 @@ class Buddy:
             mf = _generate_candidate_formula(meta_feature, ps, shared_data_dict)
             return mf
 
-        # batches
-        n_batch = int(np.ceil(len(self.data) / self.param_set.batch_size))
+        batch_data = self.data[batch_start_idx:batch_end_idx]
+        modified_mf_ls = []  # modified metabolic feature list, containing annotated results
 
-        # loop over batches
-        for n in range(n_batch):
-            description = f"Candidate space generation: Batch {n + 1}/{n_batch} "
-            # get batch data
-            batch_data, start_idx, end_idx = _get_batch(self.data, self.param_set.batch_size, n)
+        # data preprocessing and candidate space generation
+        if self.param_set.parallel:
+            with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
+                      initargs=(shared_data_dict,)) as pool:
+                async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
+                                                  (mf, self.param_set)) for mf in batch_data]
+                # Initialize tqdm progress bar
 
-            modified_mf_ls = []  # modified metabolic feature list, containing annotated results
-
-            # data preprocessing and candidate space generation
-            if self.param_set.parallel:
-                with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
-                          initargs=(shared_data_dict,)) as pool:
-                    async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
-                                                      (mf, self.param_set)) for mf in batch_data]
-                    # Initialize tqdm progress bar
-
-                    pbar = tqdm(total=len(batch_data), colour="green", desc=description, file=sys.stdout)
-                    for i, async_result in enumerate(async_results):
-                        pbar.update(1)  # Update tqdm progress bar
-                        try:
-                            modified_mf = async_result.get(timeout=self.param_set.timeout_secs)
-                            modified_mf_ls.append(modified_mf)
-                        except:
-                            mf = batch_data[i]
-                            logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
-                            modified_mf_ls.append(mf)
-                pbar.close()  # Close tqdm progress bar
-                del async_results
-            else:
-                # normal loop, timeout implemented using timeout_decorator
-                for mf in tqdm(batch_data, file=sys.stdout, colour="green", desc=description):
+                pbar = tqdm(total=len(batch_data), colour="green", desc="Candidate space generation",
+                            file=sys.stdout)
+                for i, async_result in enumerate(async_results):
+                    pbar.update(1)  # Update tqdm progress bar
                     try:
-                        modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
+                        modified_mf = async_result.get(timeout=self.param_set.timeout_secs)
                         modified_mf_ls.append(modified_mf)
                     except:
+                        mf = batch_data[i]
                         logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
                         modified_mf_ls.append(mf)
+            pbar.close()  # Close tqdm progress bar
+            del async_results
+        else:
+            # normal loop, timeout implemented using timeout_decorator
+            for mf in tqdm(batch_data, file=sys.stdout, colour="green", desc="Candidate space generation"):
+                try:
+                    modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
+                    modified_mf_ls.append(modified_mf)
+                except:
+                    logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
+                    modified_mf_ls.append(mf)
 
-            # update data
-            self.data[start_idx:end_idx] = modified_mf_ls
-            del modified_mf_ls
+        # update data
+        self.data[batch_start_idx:batch_end_idx] = modified_mf_ls
+        del modified_mf_ls
 
-    def assign_subformula_annotation(self):
+    def assign_subformula_annotation(self, batch_start_idx: int = 0, batch_end_idx: int = None):
         """
         assign subformula annotation for loaded data, no timeout implemented
+        :param batch_start_idx: start index of batch
+        :param batch_end_idx: end index of batch
         :return: None. Update self.data
         """
-        # batches
-        n_batch = int(np.ceil(len(self.data) / self.param_set.batch_size))
+        batch_data = self.data[batch_start_idx:batch_end_idx]
+        modified_mf_ls = []  # modified metabolic feature list
 
-        # loop over batches
-        for n in range(n_batch):
-            description = f"Subformula assignment: Batch {n + 1}/{n_batch} "
-            # get batch data
-            batch_data, start_idx, end_idx = _get_batch(self.data, self.param_set.batch_size, n)
+        if self.param_set.parallel:
+            with Pool(processes=int(self.param_set.n_cpu)) as pool:
+                async_results = [pool.apply_async(_gen_subformula,
+                                                  (mf, self.param_set)) for mf in batch_data]
 
-            modified_mf_ls = []  # modified metabolic feature list
-
-            if self.param_set.parallel:
-                with Pool(processes=int(self.param_set.n_cpu)) as pool:
-                    async_results = [pool.apply_async(_gen_subformula,
-                                                      (mf, self.param_set)) for mf in batch_data]
-
-                    pbar = tqdm(total=len(batch_data), colour="green", desc=description, file=sys.stdout)
-                    for i, async_result in enumerate(async_results):
-                        pbar.update(1)  # Update tqdm progress bar
-                        modified_mf = async_result.get()
-                        modified_mf_ls.append(modified_mf)
-                pbar.close()  # Close tqdm progress bar
-                del async_results
-            else:
-                # normal loop
-                for mf in tqdm(batch_data, desc=description, file=sys.stdout, colour="green"):
-                    modified_mf = _gen_subformula(mf, self.param_set)
+                pbar = tqdm(total=len(batch_data), colour="green", desc="Subformula assignment: ", file=sys.stdout)
+                for i, async_result in enumerate(async_results):
+                    pbar.update(1)  # Update tqdm progress bar
+                    modified_mf = async_result.get()
                     modified_mf_ls.append(modified_mf)
+            pbar.close()  # Close tqdm progress bar
+            del async_results
+        else:
+            # normal loop
+            for mf in tqdm(batch_data, desc="Subformula assignment: ", file=sys.stdout, colour="green"):
+                modified_mf = _gen_subformula(mf, self.param_set)
+                modified_mf_ls.append(modified_mf)
 
-            # update data
-            self.data[start_idx:end_idx] = modified_mf_ls
-            del modified_mf_ls
+        # update data
+        self.data[batch_start_idx:batch_end_idx] = modified_mf_ls
+        del modified_mf_ls
 
     def calc_fdr(self):
         """
@@ -370,20 +359,28 @@ class Buddy:
             # parallel processing
             logging.info(f"Parallel processing with {self.param_set.n_cpu} processes.")
 
-        # data preprocessing and candidate space generation
-        self.preprocess_and_generate_candidate_formula()
+        # batches
+        n_batch = int(np.ceil(len(self.data) / self.param_set.batch_size))
 
-        # ml_a feature generation + prediction, retain top candidates
-        cand_form_available = pred_formula_feasibility(self.data, self.param_set.batch_size, shared_data_dict)
+        # loop over batches
+        for n in range(n_batch):
+            tqdm.write(f"Batch {n + 1}/{n_batch}:")
+            # get batch data
+            start_idx, end_idx = _get_batch(self.data, self.param_set.batch_size, n)
 
-        if not cand_form_available:
-            raise ValueError("No feasible candidate formula.")
+            # data preprocessing and candidate space generation
+            self.preprocess_and_generate_candidate_formula(start_idx, end_idx)
 
-        # assign subformula annotation
-        self.assign_subformula_annotation()
+            # ml_a feature generation + prediction, retain top candidates
+            tqdm.write("Formula feasibility assessment...")
+            pred_formula_feasibility(self.data, start_idx, end_idx, shared_data_dict)
 
-        # ml_b feature generation + prediction
-        pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
+            # assign subformula annotation
+            self.assign_subformula_annotation(start_idx, end_idx)
+
+            # # ml_b feature generation + prediction
+            tqdm.write("Formula probability prediction...")
+            # pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
 
         # FDR calculation
         self.calc_fdr()
@@ -426,8 +423,7 @@ def _get_batch(data: List[MetaFeature], batch_size: int, n: int):
     """
     start_idx = n * batch_size
     end_idx = min((n + 1) * batch_size, len(data))
-    batch_data = data[start_idx:end_idx]
-    return batch_data, start_idx, end_idx
+    return start_idx, end_idx
 
 
 def init_pool(the_dict):
@@ -491,7 +487,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=8, batch_size=300,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=8, batch_size=300,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
                                     i_range=(1, 20))
 

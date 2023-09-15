@@ -137,72 +137,53 @@ def _predict_ml_a(feature_arr: np.array, gd) -> np.array:
     return prob_arr[:, 1]
 
 
-def pred_formula_feasibility(buddy_data, batch_size, gd) -> bool:
+def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: int, gd) -> None:
     """
     predict formula feasibility using ML model a, retain top candidate formulas
     this function is performed in batch
     :param buddy_data: buddy data
-    :param batch_size: batch size
+    :param batch_start_idx: batch start index
+    :param batch_end_idx: batch end index
     :param gd: global dependencies
-    :return: True if there is at least one feasible formula, False if not
-    fill in ml_a_prob in candidate formula objects
+    :return: int, number of total candidate formulas in this batch
     """
-    # batches
-    n_batch = int(np.ceil(len(buddy_data) / batch_size))
+    # batch data
+    batch_data = buddy_data[batch_start_idx:batch_end_idx]
 
-    # total candidate formula count
-    total_cand_form_cnt = 0
-    # loop through batches
-    pbar = tqdm(total=n_batch, colour="green", desc="Formula feasibility assessment: Batch", file=sys.stdout)
-    for i in range(n_batch):
-        # batch start and end index
-        start_idx = i * batch_size
-        end_idx = min((i + 1) * batch_size, len(buddy_data))
-        batch_data = buddy_data[start_idx:end_idx]
+    # generate three arrays from buddy data
+    cand_form_arr, dbe_arr, mass_arr = _gen_ml_a_feature_from_buddy_data(batch_data)
 
-        # generate three arrays from buddy data
-        cand_form_arr, dbe_arr, mass_arr = _gen_ml_a_feature_from_buddy_data(batch_data)
+    # if no candidate formula, return
+    if cand_form_arr.size == 0:
+        return 0
 
-        # if no candidate formula, return
-        if cand_form_arr.size == 0:
+    # generate ML feature array
+    feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
+    feature_arr = _z_norm_ml_a_feature(feature_arr, gd)
+    # predict formula feasibility
+    prob_arr = _predict_ml_a(feature_arr, gd)
+
+    # add prediction results to candidate formula objects in the list
+    cnt = 0
+    for meta_feature in batch_data:
+        if not meta_feature.candidate_formula_list:
             continue
+        # generate ML features for each candidate formula
+        for candidate_formula in meta_feature.candidate_formula_list:
+            candidate_formula.ml_a_prob = prob_arr[cnt]
+            cnt += 1
 
-        total_cand_form_cnt += len(cand_form_arr)
+        top_n = _calc_top_n_candidate(meta_feature.mz)
+        # sort candidate formula list by formula feasibility, descending
+        # retain top candidate formulas
+        meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
+        if len(meta_feature.candidate_formula_list) > top_n:
+            meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:top_n]
 
-        # generate ML feature array
-        feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
-        feature_arr = _z_norm_ml_a_feature(feature_arr, gd)
-        # predict formula feasibility
-        prob_arr = _predict_ml_a(feature_arr, gd)
+    # update buddy data
+    buddy_data[batch_start_idx:batch_end_idx] = batch_data
 
-        # add prediction results to candidate formula objects in the list
-        cnt = 0
-        for meta_feature in batch_data:
-            if not meta_feature.candidate_formula_list:
-                continue
-            # generate ML features for each candidate formula
-            for candidate_formula in meta_feature.candidate_formula_list:
-                candidate_formula.ml_a_prob = prob_arr[cnt]
-                cnt += 1
-
-            top_n = _calc_top_n_candidate(meta_feature.mz)
-            # sort candidate formula list by formula feasibility, descending
-            # retain top candidate formulas
-            meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
-            if len(meta_feature.candidate_formula_list) > top_n:
-                meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:top_n]
-
-        # update buddy data
-        buddy_data[start_idx:end_idx] = batch_data
-        pbar.update(1)
-
-    pbar.close()
-
-    # return True if there is at least one feasible formula, False if not
-    if total_cand_form_cnt == 0:
-        return False
-
-    return True
+    return
 
 
 def _calc_top_n_candidate(mz: float) -> int:
