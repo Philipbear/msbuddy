@@ -33,6 +33,7 @@ class BuddyParamSet:
                  parallel: bool = False,
                  n_cpu: int = -1,
                  timeout_secs: float = 300,
+                 batch_size: int = 500,
                  c_range: Tuple[int, int] = (0, 80),
                  h_range: Tuple[int, int] = (0, 150),
                  n_range: Tuple[int, int] = (0, 20),
@@ -57,6 +58,7 @@ class BuddyParamSet:
         :param parallel: whether to use parallel processing
         :param n_cpu: number of CPU cores used for parallel processing; if -1, all available cores will be used
         :param timeout_secs: timeout in seconds
+        :param batch_size: batch size for formula annotation; a larger batch size takes more memory
         :param c_range: C range
         :param h_range: H range
         :param n_range: N range
@@ -95,6 +97,12 @@ class BuddyParamSet:
         self.timeout_secs = timeout_secs
         if self.parallel:
             self.timeout_secs += 20  # add 20 seconds for db initialization
+
+        if batch_size <= 1:
+            self.batch_size = 500
+            logging.warning(f"Batch size is set to {self.batch_size}.")
+        else:
+            self.batch_size = int(batch_size)
 
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
                                    0, n_range[0], 0, o_range[0], p_range[0], s_range[0]])
@@ -211,7 +219,6 @@ class Buddy:
         preprocess data and generate candidate formula space
         :return: None. Update self.data
         """
-        modified_mf_ls = []  # modified metabolic feature list, containing annotated results
 
         @timeout(self.param_set.timeout_secs)
         def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
@@ -224,77 +231,88 @@ class Buddy:
             mf = _generate_candidate_formula(meta_feature, ps, shared_data_dict)
             return mf
 
-        # data preprocessing and candidate space generation
-        if self.param_set.parallel:
-            # parallel processing
-            logging.info(f"Parallel processing with {self.param_set.n_cpu} processes.")
-            logging.info("Candidate space generation...")
+        # batches
+        n_batch = int(np.ceil(len(self.data) / self.param_set.batch_size))
 
-            with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
-                      initargs=(shared_data_dict,)) as pool:
-                async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
-                                                  (mf, self.param_set)) for mf in self.data]
+        # loop over batches
+        for n in range(n_batch):
+            description = f"Candidate space generation: Batch {n + 1}/{n_batch} "
+            # get batch data
+            batch_data, start_idx, end_idx = _get_batch(self.data, self.param_set.batch_size, n)
 
-                pbar = tqdm(total=len(self.data), colour="green")  # Initialize tqdm progress bar
-                for i, async_result in enumerate(async_results):
-                    pbar.update(1)  # Update tqdm progress bar
+            modified_mf_ls = []  # modified metabolic feature list, containing annotated results
+
+            # data preprocessing and candidate space generation
+            if self.param_set.parallel:
+                with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
+                          initargs=(shared_data_dict,)) as pool:
+                    async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
+                                                      (mf, self.param_set)) for mf in batch_data]
+                    # Initialize tqdm progress bar
+
+                    pbar = tqdm(total=len(batch_data), colour="green", desc=description, file=sys.stdout)
+                    for i, async_result in enumerate(async_results):
+                        pbar.update(1)  # Update tqdm progress bar
+                        try:
+                            modified_mf = async_result.get(timeout=self.param_set.timeout_secs)
+                            modified_mf_ls.append(modified_mf)
+                        except:
+                            mf = batch_data[i]
+                            logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
+                            modified_mf_ls.append(mf)
+                pbar.close()  # Close tqdm progress bar
+                del async_results
+            else:
+                # normal loop, timeout implemented using timeout_decorator
+                for mf in tqdm(batch_data, file=sys.stdout, colour="green", desc=description):
                     try:
-                        modified_mf = async_result.get(timeout=self.param_set.timeout_secs)
+                        modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
                         modified_mf_ls.append(modified_mf)
                     except:
-                        mf = self.data[i]
                         logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
                         modified_mf_ls.append(mf)
-            pbar.close()  # Close tqdm progress bar
-            del async_results
-        else:
-            # normal loop, timeout implemented using timeout_decorator
-            for mf in tqdm(self.data, desc="Data preprocessing & candidate space generation",
-                           file=sys.stdout, colour="green"):
-                try:
-                    modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
-                    modified_mf_ls.append(modified_mf)
-                except:
-                    logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
-                    modified_mf_ls.append(mf)
 
-        # update data
-        self.data = modified_mf_ls
-        del modified_mf_ls
+            # update data
+            self.data[start_idx:end_idx] = modified_mf_ls
+            del modified_mf_ls
 
     def assign_subformula_annotation(self):
         """
         assign subformula annotation for loaded data, no timeout implemented
         :return: None. Update self.data
         """
-        # subformula generation
-        modified_mf_ls = []  # modified metabolic feature list
+        # batches
+        n_batch = int(np.ceil(len(self.data) / self.param_set.batch_size))
 
-        if self.param_set.parallel:
-            # parallel processing
-            logging.info("Subformula assignment...")
+        # loop over batches
+        for n in range(n_batch):
+            description = f"Subformula assignment: Batch {n + 1}/{n_batch} "
+            # get batch data
+            batch_data, start_idx, end_idx = _get_batch(self.data, self.param_set.batch_size, n)
 
-            with Pool(processes=int(self.param_set.n_cpu)) as pool:
-                async_results = [pool.apply_async(_gen_subformula,
-                                                  (mf, self.param_set)) for mf in self.data]
+            modified_mf_ls = []  # modified metabolic feature list
 
-                pbar = tqdm(total=len(self.data), colour="green")  # Initialize tqdm progress bar
-                for i, async_result in enumerate(async_results):
-                    pbar.update(1)  # Update tqdm progress bar
-                    modified_mf = async_result.get()
+            if self.param_set.parallel:
+                with Pool(processes=int(self.param_set.n_cpu)) as pool:
+                    async_results = [pool.apply_async(_gen_subformula,
+                                                      (mf, self.param_set)) for mf in batch_data]
+
+                    pbar = tqdm(total=len(batch_data), colour="green", desc=description, file=sys.stdout)
+                    for i, async_result in enumerate(async_results):
+                        pbar.update(1)  # Update tqdm progress bar
+                        modified_mf = async_result.get()
+                        modified_mf_ls.append(modified_mf)
+                pbar.close()  # Close tqdm progress bar
+                del async_results
+            else:
+                # normal loop
+                for mf in tqdm(batch_data, desc=description, file=sys.stdout, colour="green"):
+                    modified_mf = _gen_subformula(mf, self.param_set)
                     modified_mf_ls.append(modified_mf)
-            pbar.close()  # Close tqdm progress bar
-            del async_results
-        else:
-            # normal loop
-            for mf in tqdm(self.data, desc="Subformula assignment",
-                           file=sys.stdout, colour="green"):
-                modified_mf = _gen_subformula(mf, self.param_set)
-                modified_mf_ls.append(modified_mf)
 
-        # update data
-        self.data = modified_mf_ls
-        del modified_mf_ls
+            # update data
+            self.data[start_idx:end_idx] = modified_mf_ls
+            del modified_mf_ls
 
     def calc_fdr(self):
         """
@@ -303,7 +321,7 @@ class Buddy:
         """
         # calculate FDR
         # sort candidate formula list for each metabolic feature
-        for meta_feature in self.data:
+        for meta_feature in tqdm(self.data, desc="FDR calculation: ", file=sys.stdout, colour="green"):
             if not meta_feature.candidate_formula_list:
                 continue
             # sort candidate formula list by estimated probability, in descending order
@@ -348,13 +366,15 @@ class Buddy:
         logging.info(f"Total {len(self.data)} spectra loaded.")
 
         param_set = self.param_set
+        if self.param_set.parallel:
+            # parallel processing
+            logging.info(f"Parallel processing with {self.param_set.n_cpu} processes.")
 
         # data preprocessing and candidate space generation
         self.preprocess_and_generate_candidate_formula()
 
         # ml_a feature generation + prediction, retain top candidates
-        logging.info("Formula feasibility assessment...")
-        cand_form_available = pred_formula_feasibility(self.data, shared_data_dict)
+        cand_form_available = pred_formula_feasibility(self.data, self.param_set.batch_size, shared_data_dict)
 
         if not cand_form_available:
             raise ValueError("No feasible candidate formula.")
@@ -363,11 +383,9 @@ class Buddy:
         self.assign_subformula_annotation()
 
         # ml_b feature generation + prediction
-        logging.info("Formula probability prediction...")
         pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
 
         # FDR calculation
-        logging.info("FDR calculation...")
         self.calc_fdr()
 
         logging.info("Job finished.")
@@ -396,6 +414,20 @@ class Buddy:
         """
         formulas = query_neutral_mass(mass, mz_tol, ppm, shared_data_dict)
         return [form_arr_to_str(f.array) for f in formulas]
+
+
+def _get_batch(data: List[MetaFeature], batch_size: int, n: int):
+    """
+    get batch data
+    :param data: data list
+    :param batch_size: batch size
+    :param n: batch number
+    :return: batch data
+    """
+    start_idx = n * batch_size
+    end_idx = min((n + 1) * batch_size, len(data))
+    batch_data = data[start_idx:end_idx]
+    return batch_data, start_idx, end_idx
 
 
 def init_pool(the_dict):
@@ -459,9 +491,9 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=8,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=8, batch_size=300,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
-                                    i_range=(0, 20))
+                                    i_range=(1, 20))
 
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")

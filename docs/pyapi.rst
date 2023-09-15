@@ -161,14 +161,13 @@ Example Usage:
 
 .. code-block:: python
 
-   from msbuddy import Buddy, BuddyParamSet
+   from msbuddy import Buddy
 
-   # create a parameter set and a Buddy object
-   param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20, halogen=True, parallel=True, n_cpu=-1)
-   buddy = Buddy(param_set)
+   # create a Buddy object with default parameter set
+   buddy = Buddy()
 
    # load some data here
-   buddy.load_mgf("qtof_ms2_data.mgf")
+   buddy.load_mgf("demo.mgf")
    # or add custom data (List[MetaFeature])
    buddy.add_data(...)
 
@@ -181,7 +180,7 @@ Example Usage:
 
 
 
-.. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
+.. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 500, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
 
    It is a class to store all the parameter settings for **msbuddy**.
 
@@ -192,6 +191,7 @@ Example Usage:
    :param parallel: bool. If True, the annotation is performed in parallel. Default is False.
    :param n_cpu: int. The number of CPUs to use. Default is -1, which means all available CPUs.
    :param timeout_secs: float. The timeout in seconds for each query. Default is 300 seconds.
+   :param batch_size: int. The batch size for formula annotation; a larger batch size takes more memory.
    :param c_range: Tuple[int, int]. The range of carbon atoms. Default is (0, 80).
    :param h_range: Tuple[int, int]. The range of hydrogen atoms. Default is (0, 150).
    :param n_range: Tuple[int, int]. The range of nitrogen atoms. Default is (0, 20).

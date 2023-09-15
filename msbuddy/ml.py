@@ -1,5 +1,6 @@
+import sys
 import warnings
-
+from tqdm import tqdm
 import numpy as np
 from numba import njit
 from scipy.stats import norm
@@ -136,7 +137,7 @@ def _predict_ml_a(feature_arr: np.array, gd) -> np.array:
     return prob_arr[:, 1]
 
 
-def pred_formula_feasibility(buddy_data, gd) -> bool:
+def pred_formula_feasibility(buddy_data, batch_size, gd) -> bool:
     """
     predict formula feasibility using ML model a, retain top candidate formulas
     this function is performed in batch
@@ -146,16 +147,17 @@ def pred_formula_feasibility(buddy_data, gd) -> bool:
     :return: True if there is at least one feasible formula, False if not
     fill in ml_a_prob in candidate formula objects
     """
-    # batch size: 100
-    n_batch = int(np.ceil(len(buddy_data) / 100))
+    # batches
+    n_batch = int(np.ceil(len(buddy_data) / batch_size))
+
     # total candidate formula count
     total_cand_form_cnt = 0
     # loop through batches
+    pbar = tqdm(total=n_batch, colour="green", desc="Formula feasibility assessment: Batch", file=sys.stdout)
     for i in range(n_batch):
         # batch start and end index
-        start_idx = i * 100
-        end_idx = min((i + 1) * 100, len(buddy_data))
-
+        start_idx = i * batch_size
+        end_idx = min((i + 1) * batch_size, len(buddy_data))
         batch_data = buddy_data[start_idx:end_idx]
 
         # generate three arrays from buddy data
@@ -192,6 +194,9 @@ def pred_formula_feasibility(buddy_data, gd) -> bool:
 
         # update buddy data
         buddy_data[start_idx:end_idx] = batch_data
+        pbar.update(1)
+
+    pbar.close()
 
     # return True if there is at least one feasible formula, False if not
     if total_cand_form_cnt == 0:

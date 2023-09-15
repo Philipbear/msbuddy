@@ -458,12 +458,12 @@ def parse_args():
 if __name__ == '__main__':
     __package__ = "msbuddy"
     # parse arguments
-    # args = parse_args()
+    args = parse_args()
 
     # test here
-    args = argparse.Namespace(gen=False, calc=True, instru='ft',
-                              parallel=False, n_cpu=1, to=1000,
-                              ms1=True, ms2=True)
+    # args = argparse.Namespace(gen=False, calc=True, instru='ft',
+    #                           parallel=False, n_cpu=1, to=1000,
+    #                           ms1=True, ms2=True)
 
     # /Users/shipei/Documents/projects/ms2/gnps/
 
