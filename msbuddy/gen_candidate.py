@@ -270,8 +270,8 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
 
     # retain top candidate formulas
     # calculate neutral mass of the precursor ion
-    ion_mode_int = 1 if mf.adduct.pos_mode else -1
-    t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode_int * 0.0005485799) / mf.adduct.m
+    ion_mode = 1 if mf.adduct.pos_mode else -1
+    t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode * 0.0005485799) / mf.adduct.m
     mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
