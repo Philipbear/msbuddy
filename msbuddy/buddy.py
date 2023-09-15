@@ -176,7 +176,7 @@ class Buddy:
 
     def __init__(self, param_set: Union[BuddyParamSet, None] = None):
 
-        logging.info("Buddy version 0.1.1")
+        logging.info("msbuddy: molecular formula annotation in MS-based metabolomics. maintained by Shipei Xing.")
         logging.info("Initializing...")
         if param_set is None:
             self.param_set = BuddyParamSet()  # default parameter set
