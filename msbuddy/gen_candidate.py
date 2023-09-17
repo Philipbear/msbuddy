@@ -636,12 +636,29 @@ def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float) -> M
         subform_arr = enumerate_subformula(pre_charged_arr)
 
         # mono mass
-        mass_arr = np.dot(subform_arr, Formula.mass_arr) - 0.00054858 * mf.adduct.charge
+        mass_arr = _calc_subform_mass(subform_arr, mf.adduct.charge)
         # assign ms2 explanation
         mf.candidate_formula_list[k] = _assign_ms2_explanation(mf, cf, pre_charged_arr, subform_arr, mass_arr,
                                                                ppm, ms2_tol)
 
     return mf
+
+
+@njit
+def _calc_subform_mass(subform_arr: np.array, adduct_charge: int) -> np.array:
+    """
+    Calculate mass of each subformula.
+    :param subform_arr: 2D array, each row is a subformula array
+    :param adduct_charge: adduct charge
+    :return: 1D array, mass of each subformula
+    """
+    mass_arr = np.empty(subform_arr.shape[0])
+    ele_mass_arr = np.array([12.000000, 1.007825, 78.918336, 34.968853, 18.998403, 126.904473, 38.963707, 14.003074,
+                             22.989769, 15.994915, 30.973762, 31.972071])
+    for i in range(subform_arr.shape[0]):
+        # element wise multiplication
+        mass_arr[i] = np.sum(subform_arr[i, :] * ele_mass_arr) - adduct_charge * 0.0005486
+    return mass_arr
 
 
 @njit
@@ -769,4 +786,3 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     candidate_form.ml_a_prob = cf.ml_a_prob
 
     return candidate_form
-

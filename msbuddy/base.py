@@ -3,6 +3,7 @@ import math
 from typing import Union, Tuple, List
 
 import numpy as np
+from numba import njit
 from msbuddy.api import read_formula, form_arr_to_str
 
 mass_i = 1.0033548  # mass of isotope
@@ -29,12 +30,12 @@ class Formula:
                  isotope: int = 0):
         self.array = array
         self.charge = charge
-        self.__calc_formula_dbe()
+        self.dbe = _calc_formula_dbe(array)
         self.isotope = isotope
 
         # fill in mass directly from formula database, otherwise calculate
         if mass is None:
-            self.__calc_formula_mass()
+            self.mass = _calc_formula_mass(np.float64(array), charge, isotope)
         else:
             self.mass = mass
 
@@ -47,28 +48,32 @@ class Formula:
             return 'Null'
         return form_arr_to_str(self.array)
 
-    def __calc_formula_dbe(self):
-        """
-        calculate dbe of a formula
-        :return: fill in dbe
-        """
-        # ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
-        # DBE: C + 1 - (H + F + Cl + Br + I + Na + K)/2 + (N + P)/2
-        arr = self.array
-        dbe = arr[0] + 1 - (arr[1] + arr[4] + arr[3] + arr[2] + arr[5] + arr[8] + arr[6]) / 2 + (arr[7] + arr[10]) / 2
 
-        self.dbe = dbe
+@njit
+def _calc_formula_dbe(arr):
+    """
+    calculate dbe of a formula
+    :return: dbe
+    """
+    # ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
+    # DBE: C + 1 - (H + F + Cl + Br + I + Na + K)/2 + (N + P)/2
+    dbe = arr[0] + 1 - (arr[1] + arr[4] + arr[3] + arr[2] + arr[5] + arr[8] + arr[6]) / 2 + (arr[7] + arr[10]) / 2
+    return dbe
 
-    def __calc_formula_mass(self):
-        """
-        calculate monoisotopic mass of a formula, charge adjusted
-        :return: fill in mass
-        """
-        if self.charge == 0:
-            self.mass = float(np.sum(self.array * Formula.mass_arr) + self.isotope * mass_i)
-        else:
-            self.mass = float((np.sum(self.array * Formula.mass_arr) - self.charge * mass_e +
-                               self.isotope * mass_i) / abs(self.charge))
+
+@njit
+def _calc_formula_mass(array, charge, isotope):
+    """
+    calculate monoisotopic mass of a formula, charge adjusted
+    :return: mass
+    """
+    ele_mass_arr = np.array([12.000000, 1.007825, 78.918336, 34.968853, 18.998403, 126.904473, 38.963707, 14.003074,
+                             22.989769, 15.994915, 30.973762, 31.972071])
+    if charge == 0:
+        mass = float(np.sum(array * ele_mass_arr) + isotope * mass_i)
+    else:
+        mass = float((np.sum(array * ele_mass_arr) - charge * mass_e + isotope * mass_i) / abs(charge))
+    return mass
 
 
 class Spectrum:

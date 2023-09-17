@@ -14,6 +14,8 @@ from msbuddy.ml import pred_formula_feasibility, pred_formula_prob
 from msbuddy.query import query_neutral_mass
 from msbuddy.api import form_arr_to_str
 
+import time
+
 logging.basicConfig(level=logging.INFO)
 
 # global variable containing shared data
@@ -362,6 +364,7 @@ class Buddy:
         # batches
         n_batch = int(np.ceil(len(self.data) / self.param_set.batch_size))
 
+        start_time = time.time()
         # loop over batches
         for n in range(n_batch):
             tqdm.write(f"Batch {n + 1}/{n_batch}:")
@@ -378,9 +381,11 @@ class Buddy:
             # assign subformula annotation
             self.assign_subformula_annotation(start_idx, end_idx)
 
-            # # ml_b feature generation + prediction
+            # ml_b feature generation + prediction
             tqdm.write("Formula probability prediction...")
             # pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
+
+        print(f"Total time: {time.time() - start_time} seconds.")
 
         # FDR calculation
         self.calc_fdr()
@@ -487,7 +492,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=8, batch_size=300,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=8, batch_size=300,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
                                     i_range=(1, 20))
 

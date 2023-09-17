@@ -155,7 +155,7 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
 
     # if no candidate formula, return
     if cand_form_arr.size == 0:
-        return 0
+        return
 
     # generate ML feature array
     feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
@@ -443,23 +443,28 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     return prob_arr[:, 1]
 
 
-def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float, gd):
+def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
+                      ppm: bool, ms1_tol: float, ms2_tol: float, gd):
     """
     predict formula probability using ML model b
     :param buddy_data: buddy data
+    :param batch_start_idx: batch start index
+    :param batch_end_idx: batch end index
     :param ppm: whether to use ppm error
     :param ms1_tol: m/z tolerance for MS1
     :param ms2_tol: m/z tolerance for MS2
     :param gd: global dependencies
     :return: fill in estimated_prob in candidate formula objects
     """
+    # batch data
+    batch_data = buddy_data[batch_start_idx:batch_end_idx]
 
     # split buddy data into 4 groups and store their indices in a dictionary
     group_dict = dict()
     for i in range(4):
         group_dict[i] = []
 
-    for i, meta_feature in enumerate(buddy_data):
+    for i, meta_feature in enumerate(batch_data):
         if not meta_feature.candidate_formula_list:
             continue
         if meta_feature.ms1_raw:
@@ -478,10 +483,15 @@ def pred_formula_prob(buddy_data, ppm: bool, ms1_tol: float, ms2_tol: float, gd)
         if not group_dict[i]:
             continue
         # predict formula probability
-        prob_arr = _predict_ml_b([buddy_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
+        prob_arr = _predict_ml_b([batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
         # add prediction results to candidate formula objects in the list
         cnt = 0
         for j in group_dict[i]:
-            for candidate_formula in buddy_data[j].candidate_formula_list:
+            for candidate_formula in batch_data[j].candidate_formula_list:
                 candidate_formula.estimated_prob = prob_arr[cnt]
                 cnt += 1
+
+    # update buddy data
+    buddy_data[batch_start_idx:batch_end_idx] = batch_data
+
+    return
