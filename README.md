@@ -1,5 +1,5 @@
 # msbuddy
-![Developer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
+![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
 [![PyPI](https://img.shields.io/pypi/v/msbuddy?color=green)](https://pypi.org/project/msbuddy/)
 [![docs](https://readthedocs.org/projects/msbuddy/badge/?version=latest)](https://msbuddy.readthedocs.io/en/latest/?badge=latest)
 [![Generic badge](https://img.shields.io/badge/msbuddy-mass_spec_tools-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
