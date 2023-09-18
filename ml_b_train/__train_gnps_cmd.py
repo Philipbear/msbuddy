@@ -283,6 +283,8 @@ def assign_subform_gen_training_data(instru):
     gt_ls = joblib.load(gt_name)
 
     for k, meta_feature in enumerate(buddy.data):
+        if k < 4000:
+            continue
         print('k: ' + str(k) + ' out of ' + str(len(buddy.data)))
         gt_form_arr = gt_ls[k]
         gt_form_str = form_arr_to_str(gt_form_arr)
@@ -290,7 +292,10 @@ def assign_subform_gen_training_data(instru):
             continue
 
         # modify the candidate formula list, such that the ground truth formula is the first one
-        cand_form_ls = [CandidateFormula(Formula(gt_form_arr, 0))]
+        ml_a_prob = buddy.predict_formula_feasibility(gt_form_arr)
+        this_cf = CandidateFormula(Formula(gt_form_arr, 0))
+        this_cf.ml_a_prob = ml_a_prob
+        cand_form_ls = [this_cf]
         cand_cnt = 0
         for cf in meta_feature.candidate_formula_list:
             if cand_cnt >= 100:
@@ -333,11 +338,124 @@ def assign_subform_gen_training_data(instru):
         del mf
         buddy.data[k] = None
 
+        # if k == 4000:
+        #     joblib.dump(X_arr, 'gnps_X_arr_' + instru + '_4k.joblib')
+        #     joblib.dump(y_arr, 'gnps_y_arr_' + instru + '_4k.joblib')
+
     print('y_arr sum: ' + str(np.sum(y_arr)))
-    X_arr_name = 'gnps_X_arr_' + instru + '.joblib'
-    y_arr_name = 'gnps_y_arr_' + instru + '.joblib'
+    X_arr_name = 'gnps_X_arr_' + instru + '_3k_filled.joblib'
+    y_arr_name = 'gnps_y_arr_' + instru + '_3k.joblib'
     joblib.dump(X_arr, X_arr_name)
     joblib.dump(y_arr, y_arr_name)
+
+
+def fill_model_a_prob(instru):
+    """
+    fill in model a prob for ground truth formula
+    """
+    # generate ML features for each candidate formula, for ML model B
+    # generate feature array
+
+    X_name = 'gnps_X_arr_' + instru + '_3k.joblib'
+    y_name = 'gnps_y_arr_' + instru + '_3k.joblib'
+    X_arr = joblib.load(X_name)
+    y_arr = joblib.load(y_name)
+
+    buddy = Buddy()
+
+    data_name = 'gnps_' + instru + '_mf_ls_cand_2.joblib'
+    data = joblib.load(data_name)
+    buddy.add_data(data)
+    del data
+
+    gt_name = 'gnps_' + instru + '_gt_ls.joblib'
+    gt_ls = joblib.load(gt_name)
+
+    cnt = 0
+    for k, meta_feature in enumerate(buddy.data):
+        if k < 4000:
+            continue
+        # print('k: ' + str(k) + ' out of ' + str(len(buddy.data)))
+        gt_form_arr = gt_ls[k]
+        gt_form_str = form_arr_to_str(gt_form_arr)
+        if not meta_feature.candidate_formula_list:
+            continue
+
+        # modify the candidate formula list, such that the ground truth formula is the first one
+        cand_form_ls = [CandidateFormula(Formula(gt_form_arr, 0))]
+        cand_cnt = 0
+        for cf in meta_feature.candidate_formula_list:
+            if cand_cnt >= 100:
+                break
+            if gt_form_str == form_arr_to_str(cf.formula.array):
+                continue
+            cand_form_ls.append(cf)
+            cand_cnt += 1
+
+        meta_feature.candidate_formula_list = cand_form_ls
+
+        # generate ML features for each candidate formula
+        for n, cf in enumerate(meta_feature.candidate_formula_list):
+            if n == 0:
+                X_arr[cnt, 2] = buddy.predict_formula_feasibility(gt_form_arr)
+                if y_arr[cnt] != 1:
+                    raise Exception('y_arr[cnt] != 1')
+            cnt += 1
+
+    print('y_arr sum: ' + str(np.sum(y_arr)))
+    X_arr_name = 'gnps_X_arr_' + instru + '_3k_filled.joblib'
+    joblib.dump(X_arr, X_arr_name)
+
+
+def combine_and_clean_X_y():
+    # load training data
+    X_arr_qtof = joblib.load('gnps_X_arr_qtof_filled.joblib')
+    y_arr_qtof = joblib.load('gnps_y_arr_qtof.joblib')
+    X_arr_orbi = joblib.load('gnps_X_arr_orbi_filled.joblib')
+    y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
+    X_arr_ft = joblib.load('gnps_X_arr_ft_filled.joblib')
+    y_arr_ft = joblib.load('gnps_y_arr_ft.joblib')
+
+    X_arr = np.vstack((X_arr_qtof, X_arr_orbi, X_arr_ft))
+    y_arr = np.append(y_arr_qtof, np.append(y_arr_orbi, y_arr_ft))
+    print('X_arr shape: ' + str(X_arr.shape))
+    print('y_arr shape: ' + str(y_arr.shape))
+
+    # remove rows with nan
+    X_arr = np.where(X_arr == None, np.nan, X_arr)
+    X_arr = X_arr.astype(np.float64)
+    nan_rows = np.any(np.isnan(X_arr), axis=1)
+    # Remove those rows from X_arr and y_arr
+    X_arr = X_arr[~nan_rows]
+    y_arr = y_arr[~nan_rows]
+    print('X_arr shape: ' + str(X_arr.shape))
+    print('y_arr shape: ' + str(y_arr.shape))
+
+    # save to joblib file
+    joblib.dump(X_arr, 'gnps_X_arr.joblib')
+    joblib.dump(y_arr, 'gnps_y_arr.joblib')
+
+
+def z_norm_smote():
+    """
+    z-normalization of X_arr
+    """
+    X_arr = joblib.load('gnps_X_arr.joblib')
+    # z-normalization, except for the 1st feature
+    X_mean = np.mean(X_arr[:, 1:], axis=0)
+    X_std = np.std(X_arr[:, 1:], axis=0)
+    X_arr[:, 1:] = (X_arr[:, 1:] - X_mean) / X_std
+
+    joblib.dump(X_arr, 'gnps_X_arr_z_norm.joblib')
+    joblib.dump(X_mean, 'ml_b_X_mean.joblib')
+    joblib.dump(X_std, 'ml_b_X_std.joblib')
+
+    y_arr = joblib.load('gnps_y_arr.joblib')
+    smote = SMOTE(random_state=42)
+    X_arr, y_arr = smote.fit_resample(X_arr, y_arr)
+
+    joblib.dump(X_arr, 'gnps_X_arr_SMOTE.joblib')
+    joblib.dump(y_arr, 'gnps_y_arr_SMOTE.joblib')
 
 
 def train_model(ms1_iso, ms2_spec):
@@ -348,51 +466,43 @@ def train_model(ms1_iso, ms2_spec):
     :return: trained model
     """
     # load training data
-    X_arr_qtof = joblib.load('gnps_X_arr_qtof.joblib')
-    y_arr_qtof = joblib.load('gnps_y_arr_qtof.joblib')
-    X_arr_orbi = joblib.load('gnps_X_arr_orbi.joblib')
-    y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
-    X_arr_ft = joblib.load('gnps_X_arr_ft.joblib')
-    y_arr_ft = joblib.load('gnps_y_arr_ft.joblib')
-
-    X_arr = np.vstack((X_arr_qtof, X_arr_orbi, X_arr_ft))
-    y_arr = np.append(y_arr_qtof, np.append(y_arr_orbi, y_arr_ft))
-
-    print('SMOTE...')
-    # Apply SMOTE to the training data
-    smote = SMOTE(random_state=42)
-    X_resampled, y_resampled = smote.fit_resample(X_arr, y_arr)
-
-    joblib.dump(X_resampled, 'gnps_X_arr_SMOTE.joblib')
-    joblib.dump(y_resampled, 'gnps_y_arr_SMOTE.joblib')
+    X_arr = joblib.load('gnps_X_arr_SMOTE.joblib')
+    y_arr = joblib.load('gnps_y_arr_SMOTE.joblib')
 
     print("Training model ...")
     if not ms1_iso:
         # discard the 2nd feature in X_arr
-        X_resampled = np.delete(X_resampled, 1, axis=1)
+        X_arr = np.delete(X_arr, 1, axis=1)
     if not ms2_spec:
         # discard the last 10 features in X_arr
-        X_resampled = X_resampled[:, :-10]
+        X_arr = X_arr[:, :-10]
 
     print('splitting...')
     # split training and testing data
-    X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(X_arr, y_arr, test_size=0.2, random_state=0)
 
     # grid search
+    # all_param_grid = {
+    #     'hidden_layer_sizes': [(1024,), (512,), (256,), (128,), (64,),
+    #                            (512, 512), (256, 256), (128, 128), (128, 64), (64, 64), (64, 32), (32, 32),
+    #                            (64, 32, 32), (32, 32, 32), (32, 32, 16), (16, 32, 16), (32, 16, 16),
+    #                            (128, 64, 64, 32), (64, 64, 32, 32), (32, 32, 16, 16),
+    #                            (32, 64, 64, 32, 16), (32, 32, 32, 16, 8)],
+    #     'activation': ['relu'],
+    #     'alpha': [1e-5, 1e-4, 1e-3, 1e-2],
+    #     'max_iter': [800]
+    # }
+
     all_param_grid = {
-        'hidden_layer_sizes': [(1024,), (512,), (256,), (128,), (64,),
-                               (512, 512), (256, 256), (128, 128), (128, 64), (64, 64), (64, 32), (32, 32),
-                               (64, 32, 32), (32, 32, 32), (32, 32, 16), (16, 32, 16), (32, 16, 16),
-                               (128, 64, 64, 32), (64, 64, 32, 32), (32, 32, 16, 16),
-                               (32, 64, 64, 32, 16), (32, 32, 32, 16, 8)],
+        'hidden_layer_sizes': [(512,), (256, 256), (128, 128, 64), (128, 64, 64, 32)],
         'activation': ['relu'],
-        'alpha': [1e-5, 1e-4, 1e-3, 1e-2],
+        'alpha': [1e-5],
         'max_iter': [800]
     }
 
     # grid search
     mlp = MLPClassifier(random_state=1)
-    clf = GridSearchCV(mlp, all_param_grid, cv=5, n_jobs=-1, scoring='roc_auc', verbose=1)
+    clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=7, scoring='roc_auc', verbose=1)
     clf.fit(X_train, y_train)
 
     # print best parameters
@@ -430,7 +540,7 @@ def train_model(ms1_iso, ms2_spec):
     # save model
     model_name = 'model_b'
     model_name += '_ms1' if ms1_iso else '_noms1'
-    model_name += '_ms2' if ms2_spec else '_noms2_gnps'
+    model_name += '_ms2' if ms2_spec else '_noms2'
     joblib.dump(best_mlp, model_name + '.joblib')
 
     return best_mlp
@@ -444,6 +554,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='ML model B training')
     parser.add_argument('-gen', action='store_true', help='generate training data')
     parser.add_argument('-calc', action='store_true', help='calculate gnps data')
+    parser.add_argument('-combine', action='store_true', help='combine and clean X_arr and y_arr')
     parser.add_argument('-instru', type=str, default='qtof', help='instrument type')
     parser.add_argument('-parallel', action='store_true', help='parallel mode')
     parser.add_argument('-n_cpu', type=int, default=16, help='number of CPU cores to use')
@@ -461,9 +572,9 @@ if __name__ == '__main__':
     args = parse_args()
 
     # test here
-    # args = argparse.Namespace(gen=False, calc=True, instru='ft',
-    #                           parallel=False, n_cpu=1, to=1000,
-    #                           ms1=True, ms2=True)
+    # args = argparse.Namespace(gen=False, calc=False, combine=False,
+    #                           instru='qtof', parallel=False, n_cpu=1, to=1000,
+    #                           ms1=False, ms2=True)
 
     # /Users/shipei/Documents/projects/ms2/gnps/
 
@@ -477,8 +588,13 @@ if __name__ == '__main__':
         assign_subform_gen_training_data(args.instru)
         print("Done.")
 
+    elif args.combine:
+        combine_and_clean_X_y()
+        z_norm_smote()  # z-normalization and SMOTE
+
     else:  # train model
-        # train models
         train_model(args.ms1, args.ms2)
+
+    # fill_model_a_prob('qtof')
 
     print("Done.")

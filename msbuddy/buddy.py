@@ -10,7 +10,7 @@ from tqdm import tqdm
 from msbuddy.base import MetaFeature
 from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.load import init_db, load_usi, load_mgf
-from msbuddy.ml import pred_formula_feasibility, pred_formula_prob
+from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single
 from msbuddy.query import query_neutral_mass
 from msbuddy.api import form_arr_to_str
 
@@ -417,6 +417,14 @@ class Buddy:
         formulas = query_neutral_mass(mass, mz_tol, ppm, shared_data_dict)
         return [form_arr_to_str(f.array) for f in formulas]
 
+    def predict_formula_feasibility(self, formula: Union[str, np.array]) -> Union[float, None]:
+        """
+        check whether a neutral formula is feasible
+        :param formula: formula string or array
+        :return: feasibility score (float) or None
+        """
+        return pred_form_feasibility_single(formula, shared_data_dict)
+
 
 def _get_batch(data: List[MetaFeature], batch_size: int, n: int):
     """
@@ -514,6 +522,16 @@ if __name__ == '__main__':
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
     # buddy.data = buddy.data[:300]
+
+    #########################################
+    import joblib
+    gt_form_arr = joblib.load("/Users/shipei/Documents/projects/msbuddy/ml_b_train/gnps_qtof_gt_ls.joblib")
+    score_ls = []
+    for m in range(len(gt_form_arr)):
+        print(m)
+        form_score = buddy.predict_formula_feasibility(gt_form_arr[m])
+        score_ls.append(form_score)
+    print(score_ls)
 
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()

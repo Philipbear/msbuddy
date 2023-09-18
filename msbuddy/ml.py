@@ -1,11 +1,13 @@
-import sys
 import warnings
-from tqdm import tqdm
+from typing import Union
+
 import numpy as np
 from numba import njit
 from scipy.stats import norm
 
+from msbuddy.api import read_formula
 from msbuddy.query import common_nl_from_array
+from msbuddy.base import Formula
 
 # ignore warnings
 warnings.filterwarnings('ignore')
@@ -193,6 +195,37 @@ def _calc_top_n_candidate(mz: float) -> int:
     :return: number of top candidate formulas to retain
     """
     return min(800, int(mz * mz / 500) + 10)
+
+
+def pred_form_feasibility_single(formula: Union[str, np.array], gd) -> Union[float, None]:
+    """
+    predict formula feasibility for a single formula; for API use
+    :param formula: formula string or array
+    :param gd: global dependencies
+    :return: formula feasibility score
+    """
+    # read formula
+    if isinstance(formula, str):
+        form_arr = read_formula(formula)
+        if form_arr is None:
+            return None
+    else:
+        form_arr = formula
+
+    form = Formula(form_arr, 0)
+    dbe = form.dbe
+    mass = form.mass
+
+    if dbe < 0 or mass < 0:
+        return None
+
+    # generate ML feature array
+    feature_arr = _gen_ml_a_feature(np.array([form_arr]), np.array([dbe]), np.array([mass]))
+    feature_arr = _z_norm_ml_a_feature(feature_arr, gd)
+    # predict formula feasibility
+    prob_arr = _predict_ml_a(feature_arr, gd)
+
+    return prob_arr[0]
 
 
 def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
