@@ -120,8 +120,7 @@ def _z_norm_ml_a_feature(feature_arr: np.array, gd) -> np.array:
     :return: numpy array of z-normalized ML features
     """
     # normalize each col using mean_arr and std_arr in global dependencies, except the last two
-    for i in range(feature_arr.shape[1] - 2):
-        feature_arr[:, i] = (feature_arr[:, i] - gd['model_a_mean_arr'][i]) / gd['model_a_std_arr'][i]
+    feature_arr[:, :-2] = (feature_arr[:, :-2] - gd['model_a_mean_arr']) / gd['model_a_std_arr']
 
     return feature_arr
 
@@ -456,6 +455,12 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     """
     # generate feature array
     X_arr = gen_ml_b_feature(meta_feature_list, ppm, ms1_tol, ms2_tol, gd)
+
+    if X_arr.size == 0:
+        return np.array([])
+
+    # z-normalize
+    X_arr[:, 1:] = (X_arr[:, 1:] - gd['model_b_mean_arr']) / gd['model_b_std_arr']
 
     # load model
     if group_no == 0:
