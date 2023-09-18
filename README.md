@@ -1,5 +1,5 @@
 # msbuddy
-![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
+![Developer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
 [![PyPI](https://img.shields.io/pypi/v/msbuddy?color=green)](https://pypi.org/project/msbuddy/)
 [![docs](https://readthedocs.org/projects/msbuddy/badge/?version=latest)](https://msbuddy.readthedocs.io/en/latest/?badge=latest)
 [![Generic badge](https://img.shields.io/badge/msbuddy-mass_spec_tools-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
@@ -98,4 +98,4 @@ This work is licensed under the MIT license.
 ## Contact
 To contribute to `msbuddy`, please feel free to [file an issue](https://github.com/Philipbear/msbuddy/issues), or submit a pull request with improvements.
 
-You are also welcome to directly contact the maintainer Shipei Xing (philipxsp@hotmail.com).
+You are also welcome to directly contact the developer & maintainer Shipei Xing (philipxsp@hotmail.com).

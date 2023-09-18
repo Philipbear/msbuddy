@@ -38,8 +38,10 @@ def init_db(db_mode: int) -> dict:
     global_dict['common_loss_db'] = j_load(root_path / 'data' / 'common_loss.joblib')
     global_dict['common_frag_db'] = j_load(root_path / 'data' / 'common_frag.joblib')
     global_dict['model_a'] = j_load(root_path / 'data' / 'model_a.joblib')
-    global_dict['model_a_mean_arr'] = j_load(root_path / 'data' / 'mean_arr.joblib')
-    global_dict['model_a_std_arr'] = j_load(root_path / 'data' / 'std_arr.joblib')
+    global_dict['model_a_mean_arr'] = j_load(root_path / 'data' / 'ml_a_mean_arr.joblib')
+    global_dict['model_a_std_arr'] = j_load(root_path / 'data' / 'ml_a_std_arr.joblib')
+    global_dict['model_b_mean_arr'] = j_load(root_path / 'data' / 'ml_b_mean_arr.joblib')
+    global_dict['model_b_std_arr'] = j_load(root_path / 'data' / 'ml_b_std_arr.joblib')
     # global_dict['model_b_noms1_ms2'] = j_load(root_path / 'data' / 'model_b_noms1_ms2_2.joblib')
 
     # check existence of basic_db_mass.joblib, basic_db_formula.joblib
@@ -52,7 +54,7 @@ def init_db(db_mode: int) -> dict:
     global_dict['basic_db_formula'] = j_load(root_path / 'data' / 'basic_db_formula.joblib')
     global_dict['basic_db_idx'] = j_load(root_path / 'data' / 'basic_db_idx.joblib')
 
-    if db_mode >= 1:
+    if db_mode > 0:
         # check existence of halogen_db_mass.joblib, halogen_db_formula.joblib
         check_and_download('https://drive.google.com/uc?id=1SMhezxtXtjQNj2N8odYWSEufOO_6N1o5',
                            root_path / 'data' / 'halogen_db_mass.joblib')

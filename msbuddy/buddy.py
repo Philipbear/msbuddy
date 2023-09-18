@@ -419,7 +419,7 @@ class Buddy:
 
     def predict_formula_feasibility(self, formula: Union[str, np.array]) -> Union[float, None]:
         """
-        check whether a neutral formula is feasible
+        predict formula feasibility score for a single formula
         :param formula: formula string or array
         :return: feasibility score (float) or None
         """

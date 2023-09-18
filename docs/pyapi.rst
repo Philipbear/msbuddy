@@ -73,8 +73,26 @@ Example Usage:
    formula_list = buddy.mass_to_formula(300, 10, True)
    print(formula_list)
 
+.. function:: predict_formula_feasibility (formula: Union[str, np.array])
 
+   Predict formula feasibility score for a single formula string or a single formula array.
+   The prediction is based on a multi-layer perceptron (MLP) model trained on the combined formula database.
 
+   :param formula: str or numpy array. The formula string or formula array.
+   :returns: A float number between 0 and 1, indicating the formula feasibility score.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy.buddy import Buddy
+
+   # create a Buddy object
+   buddy = Buddy()
+
+   # predict formula feasibility score
+   feasibility_score = buddy.predict_formula_feasibility("C10H20O5")
+   print(feasibility_score)
 
 
 Classes

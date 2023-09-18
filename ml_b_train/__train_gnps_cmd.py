@@ -447,8 +447,8 @@ def z_norm_smote():
     X_arr[:, 1:] = (X_arr[:, 1:] - X_mean) / X_std
 
     joblib.dump(X_arr, 'gnps_X_arr_z_norm.joblib')
-    joblib.dump(X_mean, 'ml_b_X_mean.joblib')
-    joblib.dump(X_std, 'ml_b_X_std.joblib')
+    joblib.dump(X_mean, 'ml_b_mean_arr.joblib')
+    joblib.dump(X_std, 'ml_b_std_arr.joblib')
 
     y_arr = joblib.load('gnps_y_arr.joblib')
     smote = SMOTE(random_state=42)

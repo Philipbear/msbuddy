@@ -383,8 +383,8 @@ def gen_ml_matrix(file_pos, file_neg):
     #     mean_arr = np.append(mean_arr, mean)
     #     std_arr = np.append(std_arr, std)
     #     out[col] = (out[col] - mean) / std
-    # joblib.dump(mean_arr, "mean_arr.joblib")
-    # joblib.dump(std_arr, "std_arr.joblib")
+    # joblib.dump(mean_arr, "ml_a_mean_arr.joblib")
+    # joblib.dump(std_arr, "ml_a_std_arr.joblib")
 
     out.to_csv("formula_training_X.csv", index=False)
 
