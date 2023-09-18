@@ -68,8 +68,10 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 
 ## Command-line API ([link](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
 
-**msbuddy** can also be used as a command-line tool. Top 3 formula candidates will be reported for each query.
+**msbuddy** can also be used as a command-line tool.
+In the result summary, top 3 formula candidates will be reported for each query.
 The annotation details can be output with the `--details` option.
+Here is an example command for a mgf file:
 ```bash
 msbuddy --mgf <mgf file> --output <output folder> --details
 ```
