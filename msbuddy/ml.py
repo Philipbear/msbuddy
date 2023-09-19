@@ -1,3 +1,4 @@
+import math
 import warnings
 from typing import Union
 
@@ -362,9 +363,9 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
 
         out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, subform_score, subform_common_loss_score,
                             radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
-                            len(valid_idx_arr)])
+                            len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
     else:
-        out_arr = np.array([0] * 10)
+        out_arr = np.array([0] * 12)
 
     return out_arr
 
@@ -467,14 +468,14 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         model = gd['model_b_ms1_ms2']
     elif group_no == 1:
         model = gd['model_b_ms1_noms2']
-        X_arr = X_arr[:, :-10]  # remove MS2-related features
+        X_arr = X_arr[:, :-12]  # remove MS2-related features
     elif group_no == 2:
         model = gd['model_b_noms1_ms2']
         X_arr = np.delete(X_arr, 1, axis=1)  # remove MS1 isotope similarity
     else:
         model = gd['model_b_noms1_noms2']
         X_arr = np.delete(X_arr, 1, axis=1)  # remove MS1 isotope similarity
-        X_arr = X_arr[:, :-10]  # remove MS2-related features
+        X_arr = X_arr[:, :-12]  # remove MS2-related features
 
     # predict formula probability
     prob_arr = model.predict_proba(X_arr)

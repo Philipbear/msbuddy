@@ -431,6 +431,11 @@ def combine_and_clean_X_y():
     print('X_arr shape: ' + str(X_arr.shape))
     print('y_arr shape: ' + str(y_arr.shape))
 
+    # add 2 features to X_arr
+    # sqrt of 7th and 8th feature
+    X_arr = np.hstack((X_arr, np.sqrt(X_arr[:, 6:8])))
+    print('X_arr shape: ' + str(X_arr.shape))
+
     # save to joblib file
     joblib.dump(X_arr, 'gnps_X_arr.joblib')
     joblib.dump(y_arr, 'gnps_y_arr.joblib')
@@ -474,8 +479,8 @@ def train_model(ms1_iso, ms2_spec):
         # discard the 2nd feature in X_arr
         X_arr = np.delete(X_arr, 1, axis=1)
     if not ms2_spec:
-        # discard the last 10 features in X_arr
-        X_arr = X_arr[:, :-10]
+        # discard the last 12 features in X_arr
+        X_arr = X_arr[:, :-12]
 
     print('splitting...')
     # split training and testing data
@@ -571,7 +576,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     # test here
-    # args = argparse.Namespace(gen=False, calc=False, combine=False,
+    # args = argparse.Namespace(gen=False, calc=False, combine=True,
     #                           instru='qtof', parallel=False, n_cpu=1, to=1000,
     #                           ms1=False, ms2=True)
 
