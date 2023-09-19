@@ -505,8 +505,8 @@ if __name__ == '__main__':
                                     i_range=(0, 20))
 
     buddy = Buddy(buddy_param_set)
-    buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
-    # buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
+    buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     #
@@ -521,7 +521,7 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    # buddy.data = buddy.data[:300]
+    buddy.data = buddy.data[:10]
 
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()

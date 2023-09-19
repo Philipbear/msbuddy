@@ -241,13 +241,13 @@ def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: floa
     # generate feature array
     total_feature_arr = np.array([])
 
-    for meta_feature in meta_feature_list:
-        if not meta_feature.candidate_formula_list:
+    for mf in meta_feature_list:
+        if not mf.candidate_formula_list:
             continue
         # generate ML features for each candidate formula
-        for candidate_formula in meta_feature.candidate_formula_list:
+        for cf in mf.candidate_formula_list:
             # get ML features
-            ml_feature_arr = gen_ml_b_feature_single(meta_feature, candidate_formula, ppm, ms1_tol, ms2_tol, gd)
+            ml_feature_arr = gen_ml_b_feature_single(mf, cf, ppm, ms1_tol, ms2_tol, gd)
             # add to feature array
             if total_feature_arr.size == 0:
                 total_feature_arr = ml_feature_arr
@@ -381,7 +381,6 @@ def _calc_subformula_score(frag_form_arr, gd) -> (float, float):
         return 0, 0
 
     exp_frag_cnt = 0  # explained fragment count, except for isotope peaks
-
     # loop through all fragment formulas, stack formula arrays that are not isotope peaks
     all_frag_arr = frag_form_arr[0].array
     for i in range(1, len(frag_form_arr)):
@@ -435,12 +434,22 @@ def _calc_log_p_norm(arr: np.array, sigma: float) -> np.array:
     :return: numpy array
     """
     arr_norm_p = norm.cdf(arr, loc=0, scale=sigma)
-    arr_norm_p = np.where(arr_norm_p > 0.5, 1 - arr_norm_p, arr_norm_p)
-    log_p_arr = np.log(arr_norm_p * 2)
-    # clip to the range of [-4, 0]
-    log_p_arr = np.clip(log_p_arr, -4, 0)
+    return _calc_log_p_norm_helper(arr_norm_p)
 
-    return log_p_arr
+
+@njit
+def _calc_log_p_norm_helper(arr_norm_p) -> np.array:
+    """
+    calculate log(p) for a single element, where p is the probability of a normal distribution
+    :param arr_norm_p: numpy array
+    :return: numpy array
+    """
+    arr_norm_p = 1 - arr_norm_p if arr_norm_p > 0.5 else arr_norm_p
+    log_p = np.log(arr_norm_p * 2)
+    # clip to the range of [-4, 0]
+    log_p = -4 if log_p < -4 else log_p
+
+    return log_p
 
 
 def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
