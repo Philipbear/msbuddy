@@ -482,27 +482,26 @@ def train_model(ms1_iso, ms2_spec):
     X_train, X_test, y_train, y_test = train_test_split(X_arr, y_arr, test_size=0.2, random_state=0)
 
     # grid search
-    # all_param_grid = {
-    #     'hidden_layer_sizes': [(1024,), (512,), (256,), (128,), (64,),
-    #                            (512, 512), (256, 256), (128, 128), (128, 64), (64, 64), (64, 32), (32, 32),
-    #                            (64, 32, 32), (32, 32, 32), (32, 32, 16), (16, 32, 16), (32, 16, 16),
-    #                            (128, 64, 64, 32), (64, 64, 32, 32), (32, 32, 16, 16),
-    #                            (32, 64, 64, 32, 16), (32, 32, 32, 16, 8)],
-    #     'activation': ['relu'],
-    #     'alpha': [1e-5, 1e-4, 1e-3, 1e-2],
-    #     'max_iter': [800]
-    # }
-
     all_param_grid = {
-        'hidden_layer_sizes': [(512,), (256, 256), (128, 128, 64), (128, 64, 64, 32)],
+        'hidden_layer_sizes': [(1024,),
+                               (512, 512), (256, 256),
+                               (256, 256, 128), (256, 128, 128),
+                               (256, 128, 128, 64), (128, 128, 64, 64)],
         'activation': ['relu'],
-        'alpha': [1e-5],
+        'alpha': [1e-5, 1e-4, 1e-3, 1e-2],
         'max_iter': [800]
     }
 
+    # all_param_grid = {
+    #     'hidden_layer_sizes': [(512,), (256, 256), (128, 128, 64), (128, 64, 64, 32)],
+    #     'activation': ['relu'],
+    #     'alpha': [1e-5],
+    #     'max_iter': [800]
+    # }
+
     # grid search
     mlp = MLPClassifier(random_state=1)
-    clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=7, scoring='roc_auc', verbose=1)
+    clf = GridSearchCV(mlp, all_param_grid, cv=5, n_jobs=40, scoring='roc_auc', verbose=1)
     clf.fit(X_train, y_train)
 
     # print best parameters
@@ -518,9 +517,9 @@ def train_model(ms1_iso, ms2_spec):
               % (mean, std * 2, params))
 
     print("train model...")
-    # train model with best params for 3 times, and choose the best one
+    # train model with best params for 5 times, and choose the best one
     best_score = 0
-    for i in range(3):
+    for i in range(5):
         mlp = MLPClassifier(**best_params, random_state=i).fit(X_train, y_train)
         score = mlp.score(X_test, y_test)
         if score > best_score:
