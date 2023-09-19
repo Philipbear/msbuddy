@@ -383,7 +383,7 @@ class Buddy:
 
             # ml_b feature generation + prediction
             tqdm.write("Formula probability prediction...")
-            # pred_formula_prob(self.data, param_set.ppm, param_set.ms1_tol, param_set.ms2_tol, shared_data_dict)
+            pred_formula_prob(self.data, start_idx, end_idx, self.param_set, shared_data_dict)
 
         print(f"Total time: {time.time() - start_time} seconds.")
 
@@ -502,11 +502,11 @@ if __name__ == '__main__':
     #########################################
     buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=8, batch_size=300,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
-                                    i_range=(1, 20))
+                                    i_range=(0, 20))
 
     buddy = Buddy(buddy_param_set)
-    # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
-    buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
+    # buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     #
@@ -522,16 +522,6 @@ if __name__ == '__main__':
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
     # buddy.data = buddy.data[:300]
-
-    #########################################
-    import joblib
-    gt_form_arr = joblib.load("/Users/shipei/Documents/projects/msbuddy/ml_b_train/gnps_qtof_gt_ls.joblib")
-    score_ls = []
-    for m in range(len(gt_form_arr)):
-        print(m)
-        form_score = buddy.predict_formula_feasibility(gt_form_arr[m])
-        score_ls.append(form_score)
-    print(score_ls)
 
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()

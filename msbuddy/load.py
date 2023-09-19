@@ -43,7 +43,7 @@ def init_db(db_mode: int) -> dict:
     global_dict['model_b_mean_arr'] = j_load(root_path / 'data' / 'ml_b_mean_arr.joblib')
     global_dict['model_b_std_arr'] = j_load(root_path / 'data' / 'ml_b_std_arr.joblib')
     # global_dict['model_b_ms1_ms2'] = j_load(root_path / 'data' / 'model_b_ms1_ms2.joblib')
-    # global_dict['model_b_noms1_ms2'] = j_load(root_path / 'data' / 'model_b_noms1_ms2.joblib')
+    global_dict['model_b_noms1_ms2'] = j_load(root_path / 'data' / 'model_b_noms1_ms2.joblib')
     # global_dict['model_b_ms1_noms2'] = j_load(root_path / 'data' / 'model_b_ms1_noms2.joblib')
     # global_dict['model_b_noms1_noms2'] = j_load(root_path / 'data' / 'model_b_noms1_noms2.joblib')
 
@@ -140,6 +140,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 if '=' in _line:
                     # split by first '=', in case of multiple '=' in the line
                     key, value = _line.split('=', 1)
+                    key, value = key.strip(), value.strip()
                     # if key (into all upper case) is 'PEPMASS', it is precursor mz
                     if key.upper() == 'PEPMASS':
                         precursor_mz = float(value)
@@ -158,9 +159,9 @@ def load_mgf(file_path) -> List[MetaFeature]:
                         adduct_str = value
                     # if key is 'IONMODE', it is ion mode
                     elif key.upper() == 'IONMODE':
-                        if value.upper() == 'POSITIVE':
+                        if value.upper() in ['POSITIVE', 'POS', 'P']:
                             pos_mode = True
-                        elif value.upper() == 'NEGATIVE':
+                        elif value.upper() in ['NEGATIVE', 'NEG', 'N']:
                             pos_mode = False
                     # if key is 'MSLEVEL', it is ms level
                     elif key.upper() == 'MSLEVEL':

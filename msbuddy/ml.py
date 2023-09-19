@@ -482,18 +482,20 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
 
 
 def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
-                      ppm: bool, ms1_tol: float, ms2_tol: float, gd):
+                      param_set, gd):
     """
     predict formula probability using ML model b
     :param buddy_data: buddy data
     :param batch_start_idx: batch start index
     :param batch_end_idx: batch end index
-    :param ppm: whether to use ppm error
-    :param ms1_tol: m/z tolerance for MS1
-    :param ms2_tol: m/z tolerance for MS2
+    :param param_set: parameter set
     :param gd: global dependencies
     :return: fill in estimated_prob in candidate formula objects
     """
+    ppm = param_set.ppm
+    ms1_tol = param_set.ms1_tol
+    ms2_tol = param_set.ms2_tol
+
     # batch data
     batch_data = buddy_data[batch_start_idx:batch_end_idx]
 

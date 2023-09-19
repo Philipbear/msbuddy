@@ -415,8 +415,7 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     return cand_form_list, cand_form_str_list
 
 
-def _gen_candidate_formula_from_ms2(mf: MetaFeature,
-                                    ppm: bool, ms1_tol: float, ms2_tol: float,
+def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
                                     lower_limit: np.array, upper_limit: np.array,
                                     db_mode: int, gd) -> Tuple[List[CandidateFormula], List[str]]:
     """
