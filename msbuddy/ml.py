@@ -572,7 +572,7 @@ def calc_fdr(buddy_data, batch_start_idx: int, batch_end_idx: int):
         # sum of estimated probabilities
         prob_sum = np.sum([cand_form.estimated_prob for cand_form in meta_feature.candidate_formula_list])
 
-        if prob_sum > 0.5:
+        if meta_feature.candidate_formula_list[0].estimated_prob > 0.5:
             # calculate normed estimated prob and FDR considering all candidate formulas
             sum_normed_estimated_prob = 0
             for i, cand_form in enumerate(meta_feature.candidate_formula_list):
@@ -582,12 +582,12 @@ def calc_fdr(buddy_data, batch_start_idx: int, batch_end_idx: int):
                 cand_form.normed_estimated_prob = this_normed_estimated_prob
                 cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
         else:
-            # scale estimated prob using sqrt, to reduce the effect of very small probs
+            # scale estimated prob using softmax, to reduce the effect of very small probs
             prob_sum = np.sum(
-                [np.sqrt(cand_form.estimated_prob) for cand_form in meta_feature.candidate_formula_list])
+                [np.exp(cand_form.estimated_prob) for cand_form in meta_feature.candidate_formula_list])
             sum_normed_estimated_prob = 0
             for i, cand_form in enumerate(meta_feature.candidate_formula_list):
-                this_normed_estimated_prob = np.sqrt(cand_form.estimated_prob) / prob_sum
+                this_normed_estimated_prob = np.exp(cand_form.estimated_prob) / prob_sum
                 sum_normed_estimated_prob += this_normed_estimated_prob
 
                 cand_form.normed_estimated_prob = this_normed_estimated_prob

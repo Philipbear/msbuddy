@@ -39,8 +39,8 @@ def ml_b_pred(x, model_path):
 
 if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
-    X_arr = joblib.load('../ml_b_train/gnps_X_arr_SMOTE.joblib')
-    y_gt = joblib.load('../ml_b_train/gnps_y_arr_SMOTE.joblib')
+    X_arr = joblib.load('gnps_X_arr_SMOTE.joblib')
+    y_gt = joblib.load('gnps_y_arr_SMOTE.joblib')
 
     X_train, X_test, y_train, y_test = train_test_split(X_arr, y_gt,
                                                         test_size=0.2, random_state=0)
