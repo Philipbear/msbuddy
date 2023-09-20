@@ -10,7 +10,7 @@ from tqdm import tqdm
 from msbuddy.base import MetaFeature
 from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.load import init_db, load_usi, load_mgf
-from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single
+from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single, calc_fdr
 from msbuddy.query import query_neutral_mass
 from msbuddy.api import form_arr_to_str
 
@@ -305,43 +305,6 @@ class Buddy:
         self.data[batch_start_idx:batch_end_idx] = modified_mf_ls
         del modified_mf_ls
 
-    def calc_fdr(self):
-        """
-        calculate FDR for loaded data
-        :return: fill in estimated_fdr in MetaFeature objects
-        """
-        # calculate FDR
-        # sort candidate formula list for each metabolic feature
-        for meta_feature in tqdm(self.data, desc="FDR calculation: ", file=sys.stdout, colour="green"):
-            if not meta_feature.candidate_formula_list:
-                continue
-            # sort candidate formula list by estimated probability, in descending order
-            meta_feature.candidate_formula_list.sort(key=lambda x: x.estimated_prob, reverse=True)
-
-            # sum of estimated probabilities
-            prob_sum = np.sum([cand_form.estimated_prob for cand_form in meta_feature.candidate_formula_list])
-
-            if prob_sum > 0.1:
-                # calculate normed estimated prob and FDR considering all candidate formulas
-                sum_normed_estimated_prob = 0
-                for i, cand_form in enumerate(meta_feature.candidate_formula_list):
-                    this_normed_estimated_prob = cand_form.estimated_prob / prob_sum
-                    sum_normed_estimated_prob += this_normed_estimated_prob
-
-                    cand_form.normed_estimated_prob = this_normed_estimated_prob
-                    cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
-            else:
-                # scale estimated prob using sqrt, to reduce the effect of very small probs
-                prob_sum = np.sum(
-                    [np.sqrt(cand_form.estimated_prob) for cand_form in meta_feature.candidate_formula_list])
-                sum_normed_estimated_prob = 0
-                for i, cand_form in enumerate(meta_feature.candidate_formula_list):
-                    this_normed_estimated_prob = np.sqrt(cand_form.estimated_prob) / prob_sum
-                    sum_normed_estimated_prob += this_normed_estimated_prob
-
-                    cand_form.normed_estimated_prob = this_normed_estimated_prob
-                    cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
-
     def annotate_formula(self):
         """
         annotate formula for loaded data
@@ -385,10 +348,10 @@ class Buddy:
             tqdm.write("Formula probability prediction...")
             pred_formula_prob(self.data, start_idx, end_idx, self.param_set, shared_data_dict)
 
-        print(f"Total time: {time.time() - start_time} seconds.")
+            # FDR calculation
+            calc_fdr(self.data, start_idx, end_idx)
 
-        # FDR calculation
-        self.calc_fdr()
+        print(f"Total time: {time.time() - start_time} seconds.")
 
         logging.info("Job finished.")
 
@@ -505,8 +468,8 @@ if __name__ == '__main__':
                                     i_range=(0, 20))
 
     buddy = Buddy(buddy_param_set)
-    # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
-    buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
+    # buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     #
@@ -521,7 +484,7 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    buddy.data = buddy.data[:10]
+    # buddy.data = buddy.data[:10]
 
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()

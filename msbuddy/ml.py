@@ -1,10 +1,12 @@
 import math
+import sys
 import warnings
 from typing import Union
 
 import numpy as np
 from numba import njit
 from scipy.stats import norm
+from tqdm import tqdm
 
 from msbuddy.api import read_formula
 from msbuddy.query import common_nl_from_array
@@ -363,9 +365,13 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
 
         out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, subform_score, subform_common_loss_score,
                             radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
-                            len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
+                            len(valid_idx_arr)])
+        # out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, subform_score, subform_common_loss_score,
+        #                     radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
+        #                     len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
     else:
-        out_arr = np.array([0] * 12)
+        # out_arr = np.array([0] * 12)
+        out_arr = np.array([0] * 10)
 
     return out_arr
 
@@ -491,6 +497,19 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     return prob_arr[:, 1]
 
 
+def _platt_scaling(prob_arr: np.array, group_no: int, gd) -> np.array:
+    """
+    calibrate probability using Platt scaling
+    :param prob_arr: numpy array of raw probabilities
+    :param group_no: group number; 0: ms1 ms2; 1: ms1 noms2; 2: noms1 ms2; 3: noms1 noms2
+    :param gd: global dependencies
+    :return: numpy array of calibrated probabilities
+    """
+    a, b = gd['platt_scaling_coeffs'][group_no]
+    prob_arr = 1 / (1 + np.exp(a * prob_arr + b))
+    return prob_arr
+
+
 def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
                       param_set, gd):
     """
@@ -532,8 +551,10 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
     for i in range(4):
         if not group_dict[i]:
             continue
-        # predict formula probability
+        # predict formula probability, raw output from MLP classifier
         prob_arr = _predict_ml_b([batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
+        # calibrate probability using Platt scaling
+        prob_arr = _platt_scaling(prob_arr, i, gd)
         # add prediction results to candidate formula objects in the list
         cnt = 0
         for j in group_dict[i]:
@@ -544,4 +565,50 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
     # update buddy data
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
 
+    return
+
+
+def calc_fdr(buddy_data, batch_start_idx: int, batch_end_idx: int):
+    """
+    calculate FDR for candidate formulas
+    :param buddy_data: buddy data
+    :param batch_start_idx: batch start index
+    :param batch_end_idx: batch end index
+    :return: fill in FDR in candidate formula objects
+    """
+    batch_data = buddy_data[batch_start_idx:batch_end_idx]
+
+    # sort candidate formula list for each metabolic feature
+    for meta_feature in tqdm(batch_data, desc="FDR calculation: ", file=sys.stdout, colour="green"):
+        if not meta_feature.candidate_formula_list:
+            continue
+        # sort candidate formula list by estimated probability, in descending order
+        meta_feature.candidate_formula_list.sort(key=lambda x: x.estimated_prob, reverse=True)
+
+        # sum of estimated probabilities
+        prob_sum = np.sum([cand_form.estimated_prob for cand_form in meta_feature.candidate_formula_list])
+
+        if prob_sum > 0.5:
+            # calculate normed estimated prob and FDR considering all candidate formulas
+            sum_normed_estimated_prob = 0
+            for i, cand_form in enumerate(meta_feature.candidate_formula_list):
+                this_normed_estimated_prob = cand_form.estimated_prob / prob_sum
+                sum_normed_estimated_prob += this_normed_estimated_prob
+
+                cand_form.normed_estimated_prob = this_normed_estimated_prob
+                cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
+        else:
+            # scale estimated prob using sqrt, to reduce the effect of very small probs
+            prob_sum = np.sum(
+                [np.sqrt(cand_form.estimated_prob) for cand_form in meta_feature.candidate_formula_list])
+            sum_normed_estimated_prob = 0
+            for i, cand_form in enumerate(meta_feature.candidate_formula_list):
+                this_normed_estimated_prob = np.sqrt(cand_form.estimated_prob) / prob_sum
+                sum_normed_estimated_prob += this_normed_estimated_prob
+
+                cand_form.normed_estimated_prob = this_normed_estimated_prob
+                cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
+
+    # update back
+    buddy_data[batch_start_idx:batch_end_idx] = batch_data
     return

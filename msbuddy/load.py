@@ -37,13 +37,19 @@ def init_db(db_mode: int) -> dict:
     # load database & models into memory
     global_dict['common_loss_db'] = j_load(root_path / 'data' / 'common_loss.joblib')
     global_dict['common_frag_db'] = j_load(root_path / 'data' / 'common_frag.joblib')
+
     global_dict['model_a'] = j_load(root_path / 'data' / 'model_a.joblib')
     global_dict['model_a_mean_arr'] = j_load(root_path / 'data' / 'ml_a_mean_arr.joblib')
     global_dict['model_a_std_arr'] = j_load(root_path / 'data' / 'ml_a_std_arr.joblib')
-    global_dict['model_b_mean_arr'] = j_load(root_path / 'data' / 'ml_b_mean_arr.joblib')
-    global_dict['model_b_std_arr'] = j_load(root_path / 'data' / 'ml_b_std_arr.joblib')
+
+    # for testing
+    b_mean = j_load(root_path / 'data' / 'ml_b_mean_arr.joblib')
+    global_dict['model_b_mean_arr'] = b_mean[:-2]
+    b_std = j_load(root_path / 'data' / 'ml_b_std_arr.joblib')
+    global_dict['model_b_std_arr'] = b_std[:-2]
+
     # global_dict['model_b_ms1_ms2'] = j_load(root_path / 'data' / 'model_b_ms1_ms2.joblib')
-    # global_dict['model_b_noms1_ms2'] = j_load(root_path / 'data' / 'model_b_noms1_ms2.joblib')
+    global_dict['model_b_noms1_ms2'] = j_load(root_path / 'data' / 'model_b_noms1_ms2.joblib')
     # global_dict['model_b_ms1_noms2'] = j_load(root_path / 'data' / 'model_b_ms1_noms2.joblib')
     # global_dict['model_b_noms1_noms2'] = j_load(root_path / 'data' / 'model_b_noms1_noms2.joblib')
 
