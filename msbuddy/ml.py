@@ -496,20 +496,6 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     prob_arr = model.predict_proba(X_arr)
     return prob_arr[:, 1]
 
-
-def _platt_scaling(prob_arr: np.array, group_no: int, gd) -> np.array:
-    """
-    calibrate probability using Platt scaling
-    :param prob_arr: numpy array of raw probabilities
-    :param group_no: group number; 0: ms1 ms2; 1: ms1 noms2; 2: noms1 ms2; 3: noms1 noms2
-    :param gd: global dependencies
-    :return: numpy array of calibrated probabilities
-    """
-    a, b = gd['platt_scaling_coeffs'][group_no]
-    prob_arr = 1 / (1 + np.exp(a * prob_arr + b))
-    return prob_arr
-
-
 def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
                       param_set, gd):
     """
@@ -553,8 +539,6 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
             continue
         # predict formula probability, raw output from MLP classifier
         prob_arr = _predict_ml_b([batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
-        # calibrate probability using Platt scaling
-        prob_arr = _platt_scaling(prob_arr, i, gd)
         # add prediction results to candidate formula objects in the list
         cnt = 0
         for j in group_dict[i]:

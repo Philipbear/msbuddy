@@ -1,4 +1,3 @@
-from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression
 import numpy as np
 import joblib
