@@ -7,7 +7,7 @@ from numba import njit
 from msbuddy.api import read_formula, form_arr_to_str
 
 mass_i = 1.0033548  # mass of isotope
-mass_e = 0.00054858  # mass of electron
+mass_e = 0.0005486  # mass of electron
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 class Formula:
     alphabet = ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
     mass_arr = np.array([12.000000, 1.007825, 78.918336, 34.968853, 18.998403, 126.904473, 38.963707, 14.003074,
-                         22.989769, 15.994915, 30.973762, 31.972071])
+                         22.989769, 15.994915, 30.973762, 31.972071], dtype=np.float32)
 
     # array: np.array(int)
     # charge: int
@@ -28,14 +28,14 @@ class Formula:
                  charge: int,
                  mass: Union[float, None] = None,
                  isotope: int = 0):
-        self.array = array
+        self.array = np.array(array, dtype=np.int16)
         self.charge = charge
         self.dbe = _calc_formula_dbe(array)
         self.isotope = isotope
 
         # fill in mass directly from formula database, otherwise calculate
         if mass is None:
-            self.mass = _calc_formula_mass(np.float64(array), charge, isotope)
+            self.mass = _calc_formula_mass(np.float32(array), charge, isotope)
         else:
             self.mass = mass
 
@@ -68,7 +68,7 @@ def _calc_formula_mass(array, charge, isotope):
     :return: mass
     """
     ele_mass_arr = np.array([12.000000, 1.007825, 78.918336, 34.968853, 18.998403, 126.904473, 38.963707, 14.003074,
-                             22.989769, 15.994915, 30.973762, 31.972071])
+                             22.989769, 15.994915, 30.973762, 31.972071], dtype=np.float32)
     if charge == 0:
         mass = float(np.sum(array * ele_mass_arr) + isotope * mass_i)
     else:
@@ -89,8 +89,8 @@ class Spectrum:
 
         # sort by mz_array
         idx = np.argsort(mz_array)
-        self.mz_array = mz_array[idx]
-        self.int_array = int_array[idx]
+        self.mz_array = np.float32(mz_array[idx])
+        self.int_array = np.float32(int_array[idx])
 
     def __str__(self) -> str:
         return f"Spectrum(mz={self.mz_array}, int={self.int_array})"
@@ -385,9 +385,9 @@ class ProcessedMS1:
             self.ppm = ppm
             self._find_ms1_isotope(mz, raw_spec, charge, isotope_bin_mztol, max_isotope_cnt)
         else:
-            self.idx_array = np.array([])
-            self.mz_array = np.array([])
-            self.int_array = np.array([])
+            self.idx_array = np.array([], dtype=int)
+            self.mz_array = np.array([], dtype=np.float32)
+            self.int_array = np.array([], dtype=np.float32)
 
     def __bool__(self):
         return self.mz_array.size != 0
@@ -416,8 +416,8 @@ class ProcessedMS1:
         m0_found, idx = _find_m0(mz, raw_spec.mz_array, tmp_mz_diff)
         if not m0_found:
             self.idx_array = np.array([])
-            self.mz_array = np.array([])
-            self.int_array = np.array([])
+            self.mz_array = np.array([], dtype=np.float32)
+            self.int_array = np.array([], dtype=np.float32)
             return
 
         # fill in M0
@@ -498,9 +498,9 @@ class ProcessedMS2:
             self._preprocess(mz, raw_spec, denoise, rel_int_denoise, rel_int_denoise_cutoff,
                              max_noise_frag_ratio, max_noise_rsd, max_frag_reserved, use_all_frag)
         else:
-            self.idx_array = np.array([])
-            self.mz_array = np.array([])
-            self.int_array = np.array([])
+            self.idx_array = np.array([], dtype=int)
+            self.mz_array = np.array([], dtype=np.float32)
+            self.int_array = np.array([], dtype=np.float32)
 
     def __bool__(self):
         return self.mz_array.size != 0
@@ -640,7 +640,7 @@ class MS2Explanation:
     """
     def __init__(self, idx_array: np.array,
                  explanation_array: List[Union[Formula, None]]):
-        self.idx_array = idx_array  # raw MS2 peak index, fragment index
+        self.idx_array = np.array(idx_array, dtype=np.int16)  # indices of peaks in MS2 spectrum
         self.explanation_array = explanation_array  # List[Formula], isotope peaks are included
 
     def __str__(self):

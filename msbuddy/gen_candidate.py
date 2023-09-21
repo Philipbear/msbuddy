@@ -193,17 +193,17 @@ def calc_isotope_pattern(formula: Formula,
 
     # calculate isotope pattern
     isotope_pattern = isotopic_variants(arr_dict, npeaks=iso_peaks)
-    int_arr = np.array([iso.intensity for iso in isotope_pattern])
+    int_arr = np.array([iso.intensity for iso in isotope_pattern], dtype=np.float32)
 
     return int_arr
 
 
-def calc_isotope_similarity(int_arr_x, int_arr_y,
-                            iso_num: int) -> float:
+@njit
+def calc_isotope_similarity(int_arr_x, int_arr_y, iso_num: int) -> float:
     """
     calculate isotope similarity between two ms1 isotope patterns
-    :param int_arr_x: int array of theoretical isotope pattern
-    :param int_arr_y: int array of experimental isotope pattern
+    :param int_arr_x: intensity array of theoretical isotope pattern
+    :param int_arr_y: intensity array of experimental isotope pattern
     :param iso_num: number of isotope peaks to calculate
     :return: isotope similarity, a float between 0 and 1
     """
@@ -212,16 +212,14 @@ def calc_isotope_similarity(int_arr_x, int_arr_y,
     if len(int_arr_y) > min_len:  # experimental isotope pattern
         int_arr_y = int_arr_y[:min_len]
     if len(int_arr_y) < min_len:
-        int_arr_y = np.append(int_arr_y, np.zeros(min_len - len(int_arr_y)))
+        int_arr_y = np.append(int_arr_y, np.zeros(min_len - len(int_arr_y), dtype=np.float32))
 
     # normalize
-    int_arr_x = int_arr_x.astype(np.float64)
-    int_arr_x /= sum(int_arr_x)
-    int_arr_y = int_arr_y.astype(np.float64)
-    int_arr_y /= sum(int_arr_y)
+    int_arr_x = int_arr_x / np.sum(int_arr_x, dtype=np.float32)
+    int_arr_y = int_arr_y / np.sum(int_arr_y, dtype=np.float32)
 
     # calculate the similarity
-    int_diff_arr = abs(int_arr_y - int_arr_x)
+    int_diff_arr = np.abs(int_arr_y - int_arr_x)
     sim_score = 1 - np.sum(int_diff_arr)
 
     return sim_score

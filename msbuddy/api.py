@@ -27,7 +27,7 @@ def read_formula(form: str) -> np.array:
             return None
 
     # convert to 12-dim array
-    array = np.zeros(12, dtype=int)
+    array = np.zeros(12, dtype=np.int16)
     for i, element in enumerate(alphabet):
         if element in parsed.keys():
             array[i] = parsed[element]
@@ -41,7 +41,7 @@ def enumerate_subform_arr(form_arr: List[int]) -> np.ndarray:
     :return: a 2-dim numpy array, with each row being a sub-formula array
     """
 
-    form_arr = np.array(form_arr)
+    form_arr = np.array(form_arr, dtype=np.int16)
 
     # enumerate all possible sub-formula arrays
     return enumerate_subformula(form_arr)
@@ -57,7 +57,7 @@ def enumerate_subformula(pre_charged_arr: np.array) -> np.array:
     n = len(pre_charged_arr)
     total_subform_cnt = np.prod(pre_charged_arr + 1)
 
-    subform_arr = np.zeros((total_subform_cnt, n), dtype=np.int64)
+    subform_arr = np.zeros((total_subform_cnt, n), dtype=np.int16)
     tempSize = 1
 
     for i in range(n):
@@ -67,7 +67,7 @@ def enumerate_subformula(pre_charged_arr: np.array) -> np.array:
 
         pattern = np.arange(count + 1)
 
-        repeated_pattern = np.empty(repeatSize * len(pattern), dtype=np.int64)
+        repeated_pattern = np.empty(repeatSize * len(pattern), dtype=np.int16)
         for j in range(len(pattern)):
             repeated_pattern[j * repeatSize: (j + 1) * repeatSize] = pattern[j]
 
@@ -84,9 +84,9 @@ def enumerate_subformula(pre_charged_arr: np.array) -> np.array:
 # for numba
 alphabet_np = np.array(
     [ord(char) for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"] for char in word],
-    dtype=np.int32)
+    dtype=np.int16)
 word_lengths = np.array([len(word) for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]],
-                        dtype=np.int32)
+                        dtype=np.int16)
 
 
 @njit

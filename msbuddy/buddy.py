@@ -107,9 +107,9 @@ class BuddyParamSet:
             self.batch_size = int(batch_size)
 
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
-                                   0, n_range[0], 0, o_range[0], p_range[0], s_range[0]])
+                                   0, n_range[0], 0, o_range[0], p_range[0], s_range[0]], dtype=np.int16)
         self.ele_upper = np.array([c_range[1], h_range[1], br_range[1], cl_range[1], f_range[1], i_range[1],
-                                   0, n_range[1], 0, o_range[1], p_range[1], s_range[1]])
+                                   0, n_range[1], 0, o_range[1], p_range[1], s_range[1]], dtype=np.int16)
         if not halogen:
             self.ele_lower[2:6] = 0
             self.ele_upper[2:6] = 0
@@ -468,18 +468,18 @@ if __name__ == '__main__':
                                     i_range=(0, 20))
 
     buddy = Buddy(buddy_param_set)
-    buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
+    # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
     # buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
-    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
-    #
-    # # add ms1 data
-    # from msbuddy.base import Spectrum
-    #
-    # buddy.data[0].ms1_raw = Spectrum(mz_array=np.array([540.369, 541.369]),
-    #                                  int_array=np.array([100, 28]))
-    # buddy.data[1].ms1_raw = Spectrum(mz_array=np.array([buddy.data[1].mz, buddy.data[1].mz + 1]),
-    #                                  int_array=np.array([100, 25]))
+    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+
+    # add ms1 data
+    from msbuddy.base import Spectrum
+
+    buddy.data[0].ms1_raw = Spectrum(mz_array=np.array([540.369, 541.369]),
+                                     int_array=np.array([100, 28]))
+    buddy.data[1].ms1_raw = Spectrum(mz_array=np.array([buddy.data[1].mz, buddy.data[1].mz + 1]),
+                                     int_array=np.array([100, 25]))
 
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
