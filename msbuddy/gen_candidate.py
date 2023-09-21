@@ -115,8 +115,8 @@ class CandidateSpace:
 
     def __init__(self, pre_neutral_array: np.array, pre_charged_array: np.array,
                  frag_exp_ls: Union[List[FragExplanation], None] = None):
-        self.pre_neutral_array = pre_neutral_array
-        self.pre_charged_array = pre_charged_array  # used for ms2 global optim.
+        self.pre_neutral_array = np.int16(pre_neutral_array)  # precursor neutral array
+        self.pre_charged_array = np.int16(pre_charged_array)  # used for ms2 global optim.
         self.neutral_mass = float(np.sum(pre_neutral_array * Formula.mass_arr))
         self.frag_exp_list = frag_exp_ls  # List[FragExplanation]
 
@@ -269,7 +269,7 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     # retain top candidate formulas
     # calculate neutral mass of the precursor ion
     ion_mode = 1 if mf.adduct.pos_mode else -1
-    t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode * 0.0005485799) / mf.adduct.m
+    t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
     mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
@@ -280,7 +280,7 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     return mf
 
 
-# @njit
+@njit
 def _element_check(form_array: np.array, lower_limit: np.array, upper_limit: np.array) -> bool:
     """
     check whether a formula satisfies the element restriction
@@ -294,7 +294,7 @@ def _element_check(form_array: np.array, lower_limit: np.array, upper_limit: np.
     return True
 
 
-# @njit
+@njit
 def _senior_rules(form: np.array) -> bool:
     """
     check whether a formula satisfies the senior rules
@@ -306,21 +306,24 @@ def _senior_rules(form: np.array) -> bool:
     # int senior_1_2 = p + n + h + f + cl + br + i + na + k
     # int senior_2 = c + h + n + o + p + f + cl + br + i + s + na + k
 
-    senior_1_1 = 6 * form[11] + 5 * form[10] + 4 * form[0] + 3 * form[7] + 2 * form[9] + form[1] + form[4] + form[3] + \
-                 form[2] + form[5] + form[8] + form[6]
+    senior_1_1 = (6 * form[11] + 5 * form[10] + 4 * form[0] + 3 * form[7] + 2 * form[9] + form[1] + form[4] +
+                  form[3] + form[2] + form[5] + form[8] + form[6])
+    senior_1_1 = np.float32(senior_1_1)
     senior_1_2 = form[10] + form[7] + form[1] + form[4] + form[3] + form[2] + form[5] + form[8] + form[6]
+    senior_1_2 = np.float32(senior_1_2)
+
     # The sum of valences or the total number of atoms having odd valences is even
     if senior_1_1 % 2 != 0 or senior_1_2 % 2 != 0:
         return False
 
-    senior_2 = np.sum(form)
+    senior_2 = np.float32(np.sum(form))
     # The sum of valences is greater than or equal to twice the number of atoms minus 1
     if senior_1_1 < 2 * (senior_2 - 1):
         return False
     return True
 
 
-# @njit
+@njit
 def _o_p_check(form: np.array) -> bool:
     """
     check whether a formula satisfies the O/P ratio rule
@@ -330,12 +333,12 @@ def _o_p_check(form: np.array) -> bool:
     # ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
     if form[10] == 0:
         return True
-    if form[9] / form[10] < 3:
+    if form[9] < 3 * form[10]:
         return False
     return True
 
 
-# @njit
+@njit
 def _dbe_check(form: np.array) -> bool:
     """
     check whether a formula DBE >= 0
@@ -343,13 +346,13 @@ def _dbe_check(form: np.array) -> bool:
     :return: True if satisfies, False otherwise
     """
     dbe = form[0] + 1 - (form[1] + form[4] + form[3] + form[2] + form[5] + form[8] +
-                         form[6]) / 2 + (form[7] + form[10]) / 2
+                         form[6]) / 2.0 + (form[7] + form[10]) / 2.0
     if dbe < 0:
         return False
     return True
 
 
-# @njit
+@njit
 def _adduct_loss_check(form: np.array, adduct_loss_form) -> bool:
     """
     check whether a precursor neutral formula contains the adduct loss
@@ -404,7 +407,8 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     formulas = query_precursor_mass(meta_feature.mz, meta_feature.adduct, ms1_tol, ppm, db_mode, gd)
     # filter out formulas that exceed element limits
     forms = [f for f in formulas if _element_check(f.array, lower_limit, upper_limit)
-             and _senior_rules(f.array) and _o_p_check(f.array) and _dbe_check(f.array)]
+             and _senior_rules(f.array) and _o_p_check(f.array) and _dbe_check(f.array) and
+             _adduct_loss_check(f.array, meta_feature.adduct.loss_formula)]
 
     # convert neutral formulas into CandidateFormula objects
     cand_form_list = [CandidateFormula(form, db_existed=True) for form in forms]
@@ -470,6 +474,8 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
                 valid_pre_form = _valid_precursor_array(pre_form_arr)
                 if not valid_pre_form:
                     continue
+                # if valid, convert to int16
+                pre_form_arr = np.int16(pre_form_arr)
 
                 # add to candidate space list
                 candidate_space_list, existing_cand_str_list = _add_to_candidate_space_list(candidate_space_list,
@@ -649,12 +655,12 @@ def _calc_subform_mass(subform_arr: np.array, adduct_charge: int) -> np.array:
     :param adduct_charge: adduct charge
     :return: 1D array, mass of each subformula
     """
-    mass_arr = np.empty(subform_arr.shape[0])
+    mass_arr = np.empty(subform_arr.shape[0], dtype=np.float32)
     ele_mass_arr = np.array([12.000000, 1.007825, 78.918336, 34.968853, 18.998403, 126.904473, 38.963707, 14.003074,
-                             22.989769, 15.994915, 30.973762, 31.972071])
+                             22.989769, 15.994915, 30.973762, 31.972071], dtype=np.float32)
     for i in range(subform_arr.shape[0]):
         # element wise multiplication
-        mass_arr[i] = np.sum(subform_arr[i, :] * ele_mass_arr) - adduct_charge * 0.0005486
+        mass_arr[i] = np.sum(subform_arr[i, :] * ele_mass_arr, dtype=np.float32) - np.float32(adduct_charge * 0.0005486)
     return mass_arr
 
 

@@ -224,7 +224,7 @@ class Buddy:
         :return: None. Update self.data
         """
 
-        @timeout(self.param_set.timeout_secs)
+        # @timeout(self.param_set.timeout_secs)
         def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
             """
             a wrapper function for data preprocessing and candidate formula space generation
@@ -262,6 +262,7 @@ class Buddy:
         else:
             # normal loop, timeout implemented using timeout_decorator
             for mf in tqdm(batch_data, file=sys.stdout, colour="green", desc="Candidate space generation"):
+                modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
                 try:
                     modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
                     modified_mf_ls.append(modified_mf)

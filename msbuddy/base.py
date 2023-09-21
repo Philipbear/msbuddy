@@ -28,7 +28,7 @@ class Formula:
                  charge: int,
                  mass: Union[float, None] = None,
                  isotope: int = 0):
-        self.array = np.array(array, dtype=np.int16)
+        self.array = np.int16(array)
         self.charge = charge
         self.dbe = _calc_formula_dbe(array)
         self.isotope = isotope
