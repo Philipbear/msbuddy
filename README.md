@@ -95,7 +95,7 @@ msbuddy --help
 S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. **Nature Methods** 2023. [DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)
 
 ## License
-This work is licensed under the MIT license.
+This work is licensed under the Apache License 2.0.
 
 ## Contact
 To contribute to `msbuddy`, please feel free to [file an issue](https://github.com/Philipbear/msbuddy/issues), or submit a pull request with improvements.
