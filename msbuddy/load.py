@@ -270,8 +270,3 @@ def load_usi(usi_list: Union[str, List[str]],
             logging.warning('Invalid USI: ' + usi)
             continue
     return data_list
-
-
-# test
-if __name__ == '__main__':
-    usi_data = load_usi('mzspec:GNPS:null:accession:CCMSLIB00000001500')

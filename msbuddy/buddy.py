@@ -35,7 +35,7 @@ class BuddyParamSet:
                  parallel: bool = False,
                  n_cpu: int = -1,
                  timeout_secs: float = 300,
-                 batch_size: int = 500,
+                 batch_size: int = 1000,
                  c_range: Tuple[int, int] = (0, 80),
                  h_range: Tuple[int, int] = (0, 150),
                  n_range: Tuple[int, int] = (0, 20),
@@ -101,7 +101,7 @@ class BuddyParamSet:
             self.timeout_secs += 20  # add 20 seconds for db initialization
 
         if batch_size <= 1:
-            self.batch_size = 500
+            self.batch_size = 1000
             logging.warning(f"Batch size is set to {self.batch_size}.")
         else:
             self.batch_size = int(batch_size)
@@ -224,7 +224,7 @@ class Buddy:
         :return: None. Update self.data
         """
 
-        # @timeout(self.param_set.timeout_secs)
+        @timeout(self.param_set.timeout_secs)
         def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
             """
             a wrapper function for data preprocessing and candidate formula space generation
@@ -340,7 +340,7 @@ class Buddy:
 
             # ml_a feature generation + prediction, retain top candidates
             tqdm.write("Formula feasibility assessment...")
-            pred_formula_feasibility(self.data, start_idx, end_idx, shared_data_dict)
+            pred_formula_feasibility(self.data, start_idx, end_idx, self.param_set.db_mode, shared_data_dict)
 
             # assign subformula annotation
             self.assign_subformula_annotation(start_idx, end_idx)
@@ -462,32 +462,34 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 
 # test
 if __name__ == '__main__':
-
+    import time
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=8, batch_size=300,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=4, batch_size=1000,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
                                     i_range=(0, 20))
 
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
-    # buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
-    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
-
-    # add ms1 data
-    from msbuddy.base import Spectrum
-
-    buddy.data[0].ms1_raw = Spectrum(mz_array=np.array([540.369, 541.369]),
-                                     int_array=np.array([100, 28]))
-    buddy.data[1].ms1_raw = Spectrum(mz_array=np.array([buddy.data[1].mz, buddy.data[1].mz + 1]),
-                                     int_array=np.array([100, 25]))
+    buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    #
+    # # add ms1 data
+    # from msbuddy.base import Spectrum
+    #
+    # buddy.data[0].ms1_raw = Spectrum(mz_array=np.array([540.369, 541.369]),
+    #                                  int_array=np.array([100, 28]))
+    # buddy.data[1].ms1_raw = Spectrum(mz_array=np.array([buddy.data[1].mz, buddy.data[1].mz + 1]),
+    #                                  int_array=np.array([100, 25]))
 
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
     # buddy.data = buddy.data[:10]
 
+    start_time = time.time()
     buddy.annotate_formula()
     result_summary_ = buddy.get_summary()
-    print(result_summary_)
+    # print(result_summary_)
+    print(f"Total time: {time.time() - start_time} seconds.")
     print('done')

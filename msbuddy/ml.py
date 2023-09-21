@@ -1,4 +1,3 @@
-import math
 import sys
 import warnings
 from typing import Union
@@ -141,13 +140,15 @@ def _predict_ml_a(feature_arr: np.array, gd) -> np.array:
     return prob_arr[:, 1]
 
 
-def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: int, gd) -> None:
+def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: int,
+                             db_mode: int, gd) -> None:
     """
     predict formula feasibility using ML model a, retain top candidate formulas
     this function is performed in batch
     :param buddy_data: buddy data
     :param batch_start_idx: batch start index
     :param batch_end_idx: batch end index
+    :param db_mode: whether halogen is considered
     :param gd: global dependencies
     :return: int, number of total candidate formulas in this batch
     """
@@ -177,7 +178,7 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
             candidate_formula.ml_a_prob = prob_arr[cnt]
             cnt += 1
 
-        top_n = _calc_top_n_candidate(meta_feature.mz)
+        top_n = _calc_top_n_candidate(meta_feature.mz, db_mode)
         # sort candidate formula list by formula feasibility, descending
         # retain top candidate formulas
         meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
@@ -190,13 +191,17 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     return
 
 
-def _calc_top_n_candidate(mz: float) -> int:
+def _calc_top_n_candidate(mz: float, db_mode: int) -> int:
     """
     calculate the number of top candidate formulas to retain
     :param mz: precursor m/z
+    :param db_mode: whether halogen is considered
     :return: number of top candidate formulas to retain
     """
-    return min(800, int(mz * mz / 500) + 10)
+    if db_mode == 0:
+        return min(400, int(mz * mz / 1500) + 50)
+    else:
+        return min(600, int(mz * mz / 1000) + 100)
 
 
 def pred_form_feasibility_single(formula: Union[str, np.array], gd) -> Union[float, None]:

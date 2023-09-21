@@ -254,8 +254,8 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
                                                                                  ele_upper_limit,
                                                                                  db_mode, gd)
 
-        # if ms2 candidate space <=10, query precursor mass directly
-        if len(ms2_cand_form_ls) <= 10:
+        # if ms2 candidate space <= 20, query precursor mass directly
+        if len(ms2_cand_form_ls) <= 20:
             ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol,
                                                                                     ele_lower_limit,
                                                                                     ele_upper_limit, db_mode, gd)
@@ -270,7 +270,7 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     # calculate neutral mass of the precursor ion
     ion_mode = 1 if mf.adduct.pos_mode else -1
     t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
-    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list)
+    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list, 800)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if mf.ms1_processed and len(mf.ms1_processed) > 1:
@@ -352,7 +352,6 @@ def _dbe_check(form: np.array) -> bool:
     return True
 
 
-@njit
 def _adduct_loss_check(form: np.array, adduct_loss_form) -> bool:
     """
     check whether a precursor neutral formula contains the adduct loss
@@ -598,19 +597,20 @@ def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     return out_list
 
 
-def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula]) -> List[CandidateFormula]:
+def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula], top_n: int) -> List[CandidateFormula]:
     """
     Retain top candidate formulas.
     :param t_mass: target neutral mass of the precursor ion
     :param cf_list: candidate formula list
+    :param top_n: number of top candidate formulas to retain
     :return: retained candidate formula list
     """
-    if len(cf_list) <= 1000:
+    if len(cf_list) <= top_n:
         return cf_list
     else:
         # sort candidate list by mz difference (increasing)
         cf_list.sort(key=lambda x: abs(x.formula.mass - t_mass))
-        return cf_list[:1000]
+        return cf_list[:top_n]
 
 
 @njit

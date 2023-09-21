@@ -209,7 +209,7 @@ Example Usage:
    :param parallel: bool. If True, the annotation is performed in parallel. Default is False.
    :param n_cpu: int. The number of CPUs to use. Default is -1, which means all available CPUs.
    :param timeout_secs: float. The timeout in seconds for each query. Default is 300 seconds.
-   :param batch_size: int. The batch size for formula annotation; a larger batch size takes more memory.
+   :param batch_size: int. The batch size for formula annotation; a larger batch size takes more memory. Default is 1000.
    :param c_range: Tuple[int, int]. The range of carbon atoms. Default is (0, 80).
    :param h_range: Tuple[int, int]. The range of hydrogen atoms. Default is (0, 150).
    :param n_range: Tuple[int, int]. The range of nitrogen atoms. Default is (0, 20).
