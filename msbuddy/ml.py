@@ -280,6 +280,10 @@ def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: floa
             else:
                 total_feature_arr = np.vstack((total_feature_arr, ml_feature_arr))
 
+    # ensure 2d array
+    if len(total_feature_arr.shape) == 1:
+        total_feature_arr = np.expand_dims(total_feature_arr, axis=0)
+
     return total_feature_arr
 
 

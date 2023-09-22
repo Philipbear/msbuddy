@@ -42,7 +42,8 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             'rt': round(mf.rt, 2) if mf.rt else 'None',
             'adduct': mf.adduct.string,
             'formula_rank_1': individual_result['formula_rank_1'],
-            'estimated_fdr': round(individual_result['estimated_fdr'], 4),
+            'estimated_fdr': round(individual_result['estimated_fdr'],
+                                   4) if individual_result['estimated_fdr'] is not None else 'None',
             'formula_rank_2': individual_result['formula_rank_2'],
             'formula_rank_3': individual_result['formula_rank_3'],
             'formula_rank_4': individual_result['formula_rank_4'],
@@ -79,12 +80,14 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                     'formula': cf.formula.__str__(),
                     'formula_feasibility': round(cf.ml_a_prob, 4),
                     'ms1_isotope_similarity': round(cf.ms1_isotope_similarity,
-                                                    4) if cf.ms1_isotope_similarity else 'None',
+                                                    4) if cf.ms1_isotope_similarity is not None else 'None',
                     'explained_ms2_peak': exp_ms2_peak,
                     'total_valid_ms2_peak': len(mf.ms2_processed) if mf.ms2_processed else 'None',
-                    'estimated_prob': round(cf.estimated_prob, 4),
-                    'normalized_estimated_prob': round(cf.normed_estimated_prob, 4),
-                    'estimated_fdr': round(cf.estimated_fdr, 4)
+                    'estimated_prob': round(cf.estimated_prob,
+                                            4) if cf.estimated_prob is not None else 'None',
+                    'normalized_estimated_prob': round(cf.normed_estimated_prob,
+                                                       4) if cf.normed_estimated_prob is not None else 'None',
+                    'estimated_fdr': round(cf.estimated_fdr, 4) if cf.estimated_fdr is not None else 'None'
                 }, ignore_index=True)
             all_candidates_df.to_csv(mf_path / 'formula_results.tsv', sep="\t", index=False)
 
