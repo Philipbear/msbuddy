@@ -1,7 +1,6 @@
 import joblib
 import pandas as pd
 import numpy as np
-# from data.model import FormulaModel
 
 
 def load_frag_table():
@@ -56,7 +55,8 @@ def formula_db_idx_arr():
     this idx array is used for fast searching of formula db
     :return: np.array, dtype=int
     """
-    db = pd.read_csv("../data/formulaDB_20230316.csv")
+    db = pd.read_csv("formulaDB_20230316.csv")
+    print("db size before dereplication: ", db.shape[0])
 
     # rename "PubChem" to "pubchem"
     db.rename(columns={'PubChem': 'pubchem'}, inplace=True)
@@ -64,6 +64,16 @@ def formula_db_idx_arr():
     db['other_db'] = db[['ANPDB', 'BLEXP', 'BMDB', 'ChEBI', 'COCONUT', 'DrugBank', 'DSSTOX', 'ECMDB',
                          'FooDB', 'HMDB', 'HSDB', 'KEGG', 'LMSD', 'MaConDa', 'MarkerDB', 'MCDB', 'NORMAN', 'NPASS', 'NPAtlas',
                          'Plantcyc', 'SMPDB', 'STOFF_IDENT', 'T3DB', 'TTD', 'UNPD', 'YMDB']].sum(axis=1)
+
+    # dereplicate
+    db = db.drop_duplicates(subset=['formula_str'], inplace=False)
+    print("db size after dereplication: ", db.shape[0])
+
+    # reindex
+    db.index = range(db.shape[0])
+    # sort by mass
+    db.sort_values(by=['mass'], inplace=True)
+    db.index = range(db.shape[0])
 
     # c, h, b, br, cl, f, i, k, n, na, o, p, s, se, si
     # basic db: db with sum of b, k, na, se, si, cl, f, i, br = 0
@@ -85,13 +95,9 @@ def formula_db_idx_arr():
     basic_db['formula_arr'] = basic_db[['c', 'h', 'br', 'cl', 'f', 'i', 'k', 'n', 'na', 'o', 'p', 's']].values.tolist()
     basic_db_mass_array = basic_db['mass'].values
     basic_db_formula_array = np.stack(basic_db['formula_arr'].values)
-    joblib.dump(basic_db_mass_array, "../data/basic_db_mass.joblib")
-    joblib.dump(basic_db_formula_array, "../data/basic_db_formula.joblib")
+    joblib.dump(basic_db_mass_array, "basic_db_mass.joblib")
+    joblib.dump(basic_db_formula_array, "basic_db_formula.joblib")
 
-    # for _, row in basic_db.iterrows():
-    #     basic_db_model.append(FormulaModel(# row['formula_str'],
-    #                                        row['mass'], np.array(row['formula_arr'])))
-    # joblib.dump(np.array(basic_db_model), "../data/basic_db.joblib")
 
     print("halogen db")
     halogen_db_model = []
@@ -99,37 +105,33 @@ def formula_db_idx_arr():
     halogen_db['formula_arr'] = halogen_db[['c', 'h', 'br', 'cl', 'f', 'i', 'k', 'n', 'na', 'o', 'p', 's']].values.tolist()
     halogen_db_mass_array = halogen_db['mass'].values
     halogen_db_formula_array = np.stack(halogen_db['formula_arr'].values)
-    joblib.dump(halogen_db_mass_array, "../data/halogen_db_mass.joblib")
-    joblib.dump(halogen_db_formula_array, "../data/halogen_db_formula.joblib")
+    joblib.dump(halogen_db_mass_array, "halogen_db_mass.joblib")
+    joblib.dump(halogen_db_formula_array, "halogen_db_formula.joblib")
 
-    # for _, row in halogen_db.iterrows():
-    #     halogen_db_model.append(FormulaModel(# row['formula_str'],
-    #                                        row['mass'], np.array(row['formula_arr'])))
-    # joblib.dump(np.array(halogen_db_model), "../data/halogen_db.joblib")
-    #
-    # print("idx array, basic db")
-    # # basic db
-    # # mass array
-    # mass_arr = np.array(basic_db['mass'])
-    # # create idx array, only for mass < 1500
-    # idx_arr = np.zeros(15000, dtype=int)
-    # # for each index i, find the index of the first formula with mass >= i/10
-    # for i in range(len(idx_arr)):
-    #     # find the first index of mass >= i/10
-    #     idx_arr[i] = np.where(mass_arr >= i / 10)[0][0]
-    # joblib.dump(idx_arr, "../data/basic_db_idx.joblib")
-    #
-    # print("halogen db")
-    # # halogen db
-    # # mass array
-    # mass_arr = np.array(halogen_db['mass'])
-    # # create idx array, only for mass < 1500
-    # idx_arr = np.zeros(15000, dtype=int)
-    # # for each index i, find the index of the first formula with mass >= i/10
-    # for i in range(len(idx_arr)):
-    #     # find the first index of mass >= i/10
-    #     idx_arr[i] = np.where(mass_arr >= i / 10)[0][0]
-    # joblib.dump(idx_arr, "../data/halogen_db_idx.joblib")
+
+    print("idx array, basic db")
+    # basic db
+    # mass array
+    mass_arr = np.array(basic_db['mass'])
+    # create idx array, only for mass < 1500
+    idx_arr = np.zeros(15000, dtype=int)
+    # for each index i, find the index of the first formula with mass >= i/10
+    for i in range(len(idx_arr)):
+        # find the first index of mass >= i/10
+        idx_arr[i] = np.where(mass_arr >= i / 10)[0][0]
+    joblib.dump(idx_arr, "basic_db_idx.joblib")
+
+    print("halogen db")
+    # halogen db
+    # mass array
+    mass_arr = np.array(halogen_db['mass'])
+    # create idx array, only for mass < 1500
+    idx_arr = np.zeros(15000, dtype=int)
+    # for each index i, find the index of the first formula with mass >= i/10
+    for i in range(len(idx_arr)):
+        # find the first index of mass >= i/10
+        idx_arr[i] = np.where(mass_arr >= i / 10)[0][0]
+    joblib.dump(idx_arr, "halogen_db_idx.joblib")
 
 
 # test

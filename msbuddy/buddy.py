@@ -232,7 +232,7 @@ class Buddy:
         :return: None. Update self.data
         """
 
-        @timeout(self.param_set.timeout_secs)
+        # @timeout(self.param_set.timeout_secs)
         def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
             """
             a wrapper function for data preprocessing and candidate formula space generation
@@ -270,7 +270,6 @@ class Buddy:
         else:
             # normal loop, timeout implemented using timeout_decorator
             for mf in tqdm(batch_data, file=sys.stdout, colour="green", desc="Candidate space generation"):
-                modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
                 try:
                     modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
                     modified_mf_ls.append(modified_mf)
@@ -346,11 +345,13 @@ class Buddy:
         # loop over batches
         for n in range(n_batch):
             start_idx, end_idx = self.__annotate_formula_main_batch(n, n_batch)
+            print("Writing batch results...")
             result_summary_df = self.__write_batch_results(output_path, write_details, start_idx, end_idx,
                                                            result_summary_df)
             # clear computed data to save memory, convert to None of the same size
             self.data[start_idx:end_idx] = [None] * (end_idx - start_idx)
 
+        print("Writing summary results to tsv file...")
         result_summary_df.to_csv(output_path / 'buddy_result_summary.tsv', sep="\t", index=False)
         logging.info("Job finished.")
 
@@ -425,11 +426,11 @@ class Buddy:
             individual_result = mf.summarize_result()
             result_df = result_df.append({
                 'identifier': mf.identifier,
-                'mz': mf.mz,
-                'rt': mf.rt if mf.rt else 'None',
+                'mz': round(mf.mz, 4),
+                'rt': round(mf.rt, 2) if mf.rt else 'None',
                 'adduct': mf.adduct.string,
                 'formula_rank_1': individual_result['formula_rank_1'],
-                'estimated_fdr': individual_result['estimated_fdr'],
+                'estimated_fdr': round(individual_result['estimated_fdr'], 4),
                 'formula_rank_2': individual_result['formula_rank_2'],
                 'formula_rank_3': individual_result['formula_rank_3']
             }, ignore_index=True)
@@ -462,13 +463,13 @@ class Buddy:
                     all_candidates_df = all_candidates_df.append({
                         'rank': m,
                         'formula': cf.formula.__str__(),
-                        'formula_feasibility': cf.ml_a_prob,
-                        'ms1_isotope_similarity': cf.ms1_isotope_similarity if cf.ms1_isotope_similarity else 'None',
+                        'formula_feasibility': round(cf.ml_a_prob, 4),
+                        'ms1_isotope_similarity': round(cf.ms1_isotope_similarity, 4) if cf.ms1_isotope_similarity else 'None',
                         'explained_ms2_peak': exp_ms2_peak,
                         'total_valid_ms2_peak': len(mf.ms2_processed) if mf.ms2_processed else 'None',
-                        'estimated_prob': cf.estimated_prob,
-                        'normalized_estimated_prob': cf.normed_estimated_prob,
-                        'estimated_fdr': cf.estimated_fdr
+                        'estimated_prob': round(cf.estimated_prob, 4),
+                        'normalized_estimated_prob': round(cf.normed_estimated_prob, 4),
+                        'estimated_fdr': round(cf.estimated_fdr, 4)
                     }, ignore_index=True)
                 all_candidates_df.to_csv(mf_path / 'formula_results.tsv', sep="\t", index=False)
 
@@ -478,8 +479,8 @@ class Buddy:
                     for m in range(len(mf.ms1_processed)):
                         ms1_df = ms1_df.append({
                             'raw_idx': mf.ms1_processed.idx_array[m],
-                            'mz': mf.ms1_processed.mz_array[m],
-                            'intensity': mf.ms1_processed.int_array[m]
+                            'mz': round(mf.ms1_processed.mz_array[m], 4),
+                            'intensity': round(mf.ms1_processed.int_array[m], 4)
                         }, ignore_index=True)
                     ms1_df.to_csv(mf_path / 'ms1_preprocessed.tsv', sep="\t", index=False)
                 if mf.ms2_processed:
@@ -487,8 +488,8 @@ class Buddy:
                     for m in range(len(mf.ms2_processed)):
                         ms2_df = ms2_df.append({
                             'raw_idx': mf.ms2_processed.idx_array[m],
-                            'mz': mf.ms2_processed.mz_array[m],
-                            'intensity': mf.ms2_processed.int_array[m]
+                            'mz': round(mf.ms2_processed.mz_array[m], 4),
+                            'intensity': round(mf.ms2_processed.int_array[m], 4)
                         }, ignore_index=True)
                     ms2_df.to_csv(mf_path / 'ms2_preprocessed.tsv', sep="\t", index=False)
 
@@ -602,7 +603,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
     import time
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=10, ms2_tol=10, parallel=False, n_cpu=4, batch_size=300,
+    buddy_param_set = BuddyParamSet(ms1_tol=10, ms2_tol=10, parallel=False, n_cpu=4, batch_size=1000,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
                                     i_range=(0, 20))
 
@@ -623,7 +624,7 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    buddy.data = buddy.data[:10]
+    buddy.data = buddy.data[183:200]
 
     buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'), write_details=True)
 

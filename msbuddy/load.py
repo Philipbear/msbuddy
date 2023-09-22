@@ -20,7 +20,7 @@ def check_and_download(url: str, path) -> bool:
     :param path: path to save
     :return: True if success
     """
-    if not path.exists() or path.stat().st_size < 10 ** 4:
+    if not path.exists() or path.stat().st_size < 10 ** 3:
         download(url, str(path))
         return True
 
@@ -42,7 +42,7 @@ def init_db(db_mode: int) -> dict:
     global_dict['model_a_mean_arr'] = j_load(root_path / 'data' / 'ml_a_mean_arr.joblib')
     global_dict['model_a_std_arr'] = j_load(root_path / 'data' / 'ml_a_std_arr.joblib')
 
-    # for testing
+    # for testing ########################
     b_mean = j_load(root_path / 'data' / 'ml_b_mean_arr.joblib')
     global_dict['model_b_mean_arr'] = b_mean[:-2]
     b_std = j_load(root_path / 'data' / 'ml_b_std_arr.joblib')
@@ -54,10 +54,12 @@ def init_db(db_mode: int) -> dict:
     # global_dict['model_b_noms1_noms2'] = j_load(root_path / 'data' / 'model_b_noms1_noms2.joblib')
 
     # check existence of basic_db_mass.joblib, basic_db_formula.joblib
-    check_and_download('https://drive.google.com/uc?id=1obPMk9lcfkUpRkeGSkM1s4C9Bzatm1li',
+    check_and_download('https://drive.google.com/uc?id=1miMd60FrZzsDIhJNPdhiAWIcKJrWyC6C',
                        root_path / 'data' / 'basic_db_mass.joblib')
-    check_and_download('https://drive.google.com/uc?id=155AEYIv5XFBIc7Adpnfi-vH3s47QkbJf',
+    check_and_download('https://drive.google.com/uc?id=1jV8RxAH3_f1D-6Dcj73mXCnCiJMG7w8Y',
                        root_path / 'data' / 'basic_db_formula.joblib')
+    check_and_download('https://drive.google.com/uc?id=1ry4Ri2ADxwpgKzvfExPzbMEZ5GkMntqt',
+                       root_path / 'data' / 'basic_db_idx.joblib')
 
     global_dict['basic_db_mass'] = j_load(root_path / 'data' / 'basic_db_mass.joblib')
     global_dict['basic_db_formula'] = j_load(root_path / 'data' / 'basic_db_formula.joblib')
@@ -65,10 +67,12 @@ def init_db(db_mode: int) -> dict:
 
     if db_mode > 0:
         # check existence of halogen_db_mass.joblib, halogen_db_formula.joblib
-        check_and_download('https://drive.google.com/uc?id=1SMhezxtXtjQNj2N8odYWSEufOO_6N1o5',
+        check_and_download('https://drive.google.com/uc?id=1C6Ckh7Veg3anlDnv9-fyQgKKQkG-8L8s',
                            root_path / 'data' / 'halogen_db_mass.joblib')
-        check_and_download('https://drive.google.com/uc?id=18G8_qzTXWHDIw9Z9PwvMtjKWOi6FtwDU',
+        check_and_download('https://drive.google.com/uc?id=1hMppxy0oTO13UZWN8y_3bI_dSuF7fJqr',
                            root_path / 'data' / 'halogen_db_formula.joblib')
+        check_and_download('https://drive.google.com/uc?id=179V5a52cDHshw4ETmS-PS-Vw2Jq8Xmoa',
+                           root_path / 'data' / 'halogen_db_idx.joblib')
 
         global_dict['halogen_db_mass'] = j_load(root_path / 'data' / 'halogen_db_mass.joblib')
         global_dict['halogen_db_formula'] = j_load(root_path / 'data' / 'halogen_db_formula.joblib')
