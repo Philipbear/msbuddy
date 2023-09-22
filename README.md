@@ -70,14 +70,14 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 
 **msbuddy** can also be used as a command-line tool.
 In the result summary, top 3 formula candidates will be reported for each query.
-The annotation details can be output with the `--details` option.
+The annotation details can be output with the `-details` option (or `-d` for short).
 Here is an example command for a mgf file:
 ```bash
-msbuddy --mgf <mgf file> --output <output folder> --details
+msbuddy -mgf <mgf file> -output <output folder> -details
 ```
 or for a csv file containing USI strings (one USI per line):
 ```bash
-msbuddy --csv <csv file> --output <output folder>
+msbuddy -csv <csv file> -output <output folder>
 ```
 Run the following command to see the full list of options:
 ```bash

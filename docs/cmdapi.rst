@@ -13,27 +13,27 @@ Here is an example for loading a mgf file and performing formula annotation in p
 
 .. code-block:: bash
 
-        msbuddy --mgf <mgf file> --output <output folder> --parallel
+        msbuddy -mgf <mgf file> -output <output folder> -parallel
 
 
-Alternatively, you can use the `--usi` option for a single USI string:
-
-.. code-block:: bash
-
-        msbuddy --usi <usi string> --output <output folder>
-
-or the `--csv` option for a csv file containing a list of USI strings in the first column (one USI per line):
-
+Alternatively, you can use the `-usi` option for a single USI string:
 
 .. code-block:: bash
 
-        msbuddy --csv <csv file> --output <output folder> --parallel
+        msbuddy -usi <usi string> -output <output folder>
 
-If you want detailed results for each query (all candidate formulas and their scores), you can use the `--details` option:
+or the `-csv` option for a csv file containing a list of USI strings in the first column (one USI per line):
+
 
 .. code-block:: bash
 
-        msbuddy --mgf <mgf file> --output <output folder> --parallel --details
+        msbuddy -csv <csv file> -output <output folder> -parallel
+
+If you want detailed results for each query (all candidate formulas and their scores), you can use the `-details` option (or `-d` for short):
+
+.. code-block:: bash
+
+        msbuddy -mgf <mgf file> -output <output folder> -parallel -details
 
 
 Please check out the `--help` option to see all the available options:
