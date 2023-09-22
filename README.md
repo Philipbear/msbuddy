@@ -63,9 +63,7 @@ results = buddy.get_summary()
 
 MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
 ```python
-buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036')
-
-# you can also load a list of USIs at once
+# you can also load multiple USIs at once
 buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
@@ -74,14 +72,20 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 
 **msbuddy** can also be used as a command-line tool.
 In the result summary, top 5 formula candidates will be reported for each query.
-The annotation details can be output with the `-details` option (or `-d` for short).
-Here is an example command for a mgf file:
+More detailed annotation results can be written with the `-details` option (or `-d` for short).
+Here is an example command for a mgf file from Orbitrap:
 ```bash
-msbuddy -mgf <mgf_file> -output <output_folder> -ms_instr "orbitrap" -details
+msbuddy -mgf <mgf_file> -output <output_folder> -ms orbitrap -details
 ```
 or for a csv file containing USI strings (one USI per line):
 ```bash
-msbuddy -csv <csv_file> -output <output_folder> -ms_instr "orbitrap" -details
+msbuddy -csv <csv_file> -output <output_folder> -ms qtof -details
+```
+
+Here is an example of processing a mgf file from Orbitrap (`-ms orbitrap`) in parallel (`-p`) using 12 cores (`-n_cpu`). Detailed results are written (`-d`).
+Halogen atoms (FClBrI) are also considered (`-hal`).
+```bash
+msbuddy -mgf <mgf_file> -output <output_folder> -ms orbitrap -p -n_cpu 12 -d -hal
 ```
 Run the following command to see the full list of options:
 ```bash

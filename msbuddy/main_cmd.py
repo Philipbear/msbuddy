@@ -14,14 +14,11 @@ Description: Command line interface for msbuddy.
 """
 
 import argparse
-import logging
 import pathlib
 
 import pandas as pd
 
 from msbuddy.buddy import Buddy, BuddyParamSet
-
-logging.basicConfig(level=logging.INFO)
 
 
 def main():
@@ -30,16 +27,17 @@ def main():
     parser.add_argument('-usi', type=str, help='A single USI string.')
     parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column.')
     parser.add_argument('-output', '-o', type=str, help='The output file path.')
-    parser.add_argument('-details', '-d', type=bool, default=True,
-                        help='Whether to write detailed results. Default: True.')
+    parser.add_argument('-details', '-d', action='store_true',
+                        help='Whether to write detailed results. Default: False.')
     parser.add_argument('-ms_instr', '-ms', type=str, default='orbitrap',
                         help='MS instrument type. Supported types: orbitrap, qtof, fticr.')
-    parser.add_argument('-ppm', type=bool, default=True, help='Whether to use ppm for mass tolerance. Default: True.')
+    parser.add_argument('-disable_ppm', action='store_false',
+                        help='Whether to disable ppm for mass tolerance. Default: ppm is enabled.')
     parser.add_argument('-ms1_tol', type=float, default=5, help='MS1 tolerance. Default: 5.')
     parser.add_argument('-ms2_tol', type=float, default=10, help='MS2 tolerance. Default: 10.')
-    parser.add_argument('-halogen', '-hal', type=bool, default=False,
+    parser.add_argument('-halogen', '-hal', action='store_true',
                         help='Whether to consider halogen atoms FClBrI. Default: False.')
-    parser.add_argument('-parallel', '-p', type=bool, default=False,
+    parser.add_argument('-parallel', '-p', action='store_true',
                         help='Whether to use parallel computing. Default: False.')
     parser.add_argument('-n_cpu', type=int, default=-1, help='Number of CPUs to use. Default: -1, use all CPUs.')
     parser.add_argument('-timeout_secs', '-t', type=int, default=300, help='Timeout in seconds. Default: 300.')
@@ -70,9 +68,10 @@ def main():
                         help='m/z tolerance for isotope binning, used for MS1 isotope pattern, in Dalton. Default: 0.02.')
     parser.add_argument('-max_isotope_cnt', type=int, default=4,
                         help='Maximum isotope count, used for MS1 isotope pattern. Default: 4.')
-    parser.add_argument('-ms2_denoise', type=bool, default=True, help='Whether to denoise MS2 spectrum. Default: True.')
-    parser.add_argument('-rel_int_denoise', type=bool, default=True,
-                        help='Whether to use relative intensity for MS2 denoise. Default: True.')
+    parser.add_argument('-disable_ms2_denoise', action='store_false',
+                        help='Whether to disable denoising MS2 spectrum. Default: MS2 denoise is enabled.')
+    parser.add_argument('-disable_rel_int_denoise', action='store_false',
+                        help='Whether to disable relative intensity for MS2 denoise. Default: relative intensity denoise is enabled.')
     parser.add_argument('-rel_int_denoise_cutoff', type=float, default=0.01,
                         help='Relative intensity cutoff, used for MS2 denoise. Default: 0.01.')
     parser.add_argument('-max_noise_frag_ratio', type=float, default=0.90,
@@ -81,7 +80,7 @@ def main():
                         help='Maximum noise RSD, used for MS2 denoise. Default: 0.20.')
     parser.add_argument('-max_frag_reserved', type=int, default=50,
                         help='Max fragment number reserved, used for MS2 data.')
-    parser.add_argument('-use_all_frag', type=bool, default=False,
+    parser.add_argument('-use_all_frag', action='store_true',
                         help='Whether to use all fragments for annotation; by default, only top N fragments are used, '
                              'top N is a function of precursor mass. Default: False.')
 
@@ -91,7 +90,8 @@ def main():
     # create a BuddyParamSet object
     buddy_param_set = BuddyParamSet(
         ms_instr=args.ms_instr,
-        ppm=args.ppm, ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
+        ppm=~args.disable_ppm,
+        ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
         parallel=args.parallel, n_cpu=args.n_cpu,
         timeout_secs=args.timeout_secs, batch_size=args.batch_size, top_n_candidate=args.top_n_candidate,
         c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
@@ -99,7 +99,8 @@ def main():
         f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
         i_range=(args.i_min, args.i_max),
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
-        ms2_denoise=args.ms2_denoise, rel_int_denoise=args.rel_int_denoise,
+        ms2_denoise=~args.disable_ms2_denoise,
+        rel_int_denoise=~args.disable_rel_int_denoise,
         rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_noise_frag_ratio=args.max_noise_frag_ratio,
         max_noise_rsd=args.max_noise_rsd, max_frag_reserved=args.max_frag_reserved,
         use_all_frag=args.use_all_frag
@@ -124,7 +125,7 @@ def main():
     output_path = pathlib.Path(args.output)
     buddy.annotate_formula_cmd(output_path, write_details=args.details)
 
-    logging.info('Job finished.')
+    print('Job finished.')
 
 
 if __name__ == '__main__':
