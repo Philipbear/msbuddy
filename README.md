@@ -14,10 +14,12 @@
   * queries with or without MS1 isotopic pattern 
   * queries with or without MS/MS spectra
   * both positive and negative ionization modes
+
 The minimum requirement is a single _m/z_ value and its ionization polarity.
+
 * `msbuddy` enables:
   * candidate space shrinkage via bottom-up MS/MS interrogation
-  * accurate formula annotation via machine learning
+  * accurate formula annotation via deep learning
   * false discovery rate estimation
 
 **The entire documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
@@ -75,11 +77,11 @@ In the result summary, top 5 formula candidates will be reported for each query.
 The annotation details can be output with the `-details` option (or `-d` for short).
 Here is an example command for a mgf file:
 ```bash
-msbuddy -mgf <mgf_file> -output <output_folder> -details
+msbuddy -mgf <mgf_file> -output <output_folder> -ms_instr "orbitrap" -details
 ```
 or for a csv file containing USI strings (one USI per line):
 ```bash
-msbuddy -csv <csv_file> -output <output_folder>
+msbuddy -csv <csv_file> -output <output_folder> -ms_instr "orbitrap" -details
 ```
 Run the following command to see the full list of options:
 ```bash
