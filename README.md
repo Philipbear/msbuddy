@@ -71,8 +71,9 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 ## Command-line API ([link](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
 
 **msbuddy** can also be used as a command-line tool.
-In the result summary, top 5 formula candidates will be reported for each query.
+Result summary will be generated in a tsv file.
 More detailed annotation results can be written with the `-details` option (or `-d` for short).
+
 Here is an example command for a mgf file from Orbitrap:
 ```bash
 msbuddy -mgf <mgf_file> -output <output_folder> -ms orbitrap -details
@@ -86,8 +87,7 @@ or for a csv file containing multiple USI strings (one USI per line):
 msbuddy -csv <csv_file> -output <output_folder> -ms qtof -details
 ```
 
-For mgf file or csv file, if you want to use the default output folder (`./msbuddy_output`), you can omit the `-output` option.
-Results will be written in the same folder as the input file.
+For mgf file or csv file, you can omit the `-output` option - results will be written in the same folder as the input file.
 
 
 Here is an example of processing a mgf file from Orbitrap (`-ms orbitrap`) in parallel (`-p`) using 12 cores (`-n_cpu`). Detailed results are written (`-d`).
