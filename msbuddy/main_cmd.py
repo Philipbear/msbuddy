@@ -27,6 +27,7 @@ logging.basicConfig(level=logging.INFO)
 def buddy_cmd(args) -> Buddy:
     # create a BuddyParamSet object
     buddy_param_set = BuddyParamSet(
+        ms_instr=args.ms_instr,
         ppm=args.ppm, ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
         parallel=args.parallel, n_cpu=args.n_cpu,
         timeout_secs=args.timeout_secs, batch_size=args.batch_size, top_n_candidate=args.top_n_candidate,
@@ -114,6 +115,7 @@ def main():
     parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column.')
     parser.add_argument('-output', '-o', type=str, help='The output file path.')
     parser.add_argument('-details', '-d', type=bool, default=True, help='Whether to write detailed results. Default: True.')
+    parser.add_argument('-ms_instr', '-ms', type=str, default='orbitrap', help='MS instrument type. Supported types: orbitrap, qtof, fticr.')
     parser.add_argument('-ppm', type=bool, default=True, help='Whether to use ppm for mass tolerance. Default: True.')
     parser.add_argument('-ms1_tol', type=float, default=5, help='MS1 tolerance. Default: 5.')
     parser.add_argument('-ms2_tol', type=float, default=10, help='MS2 tolerance. Default: 10.')

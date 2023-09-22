@@ -8,13 +8,11 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
    from msbuddy import Buddy, BuddyParamSet
 
    # create a parameter set
-   buddy_param_set = BuddyParamSet(ppm=True,
-                                   ms1_tol=10,
-                                   ms2_tol=20,
+   buddy_param_set = BuddyParamSet(ms_instr="orbitrap", #  supported: "qtof", "orbitrap" and "fticr"
                                    halogen=True,
                                    parallel=True,
                                    n_cpu=12,
-                                   timeout_secs=600)
+                                   timeout_secs=200)
 
    # instantiate a Buddy object with the parameter set
    buddy = Buddy(buddy_param_set)
@@ -34,7 +32,7 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
            print(key, value)
 
 
-Here, ``individual_result`` is a Python dictionary with the following keys:
+Within the result summary, ``results`` is a list of Python dictionaries. ``individual_result`` is a dictionary containing the following keys:
 
 - ``identifier``: Identifier of the metabolic feature
 - ``mz``: Precursor m/z

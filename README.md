@@ -41,7 +41,7 @@ All the parameter settings are specified in the [`BuddyParamSet`](https://msbudd
 from msbuddy import Buddy, BuddyParamSet
 
 # instantiate a BuddyParamSet object
-param = BuddyParamSet(ppm=True, ms1_tol=5, ms2_tol=10,
+param = BuddyParamSet(ms_instr='orbitrap', # supported: "qtof", "orbitrap" and "fticr"; highly recommended to specify
                       halogen=False, timeout_secs=300,
                       parallel=True, n_cpu=12)
 

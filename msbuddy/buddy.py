@@ -44,6 +44,7 @@ class BuddyParamSet:
     """
 
     def __init__(self,
+                 ms_instr: str = None,
                  ppm: bool = True,
                  ms1_tol: float = 5,
                  ms2_tol: float = 10,
@@ -70,6 +71,7 @@ class BuddyParamSet:
                  max_frag_reserved: int = 50,
                  use_all_frag: bool = False):
         """
+        :param ms_instr: mass spectrometry instrument, one of "orbitrap, "fticr", "qtof". Highly recommended to use this for mass tolerance settings.
         :param ppm: whether ppm is used for m/z tolerance
         :param ms1_tol: MS1 m/z tolerance
         :param ms2_tol: MS2 m/z tolerance
@@ -99,9 +101,22 @@ class BuddyParamSet:
         :param max_frag_reserved: max fragment number reserved, used for MS2 data
         :param use_all_frag: whether to use all fragments for annotation; by default, only top N fragments are used, top N is a function of precursor mass
         """
-        self.ppm = ppm
-        self.ms1_tol = ms1_tol
-        self.ms2_tol = ms2_tol
+        if ms_instr in ["orbitrap", "fticr", "qtof"]:
+            self.ppm = True
+            if ms_instr == "orbitrap":
+                self.ms1_tol = 5
+                self.ms2_tol = 10
+            elif ms_instr == "fticr":
+                self.ms1_tol = 2
+                self.ms2_tol = 5
+            else:
+                self.ms1_tol = 10
+                self.ms2_tol = 20
+        else:
+            self.ppm = ppm
+            self.ms1_tol = ms1_tol
+            self.ms2_tol = ms2_tol
+
         self.db_mode = 0 if not halogen else 1
         self.parallel = parallel
         if n_cpu > cpu_count() or n_cpu <= 0:
@@ -383,7 +398,8 @@ class Buddy:
 
         if not self.data:
             raise ValueError("No data loaded.")
-        tqdm.write(f"{len(self.data)} spectra loaded.")
+        query_str = f"{len(self.data)} queries loaded." if len(self.data) > 1 else "1 query loaded."
+        tqdm.write(query_str)
 
         if self.param_set.parallel:
             # parallel processing
@@ -391,7 +407,8 @@ class Buddy:
 
         # batches
         n_batch = int(np.ceil(len(self.data) / self.param_set.batch_size))
-        tqdm.write(f"{n_batch} batches in total.")
+        batch_str = f"{n_batch} batches in total." if n_batch > 1 else "1 batch in total."
+        tqdm.write(batch_str)
 
         return n_batch
 
@@ -535,16 +552,17 @@ if __name__ == '__main__':
     import time
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=10, ms2_tol=10, parallel=False, n_cpu=4, batch_size=1000,
+    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=4, batch_size=1000,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
                                     i_range=(0, 20))
 
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
-    buddy.load_mgf(
-        '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
-    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    # buddy.load_mgf(
+        # '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
+    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952"])
     #
     # # add ms1 data
     # from msbuddy.base import Spectrum
@@ -557,14 +575,20 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    # buddy.data = buddy.data[183:200]
+    # buddy.data = buddy.data[:200]
 
-    buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'),
-                               write_details=True)
+    # buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'),
+    #                            write_details=True)
 
     # start_time = time.time()
-    # buddy.annotate_formula()
-    # result_summary_ = buddy.get_summary()
+    buddy.annotate_formula()
+    results = buddy.get_summary()
+
+    # print the result, results is a list of dictionaries
+    for individual_result in results:
+        for key, value in individual_result.items():
+            print(key, value)
+
     # # print(result_summary_)
     # print(f"Total time: {time.time() - start_time} seconds.")
     print('done')

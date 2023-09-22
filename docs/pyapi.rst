@@ -198,10 +198,11 @@ Example Usage:
 
 
 
-.. class:: msbuddy.BuddyParamSet (ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 500, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
+.. class:: msbuddy.BuddyParamSet (ms_instr: str = 'orbitrap', ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 500, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
 
    It is a class to store all the parameter settings for **msbuddy**.
 
+   :param ms_instr: str. The mass spectrometry instrument type, used for automated mass tolerance setting. Supported instruments are "orbitrap", "fticr" and "qtof". Default is "orbitrap".
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da. Default is True.
    :param ms1_tol: float. The mass tolerance for MS1 spectra. Default is 5 ppm.
    :param ms2_tol: float. The mass tolerance for MS/MS spectra. Default is 10 ppm.
@@ -238,13 +239,11 @@ Example Usage:
 
     # create a parameter set
     buddy_param_set = BuddyParamSet(
-        ppm=True,
-        ms1_tol=10,
-        ms2_tol=20,
+        ms_instr="orbitrap",
         halogen=True,
         parallel=True,
-        n_cpu=4,
-        timeout_secs=600)
+        n_cpu=12,
+        timeout_secs=100)
 
     # create a Buddy object with the specified parameter set
     buddy = Buddy(buddy_param_set)
