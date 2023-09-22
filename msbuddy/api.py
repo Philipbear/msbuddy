@@ -127,7 +127,7 @@ def _form_arr_to_str(form_arr: np.array):
     return formula_list
 
 
-def ascii_to_str(ascii_arr) -> str:
+def _ascii_to_str(ascii_arr) -> str:
     """
     Convert ASCII integer array to string
     :param ascii_arr: ASCII array
@@ -139,7 +139,7 @@ def ascii_to_str(ascii_arr) -> str:
 def form_arr_to_str(form_arr) -> str:
     """
     Convert formula array to string. (Numba version)
-    :param form_arr: formula array
+    :param form_arr: formula np.array
     :return: formula string
     """
-    return ascii_to_str(_form_arr_to_str(form_arr))
+    return _ascii_to_str(_form_arr_to_str(form_arr))

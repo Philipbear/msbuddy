@@ -42,7 +42,7 @@ from msbuddy import Buddy, BuddyParamSet
 # instantiate a BuddyParamSet object
 param = BuddyParamSet(ppm=True, ms1_tol=5, ms2_tol=10,
                       halogen=False, timeout_secs=300,
-                      parallel=True, n_cpu=8)
+                      parallel=True, n_cpu=12)
 
 # instantiate a Buddy object
 buddy = Buddy(param)
@@ -54,7 +54,7 @@ buddy.load_mgf('input_file.mgf')
 buddy.annotate_formula()
 
 # retrieve the annotation result summary
-result = buddy.get_summary()
+results = buddy.get_summary()
 ```
 
 MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
@@ -73,11 +73,11 @@ In the result summary, top 3 formula candidates will be reported for each query.
 The annotation details can be output with the `-details` option (or `-d` for short).
 Here is an example command for a mgf file:
 ```bash
-msbuddy -mgf <mgf file> -output <output folder> -details
+msbuddy -mgf <mgf_file> -output <output_folder> -details
 ```
 or for a csv file containing USI strings (one USI per line):
 ```bash
-msbuddy -csv <csv file> -output <output folder>
+msbuddy -csv <csv_file> -output <output_folder>
 ```
 Run the following command to see the full list of options:
 ```bash

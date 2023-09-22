@@ -5,10 +5,19 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
 
 .. code-block:: python
 
-   from msbuddy import Buddy
+   from msbuddy import Buddy, BuddyParamSet
 
-   # instantiate a Buddy object
-   buddy = Buddy()
+   # create a parameter set
+   buddy_param_set = BuddyParamSet(ppm=True,
+                                   ms1_tol=10,
+                                   ms2_tol=20,
+                                   halogen=True,
+                                   parallel=True,
+                                   n_cpu=12,
+                                   timeout_secs=600)
+
+   # instantiate a Buddy object with the parameter set
+   buddy = Buddy(buddy_param_set)
 
    # load data, here we use a mgf file as an example
    buddy.load_mgf('input_file.mgf')
@@ -17,20 +26,24 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
    buddy.annotate_formula()
 
    # retrieve the annotation result summary
-   result = buddy.get_summary()
+   results = buddy.get_summary()
 
-   # print the result
-   for key, value in result.items():
-       print(key, value)
+   # print the result, results is a list of dictionaries
+   for individual_result in results:
+       for key, value in individual_result.items():
+           print(key, value)
 
 
-Here, ``result`` is a Python dictionary with the following keys:
+Here, ``individual_result`` is a Python dictionary with the following keys:
 
 - ``identifier``: Identifier of the metabolic feature
-- ``mz``: Precursor ion m/z
+- ``mz``: Precursor m/z
 - ``rt``: Retention time in seconds
 - ``adduct``: Adduct type
 - ``formula_rank_1``: Molecular formula annotation ranked in the first place
 - ``estimated_fdr``: Estimated false discovery rate (FDR)
-
+- ``formula_rank_2``: Molecular formula annotation ranked in the second place
+- ``formula_rank_3``: Molecular formula annotation ranked in the third place
+- ``formula_rank_4``: Molecular formula annotation ranked in the fourth place
+- ``formula_rank_5``: Molecular formula annotation ranked in the fifth place
 

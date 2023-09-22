@@ -2,13 +2,12 @@ Result Export
 ----------------
 
 After molecular formula annotation, you can access the result summary as demonstrated in the `Quick Start <quickstart.html>`_ session.
-All the top 3 formulas will be included in the ``result``.
+All the top 5 formulas will be included in the ``results``.
 
 .. code-block:: python
 
    # retrieve the annotation result summary
-   result = buddy.get_summary()
-
+   results = buddy.get_summary()
 
 In case you want to access all the annotation results, you can iterate through the :class:`CandidateFormula` objects stored in each :class:`MetaFeature`.
 
@@ -24,3 +23,8 @@ In case you want to access all the annotation results, you can iterate through t
 
 
 Please see :class:`MetaFeature` and :class:`CandidateFormula` in `Python API <pyapi.html>`_ for more details.
+
+
+If you are using the command-line interface, the result summary will be automatically written in the output directory as a ``.tsv`` file.
+To access more detailed annotation results, you can use the ``-details`` option.
+
