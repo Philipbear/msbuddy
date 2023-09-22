@@ -232,7 +232,7 @@ class Buddy:
         :return: None. Update self.data
         """
 
-        # @timeout(self.param_set.timeout_secs)
+        @timeout(self.param_set.timeout_secs)
         def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
             """
             a wrapper function for data preprocessing and candidate formula space generation
