@@ -116,6 +116,10 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 else:
                     charge = abs(charge) if pos_mode else -abs(charge)
 
+                # if no peaks found, skip
+                if not mz_arr:
+                    continue
+
                 # create MetaFeature object if the same identifier does not exist
                 mf_idx = None
                 for idx, mf in enumerate(meta_feature_list):
@@ -139,7 +143,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                                      ms2=Spectrum(mz_arr, int_arr),
                                      identifier=identifier)
                     meta_feature_list.append(mf)
-                cnt += 1
+                    cnt += 1
                 continue
             else:
                 # if line contains '=', it is a key-value pair

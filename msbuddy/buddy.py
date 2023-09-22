@@ -602,13 +602,13 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 if __name__ == '__main__':
     import time
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=4, batch_size=1000,
+    buddy_param_set = BuddyParamSet(ms1_tol=10, ms2_tol=10, parallel=False, n_cpu=4, batch_size=300,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
                                     i_range=(0, 20))
 
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
-    buddy.load_mgf('/Users/shipei/Documents/projects/collab/martijn_iodine/Iodine_query_refined.mgf')
+    buddy.load_mgf('/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     #
@@ -625,7 +625,7 @@ if __name__ == '__main__':
 
     buddy.data = buddy.data[:10]
 
-    buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/test_data/buddy_result'), write_details=True)
+    buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'), write_details=True)
 
     # start_time = time.time()
     # buddy.annotate_formula()
