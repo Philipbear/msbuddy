@@ -78,13 +78,13 @@ Here is an example command for a mgf file from Orbitrap:
 ```bash
 msbuddy -mgf <mgf_file> -output <output_folder> -ms orbitrap -details
 ```
-For a single USI string (from QTOF, for example):
+for a single USI string (from QTOF, for example):
 ```bash
 msbuddy -usi <usi_string> -output <output_folder> -ms qtof
 ```
-or for a csv file containing multiple USI strings (one USI per line):
+or a csv file containing multiple USI strings (one USI per line, FT-ICR in this example):
 ```bash
-msbuddy -csv <csv_file> -output <output_folder> -ms qtof -details
+msbuddy -csv <csv_file> -output <output_folder> -ms fticr -details
 ```
 
 For mgf file or csv file, you can omit the `-output` option - results will be written in the same folder as the input file.
