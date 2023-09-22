@@ -286,6 +286,8 @@ def load_usi(usi_list: Union[str, List[str]],
         if item not in seen:
             seen[item] = True
             unique_indices.append(idx)
+        else:
+            logging.warning('Duplicate USI: ' + item + '. Only the first occurrence is used.')
     usi_list_unique = [usi_list[idx] for idx in unique_indices]
     adduct_list_unique = [adduct_list[idx] for idx in unique_indices]
 
