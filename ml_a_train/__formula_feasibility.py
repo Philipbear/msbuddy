@@ -476,7 +476,7 @@ def predict_prob(X_file):
 
 # test
 if __name__ == '__main__':
-    # data_process("../data_prepare/formulaDB_20230316.csv")
+    # data_process("../db_prepare/formulaDB_20230316.csv")
     # #
     # mean_h_c, std_h_c, mean_ls = data_analysis("formula_data.csv")
     # neg = gen_neg_sample("formula_data.csv", mean_h_c, std_h_c, mean_ls, write_file=True)
