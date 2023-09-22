@@ -102,7 +102,7 @@ def main():
     parser.add_argument('--ppm', type=bool, default=True, help='Whether to use ppm for mass tolerance.')
     parser.add_argument('--ms1_tol', type=float, default=5, help='MS1 tolerance.')
     parser.add_argument('--ms2_tol', type=float, default=10, help='MS2 tolerance.')
-    parser.add_argument('--halogen', type=bool, action='store_true', help='Whether to consider halogen atoms FClBrI.')
+    parser.add_argument('--halogen', type=bool, default=False, help='Whether to consider halogen atoms FClBrI.')
     parser.add_argument('--parallel', type=bool, default=False, help='Whether to use parallel computing.')
     parser.add_argument('--n_cpu', type=int, default=-1, help='Number of CPUs to use.')
     parser.add_argument('--timeout_secs', type=int, default=300, help='Timeout in seconds.')
