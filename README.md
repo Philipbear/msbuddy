@@ -11,9 +11,10 @@
 
 `msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
 * `msbuddy` is able to provide formula annotations for:
-  * metabolic features with or without MS1 isotopic pattern 
-  * metabolic features with or without MS/MS spectra
+  * queries with or without MS1 isotopic pattern 
+  * queries with or without MS/MS spectra
   * both positive and negative ionization modes
+The minimum requirement is a single _m/z_ value and its ionization polarity.
 * `msbuddy` enables:
   * candidate space shrinkage via bottom-up MS/MS interrogation
   * accurate formula annotation via machine learning
@@ -69,7 +70,7 @@ buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 ## Command-line API ([link](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
 
 **msbuddy** can also be used as a command-line tool.
-In the result summary, top 3 formula candidates will be reported for each query.
+In the result summary, top 5 formula candidates will be reported for each query.
 The annotation details can be output with the `-details` option (or `-d` for short).
 Here is an example command for a mgf file:
 ```bash
@@ -100,4 +101,4 @@ This work is licensed under the Apache License 2.0.
 ## Contact
 To contribute to `msbuddy`, please feel free to [file an issue](https://github.com/Philipbear/msbuddy/issues), or submit a pull request with improvements.
 
-You are also welcome to directly contact the developer & maintainer Shipei Xing (philipxsp@hotmail.com).
+You are always welcome to directly contact the msbuddy developer & maintainer Shipei Xing (s1xing@health.ucsd.edu).

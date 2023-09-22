@@ -14,9 +14,11 @@ msbuddy
 
 **msbuddy** is able to provide formula annotations for:
 
-  * metabolic features with or without MS1 isotopic pattern
-  * metabolic features with or without MS/MS spectra
+  * queries with or without MS1 isotopic pattern
+  * queries with or without MS/MS spectra
   * both positive and negative ionization modes
+
+The minimum requirement for a **msbuddy** query is a single m/z value and its ionization polarity.
 
 **msbuddy** enables candidate space shrinkage via bottom-up MS/MS interrogation, accurate formula annotation via machine learning and false discovery rate estimation.
 Please refer to `our paper <https://doi.org/10.1038/s41592-023-01850-x>`_ for more details.
@@ -46,7 +48,7 @@ When using **msbuddy**, please cite:
 Contact
 -------
 
-Shipei Xing: philipxsp@hotmail.com  /  s1xing@health.ucsd.edu
+Shipei Xing: s1xing@health.ucsd.edu  /  philipxsp@hotmail.com
 
 License
 -------
