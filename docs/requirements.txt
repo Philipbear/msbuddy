@@ -3,7 +3,7 @@ numpy>=1.24.0
 scipy>=1.10.0
 
 # Machine Learning libraries
-# scikit-learn>=1.3.0
+scikit-learn>=1.3.0
 joblib>=1.2.0
 
 # For downloading data

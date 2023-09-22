@@ -8,7 +8,8 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
    from msbuddy import Buddy, BuddyParamSet
 
    # create a parameter set
-   buddy_param_set = BuddyParamSet(ms_instr="orbitrap", #  supported: "qtof", "orbitrap" and "fticr"
+   buddy_param_set = BuddyParamSet(ms_instr="orbitrap", # supported: "qtof", "orbitrap" and "fticr"
+                                                        # highly recommended to fill in the instrument type
                                    halogen=True,
                                    parallel=True,
                                    n_cpu=12,
@@ -30,6 +31,11 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
    for individual_result in results:
        for key, value in individual_result.items():
            print(key, value)
+
+
+It is **highly recommended** to set up the ``ms_instr`` parameter in the :class:`msbuddy.BuddyParamSet` to obtain the best annotation performance.
+Please see `Parameter Settings <paramset.html>`_ session for more details.
+
 
 
 Within the result summary, ``results`` is a list of Python dictionaries. ``individual_result`` is a dictionary containing the following keys:
