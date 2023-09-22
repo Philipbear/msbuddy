@@ -24,16 +24,16 @@ The minimum requirement is a single _m/z_ value and its ionization polarity.
 
 **The entire documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
 
-## Python API
-
-### Installation
+## Installation ([link](https://msbuddy.readthedocs.io/en/latest/install.html))
 `msbuddy` is available on PyPI, you can install it via `pip`:
-
 ```commandline
 pip install msbuddy
 ```
 
-### Quick Start ([link](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
+[GitHub release](https://github.com/Philipbear/msbuddy/releases) is also available for installation.
+
+
+## Python API ([link](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 
 As a quick start, we here load a mgf file and annotate the molecular formula for each MS/MS spectrum.
 All the parameter settings are specified in the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.BuddyParamSet) class.
@@ -63,7 +63,7 @@ results = buddy.get_summary()
 
 MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
 ```python
-# you can also load multiple USIs at once
+# you can load multiple USIs at once
 buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
@@ -108,4 +108,4 @@ This work is licensed under the Apache License 2.0.
 ## Contact
 To contribute to `msbuddy`, please feel free to [file an issue](https://github.com/Philipbear/msbuddy/issues), or submit a pull request with improvements.
 
-You are always welcome to directly contact the msbuddy developer & maintainer Shipei Xing (s1xing@health.ucsd.edu).
+You are welcome to directly contact the msbuddy developer & maintainer Shipei Xing (s1xing@health.ucsd.edu).
