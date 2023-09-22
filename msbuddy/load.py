@@ -117,7 +117,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     charge = abs(charge) if pos_mode else -abs(charge)
 
                 # if no peaks found, skip
-                if not mz_arr:
+                if mz_arr.size == 0:
                     continue
 
                 # create MetaFeature object if the same identifier does not exist
