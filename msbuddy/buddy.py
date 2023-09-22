@@ -341,7 +341,7 @@ class Buddy:
 
         # summary results DataFrame
         result_summary_df = pd.DataFrame(columns=['identifier', 'mz', 'rt', 'adduct', 'formula_rank_1', 'estimated_fdr',
-                                                  'formula_rank_2', 'formula_rank_3'])
+                                                  'formula_rank_2', 'formula_rank_3', 'formula_rank_4', 'formula_rank_5'])
         # loop over batches
         for n in range(n_batch):
             start_idx, end_idx = self.__annotate_formula_main_batch(n, n_batch)
@@ -432,7 +432,9 @@ class Buddy:
                 'formula_rank_1': individual_result['formula_rank_1'],
                 'estimated_fdr': round(individual_result['estimated_fdr'], 4),
                 'formula_rank_2': individual_result['formula_rank_2'],
-                'formula_rank_3': individual_result['formula_rank_3']
+                'formula_rank_3': individual_result['formula_rank_3'],
+                'formula_rank_4': individual_result['formula_rank_4'],
+                'formula_rank_5': individual_result['formula_rank_5']
             }, ignore_index=True)
 
         # write out detailed results

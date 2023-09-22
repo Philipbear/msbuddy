@@ -773,7 +773,9 @@ class MetaFeature:
         :return: dict
         """
         result = {'identifier': self.identifier, 'mz': self.mz, 'rt': self.rt, 'adduct': self.adduct.string,
-                  'formula_rank_1': None, 'estimated_fdr': None, 'formula_rank_2': None, 'formula_rank_3': None}
+                  'formula_rank_1': None, 'estimated_fdr': None, 'formula_rank_2': None, 'formula_rank_3': None,
+                  'formula_rank_4': None, 'formula_rank_5': None}
+
         if self.candidate_formula_list:
             result['formula_rank_1'] = form_arr_to_str(self.candidate_formula_list[0].formula.array)
             result['estimated_fdr'] = self.candidate_formula_list[0].estimated_fdr
@@ -781,4 +783,8 @@ class MetaFeature:
                 result['formula_rank_2'] = form_arr_to_str(self.candidate_formula_list[1].formula.array)
             if len(self.candidate_formula_list) > 2:
                 result['formula_rank_3'] = form_arr_to_str(self.candidate_formula_list[2].formula.array)
+            if len(self.candidate_formula_list) > 3:
+                result['formula_rank_4'] = form_arr_to_str(self.candidate_formula_list[3].formula.array)
+            if len(self.candidate_formula_list) > 4:
+                result['formula_rank_5'] = form_arr_to_str(self.candidate_formula_list[4].formula.array)
         return result
