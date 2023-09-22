@@ -44,6 +44,9 @@ Results will be written in the same folder as the input file.
 For USI string, the output folder is required.
 
 
+**In all cases, ``-ms`` option is strongly recommended. (qtof, orbitrap or fticr)**
+
+
 Please check out the ``--help`` (or ``-h``) option to see all the available options:
 
 .. code-block:: bash
