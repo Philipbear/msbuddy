@@ -39,6 +39,10 @@ Halogen atoms (FClBrI) are also considered (``-hal``).
 
         msbuddy -mgf <mgf_file> -output <output_folder> -ms orbitrap -p -n_cpu 12 -d -hal
 
+For mgf file or csv file, if you want to use the default output folder (``./msbuddy_output``), you can omit the ``-output`` option.
+Results will be written in the same folder as the input file.
+For USI string, the output folder is required.
+
 
 Please check out the ``--help`` (or ``-h``) option to see all the available options:
 

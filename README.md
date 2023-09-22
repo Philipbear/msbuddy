@@ -77,16 +77,25 @@ Here is an example command for a mgf file from Orbitrap:
 ```bash
 msbuddy -mgf <mgf_file> -output <output_folder> -ms orbitrap -details
 ```
-or for a csv file containing USI strings (one USI per line):
+For a single USI string (from QTOF, for example):
+```bash
+msbuddy -usi <usi_string> -output <output_folder> -ms qtof
+```
+or for a csv file containing multiple USI strings (one USI per line):
 ```bash
 msbuddy -csv <csv_file> -output <output_folder> -ms qtof -details
 ```
 
+For mgf file or csv file, if you want to use the default output folder (`./msbuddy_output`), you can omit the `-output` option.
+Results will be written in the same folder as the input file.
+
+
 Here is an example of processing a mgf file from Orbitrap (`-ms orbitrap`) in parallel (`-p`) using 12 cores (`-n_cpu`). Detailed results are written (`-d`).
 Halogen atoms (FClBrI) are also considered (`-hal`).
 ```bash
-msbuddy -mgf <mgf_file> -output <output_folder> -ms orbitrap -p -n_cpu 12 -d -hal
+msbuddy -mgf <mgf_file> -ms orbitrap -p -n_cpu 12 -d -hal
 ```
+
 Run the following command to see the full list of options:
 ```bash
 msbuddy --help

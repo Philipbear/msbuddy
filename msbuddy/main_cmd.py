@@ -106,8 +106,13 @@ def main():
         use_all_frag=args.use_all_frag
     )
 
-    if not args.output:
-        raise ValueError('Please specify the output file path.')
+    if args.output:
+        output_path = pathlib.Path(args.output)
+    elif args.mgf or args.csv:
+        # use the parent directory of the input file as the output directory
+        output_path = pathlib.Path(args.mgf if args.mgf else args.csv).parent / 'msbuddy_output'
+    else:
+        raise ValueError('Please specify the output path.')
 
     buddy = Buddy(buddy_param_set)
 
@@ -122,7 +127,6 @@ def main():
     else:
         raise ValueError('Please specify the input data source.')
 
-    output_path = pathlib.Path(args.output)
     buddy.annotate_formula_cmd(output_path, write_details=args.details)
 
     print('Job finished.')
