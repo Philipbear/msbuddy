@@ -1,3 +1,19 @@
+# ==============================================================================
+# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+#
+# Licensed under the Apache License 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
+# ==============================================================================
+"""
+File: ml.py
+Author: Shipei Xing
+Email: s1xing@health.ucsd.edu
+GitHub: Philipbear
+Description: machine learning functions: model A, model B; feature generation, z-normalization, prediction, etc.
+             False discovery rate (FDR) estimation
+"""
+
 import sys
 import warnings
 from typing import Union

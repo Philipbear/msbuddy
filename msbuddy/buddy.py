@@ -1,3 +1,18 @@
+# ==============================================================================
+# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+#
+# Licensed under the Apache License 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
+# ==============================================================================
+"""
+File: buddy.py
+Author: Shipei Xing
+Email: s1xing@health.ucsd.edu
+GitHub: Philipbear
+Description: main class for msbuddy; Buddy and BuddyParamSet
+"""
+
 import logging
 import pathlib
 import sys
@@ -10,6 +25,7 @@ from timeout_decorator import timeout
 from tqdm import tqdm
 
 from msbuddy.base import MetaFeature
+from msbuddy.export import write_batch_results_cmd
 from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single, calc_fdr
@@ -174,7 +190,7 @@ class BuddyParamSet:
 class Buddy:
     """
     Buddy main class
-    Buddy data is List[MetaFeature]; MetaFeature is a class defined in base_class/MetaFeature.py
+    Buddy data is List[MetaFeature]; MetaFeature is a class defined in base/MetaFeature.py
     """
     # singleton pattern
     _instance = None
@@ -186,8 +202,10 @@ class Buddy:
 
     def __init__(self, param_set: Union[BuddyParamSet, None] = None):
 
-        logging.info("msbuddy: molecular formula annotation in MS-based metabolomics. maintained by Shipei Xing.")
-        logging.info("Initializing...")
+        tqdm.write("msbuddy: molecular formula annotation in MS-based small molecule analysis. "
+                   "Developed and maintained by Shipei Xing.")
+        tqdm.write("DB initializing...")
+
         if param_set is None:
             self.param_set = BuddyParamSet()  # default parameter set
         else:
@@ -215,7 +233,7 @@ class Buddy:
         add customized data
         :param data: metabolic feature list
         """
-        self.data = data
+        self.data.append(data)
 
     def clear_data(self):
         """
@@ -248,7 +266,7 @@ class Buddy:
 
         # data preprocessing and candidate space generation
         if self.param_set.parallel:
-            with Pool(processes=int(self.param_set.n_cpu), initializer=init_pool,
+            with Pool(processes=int(self.param_set.n_cpu), initializer=_init_pool,
                       initargs=(shared_data_dict,)) as pool:
                 async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
                                                   (mf, self.param_set)) for mf in batch_data]
@@ -320,13 +338,13 @@ class Buddy:
         -> subformula annotation -> ml model B -> FDR calculation
         :return: None. Update self.data
         """
-        n_batch = self.__annotate_formula_prepare()
+        n_batch = self._annotate_formula_prepare()
 
         # loop over batches
         for n in range(n_batch):
-            self.__annotate_formula_main_batch(n, n_batch)
+            self._annotate_formula_main_batch(n, n_batch)
 
-        logging.info("Job finished.")
+        tqdm.write("Job finished.")
 
     def annotate_formula_cmd(self, output_path: pathlib.Path, write_details: bool = False):
         """
@@ -336,26 +354,26 @@ class Buddy:
         :param write_details: whether to write out detailed results
         :return: None
         """
-        n_batch = self.__annotate_formula_prepare()
+        n_batch = self._annotate_formula_prepare()
         output_path.mkdir(parents=True, exist_ok=True)
 
         # summary results DataFrame
-        result_summary_df = pd.DataFrame(columns=['identifier', 'mz', 'rt', 'adduct', 'formula_rank_1', 'estimated_fdr',
-                                                  'formula_rank_2', 'formula_rank_3', 'formula_rank_4', 'formula_rank_5'])
+        result_summary_df = pd.DataFrame(columns=['identifier', 'mz', 'rt', 'adduct', 'formula_rank_1',
+                                                  'estimated_fdr', 'formula_rank_2', 'formula_rank_3',
+                                                  'formula_rank_4', 'formula_rank_5'])
         # loop over batches
         for n in range(n_batch):
-            start_idx, end_idx = self.__annotate_formula_main_batch(n, n_batch)
-            print("Writing batch results...")
-            result_summary_df = self.__write_batch_results(output_path, write_details, start_idx, end_idx,
-                                                           result_summary_df)
+            start_idx, end_idx = self._annotate_formula_main_batch(n, n_batch)
+            tqdm.write("Writing batch results...")
+            result_summary_df = write_batch_results_cmd(self.data, output_path, write_details,
+                                                        start_idx, end_idx, result_summary_df)
             # clear computed data to save memory, convert to None of the same size
             self.data[start_idx:end_idx] = [None] * (end_idx - start_idx)
 
-        print("Writing summary results to tsv file...")
+        tqdm.write("Writing summary results to tsv file...")
         result_summary_df.to_csv(output_path / 'buddy_result_summary.tsv', sep="\t", index=False)
-        logging.info("Job finished.")
 
-    def __annotate_formula_prepare(self) -> int:
+    def _annotate_formula_prepare(self) -> int:
         """
         prepare for formula annotation
         :return: batch number
@@ -365,19 +383,19 @@ class Buddy:
 
         if not self.data:
             raise ValueError("No data loaded.")
-        logging.info(f"Total {len(self.data)} spectra loaded.")
+        tqdm.write(f"{len(self.data)} spectra loaded.")
 
         if self.param_set.parallel:
             # parallel processing
-            logging.info(f"Parallel processing with {self.param_set.n_cpu} processes.")
+            tqdm.write(f"Parallel processing with {self.param_set.n_cpu} processes.")
 
         # batches
         n_batch = int(np.ceil(len(self.data) / self.param_set.batch_size))
-        logging.info(f"Total {n_batch} batches.")
+        tqdm.write(f"{n_batch} batches in total.")
 
         return n_batch
 
-    def __annotate_formula_main_batch(self, n: int, n_batch: int) -> Tuple[int, int]:
+    def _annotate_formula_main_batch(self, n: int, n_batch: int) -> Tuple[int, int]:
         """
         annotate formula for batch data N
         :param n: batch number
@@ -407,95 +425,6 @@ class Buddy:
         calc_fdr(self.data, start_idx, end_idx)
 
         return start_idx, end_idx
-
-    def __write_batch_results(self, output_path: pathlib.Path, write_details: bool,
-                              start_idx: int, end_idx: int, result_df: pd.DataFrame) -> pd.DataFrame:
-        """
-        write out batch results
-        :param output_path: output path
-        :param write_details: whether to write out detailed results
-        :param start_idx: start index of batch
-        :param end_idx: end index of batch
-        :param result_df: result summary DataFrame
-        :return: updated summary results DataFrame
-        """
-        batch_data = self.data[start_idx:end_idx]
-
-        # update summary results DataFrame
-        for mf in batch_data:
-            individual_result = mf.summarize_result()
-            result_df = result_df.append({
-                'identifier': mf.identifier,
-                'mz': round(mf.mz, 4),
-                'rt': round(mf.rt, 2) if mf.rt else 'None',
-                'adduct': mf.adduct.string,
-                'formula_rank_1': individual_result['formula_rank_1'],
-                'estimated_fdr': round(individual_result['estimated_fdr'], 4),
-                'formula_rank_2': individual_result['formula_rank_2'],
-                'formula_rank_3': individual_result['formula_rank_3'],
-                'formula_rank_4': individual_result['formula_rank_4'],
-                'formula_rank_5': individual_result['formula_rank_5']
-            }, ignore_index=True)
-
-        # write out detailed results
-        if write_details:
-            for mf in batch_data:
-                # make a directory for each mf
-                # replace '/' with '_' in the identifier, remove special characters
-                _id = str(mf.identifier).replace('/', '_').replace(':', '_').replace(' ', '_').strip()
-                folder_name = _id + '_mz' + str(round(mf.mz, 4)) + '_rt'
-                folder_name += str(round(mf.rt, 2)) if mf.rt else 'None'
-                mf_path = pathlib.Path(output_path / folder_name)
-                mf_path.mkdir(parents=True, exist_ok=True)
-
-                # write the tsv file containing all the candidate formulas
-                all_candidates_df = pd.DataFrame(columns=['rank', 'formula', 'formula_feasibility',
-                                                          'ms1_isotope_similarity', 'explained_ms2_peak',
-                                                          'total_valid_ms2_peak', 'estimated_prob',
-                                                          'normalized_estimated_prob', 'estimated_fdr'])
-                for m, cf in enumerate(mf.candidate_formula_list):
-                    # string for explained ms2 peak
-                    if mf.ms2_processed:
-                        if cf.ms2_raw_explanation:
-                            exp_ms2_peak = len(cf.ms2_raw_explanation)
-                        else:
-                            exp_ms2_peak = '0'
-                    else:
-                        exp_ms2_peak = 'None'
-                    all_candidates_df = all_candidates_df.append({
-                        'rank': m,
-                        'formula': cf.formula.__str__(),
-                        'formula_feasibility': round(cf.ml_a_prob, 4),
-                        'ms1_isotope_similarity': round(cf.ms1_isotope_similarity, 4) if cf.ms1_isotope_similarity else 'None',
-                        'explained_ms2_peak': exp_ms2_peak,
-                        'total_valid_ms2_peak': len(mf.ms2_processed) if mf.ms2_processed else 'None',
-                        'estimated_prob': round(cf.estimated_prob, 4),
-                        'normalized_estimated_prob': round(cf.normed_estimated_prob, 4),
-                        'estimated_fdr': round(cf.estimated_fdr, 4)
-                    }, ignore_index=True)
-                all_candidates_df.to_csv(mf_path / 'formula_results.tsv', sep="\t", index=False)
-
-                # write the tsv file containing preprocessed spectrum
-                if mf.ms1_processed:
-                    ms1_df = pd.DataFrame(columns=['raw_idx', 'mz', 'intensity'])
-                    for m in range(len(mf.ms1_processed)):
-                        ms1_df = ms1_df.append({
-                            'raw_idx': mf.ms1_processed.idx_array[m],
-                            'mz': round(mf.ms1_processed.mz_array[m], 4),
-                            'intensity': round(mf.ms1_processed.int_array[m], 4)
-                        }, ignore_index=True)
-                    ms1_df.to_csv(mf_path / 'ms1_preprocessed.tsv', sep="\t", index=False)
-                if mf.ms2_processed:
-                    ms2_df = pd.DataFrame(columns=['raw_idx', 'mz', 'intensity'])
-                    for m in range(len(mf.ms2_processed)):
-                        ms2_df = ms2_df.append({
-                            'raw_idx': mf.ms2_processed.idx_array[m],
-                            'mz': round(mf.ms2_processed.mz_array[m], 4),
-                            'intensity': round(mf.ms2_processed.int_array[m], 4)
-                        }, ignore_index=True)
-                    ms2_df.to_csv(mf_path / 'ms2_preprocessed.tsv', sep="\t", index=False)
-
-        return result_df
 
     def get_summary(self) -> List[dict]:
         """
@@ -544,7 +473,7 @@ def _get_batch(data: List[MetaFeature], batch_size: int, n: int):
     return start_idx, end_idx
 
 
-def init_pool(the_dict):
+def _init_pool(the_dict):
     """
     initialize pool for parallel processing
     :param the_dict: global dictionary containing shared data
@@ -604,6 +533,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict)
 # test
 if __name__ == '__main__':
     import time
+
     #########################################
     buddy_param_set = BuddyParamSet(ms1_tol=10, ms2_tol=10, parallel=False, n_cpu=4, batch_size=1000,
                                     timeout_secs=300, halogen=True, max_frag_reserved=50,
@@ -611,7 +541,8 @@ if __name__ == '__main__':
 
     buddy = Buddy(buddy_param_set)
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
-    buddy.load_mgf('/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
+    buddy.load_mgf(
+        '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     #
@@ -626,9 +557,10 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    buddy.data = buddy.data[183:200]
+    # buddy.data = buddy.data[183:200]
 
-    buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'), write_details=True)
+    buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'),
+                               write_details=True)
 
     # start_time = time.time()
     # buddy.annotate_formula()

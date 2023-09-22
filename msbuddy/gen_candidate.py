@@ -1,3 +1,18 @@
+# ==============================================================================
+# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+#
+# Licensed under the Apache License 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
+# ==============================================================================
+"""
+File: gen_candidate.py
+Author: Shipei Xing
+Email: s1xing@health.ucsd.edu
+GitHub: Philipbear
+Description: generate candidate formula space for a metabolic feature; mass search and bottom-up MS/MS interrogation
+"""
+
 from typing import Union, List, Tuple
 
 import numpy as np

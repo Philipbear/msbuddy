@@ -1,7 +1,23 @@
+# ==============================================================================
+# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+#
+# Licensed under the Apache License 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
+# ==============================================================================
+"""
+File: api.py
+Author: Shipei Xing
+Email: s1xing@health.ucsd.edu
+GitHub: Philipbear
+Description: main API functions for msbuddy
+"""
+
 from typing import List
-from numba import njit
+
 import numpy as np
 from chemparse import parse_formula
+from numba import njit
 
 # define alphabet
 alphabet = ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
