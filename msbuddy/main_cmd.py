@@ -13,7 +13,8 @@ def buddy_cmd(args) -> Buddy:
     # create a BuddyParamSet object
     buddy_param_set = BuddyParamSet(
         ppm=args.ppm, ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
-        parallel=args.parallel, n_cpu=args.n_cpu, timeout_secs=args.timeout_secs, batch_size=args.batch_size,
+        parallel=args.parallel, n_cpu=args.n_cpu,
+        timeout_secs=args.timeout_secs, batch_size=args.batch_size, top_n_candidate=args.top_n_candidate,
         c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
         o_range=(args.o_min, args.o_max), p_range=(args.p_min, args.p_max), s_range=(args.s_min, args.s_max),
         f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
@@ -105,7 +106,8 @@ def main():
     parser.add_argument('--parallel', type=bool, action='store_true', help='Whether to use parallel computing.')
     parser.add_argument('--n_cpu', type=int, default=-1, help='Number of CPUs to use.')
     parser.add_argument('--timeout_secs', type=int, default=300, help='Timeout in seconds.')
-    parser.add_argument('--batch_size', type=int, default=500, help='Batch size.')
+    parser.add_argument('--batch_size', type=int, default=1000, help='Batch size.')
+    parser.add_argument('--top_n_candidate', type=int, default=500, help='Max top N candidates to keep.')
     parser.add_argument('--c_min', type=int, default=0, help='Minimum number of C atoms.')
     parser.add_argument('--c_max', type=int, default=80, help='Maximum number of C atoms.')
     parser.add_argument('--h_min', type=int, default=0, help='Minimum number of H atoms.')
@@ -151,15 +153,8 @@ def main():
     # run msbuddy
     buddy = buddy_cmd(args)
 
-    logging.info('Writing summary results...')
-    # write summary results
     output_path = pathlib.Path(args.out)
-    write_summary_results(buddy, output_path)
-
-    logging.info('Writing detailed results...')
-    # write detailed results
-    if args.details:
-        write_detailed_results(buddy, output_path)
+    buddy.annotate_formula_cmd(output_path, write_details=args.details)
 
     logging.info('Job finished.')
 

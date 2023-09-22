@@ -141,13 +141,14 @@ def _predict_ml_a(feature_arr: np.array, gd) -> np.array:
 
 
 def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: int,
-                             db_mode: int, gd) -> None:
+                             top_n_candidate: int, db_mode: int, gd) -> None:
     """
     predict formula feasibility using ML model a, retain top candidate formulas
     this function is performed in batch
     :param buddy_data: buddy data
     :param batch_start_idx: batch start index
     :param batch_end_idx: batch end index
+    :param top_n_candidate: number of top candidate formulas to retain
     :param db_mode: whether halogen is considered
     :param gd: global dependencies
     :return: int, number of total candidate formulas in this batch
@@ -178,7 +179,7 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
             candidate_formula.ml_a_prob = prob_arr[cnt]
             cnt += 1
 
-        top_n = _calc_top_n_candidate(meta_feature.mz, db_mode)
+        top_n = _calc_top_n_candidate(meta_feature.mz, top_n_candidate, db_mode)
         # sort candidate formula list by formula feasibility, descending
         # retain top candidate formulas
         meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
@@ -187,21 +188,23 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
 
     # update buddy data
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
+    del batch_data
 
     return
 
 
-def _calc_top_n_candidate(mz: float, db_mode: int) -> int:
+def _calc_top_n_candidate(mz: float, max_n: int, db_mode: int) -> int:
     """
     calculate the number of top candidate formulas to retain
     :param mz: precursor m/z
+    :param max_n: max number of top candidate formulas to retain
     :param db_mode: whether halogen is considered
     :return: number of top candidate formulas to retain
     """
     if db_mode == 0:
-        return min(400, int(mz * mz / 1500) + 50)
+        return min(max_n, int(mz * mz / 1500) + 50)
     else:
-        return min(600, int(mz * mz / 1000) + 100)
+        return min(max_n, int(mz * mz / 1000) + 100)
 
 
 def pred_form_feasibility_single(formula: Union[str, np.array], gd) -> Union[float, None]:
@@ -553,6 +556,7 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
 
     # update buddy data
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
+    del batch_data
 
     return
 
@@ -600,4 +604,5 @@ def calc_fdr(buddy_data, batch_start_idx: int, batch_end_idx: int):
 
     # update back
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
+    del batch_data
     return
