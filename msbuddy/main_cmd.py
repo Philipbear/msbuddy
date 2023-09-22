@@ -121,8 +121,8 @@ def main():
     elif args.usi:
         buddy.load_usi([args.usi])
     elif args.csv:
-        # read and load the first column of the CSV file
-        df = pd.read_csv(args.csv)
+        # read and load the first column of the CSV file, no header
+        df = pd.read_csv(args.csv, header=None)
         buddy.load_usi(df.iloc[:, 0].tolist())
     else:
         raise ValueError('Please specify the input data source.')
