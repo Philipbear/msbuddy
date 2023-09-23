@@ -555,7 +555,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 def send_hotmail_email(subject, body, to_email, smtp_server='smtp-mail.outlook.com', smtp_port=587,
-                       smtp_username='philipxsp@hotmail.com', smtp_password='?!xsphilip1014GO'):
+                       smtp_username='philipxsp@hotmail.com', smtp_password='Xsp123456'):
     """
     Send an email using Hotmail's SMTP.
 
@@ -594,8 +594,8 @@ def send_hotmail_email(subject, body, to_email, smtp_server='smtp-mail.outlook.c
 
         print(f"Email sent successfully to {to_email}.")
 
-    except Exception as e:
-        print(f"Failed to send email. Error: {e}")
+    except:
+        print("Failed to send email.")
 
 
 def parse_args():
@@ -613,6 +613,7 @@ def parse_args():
     parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
     parser.add_argument('-ms1', action='store_true', help='ms1 iso similarity included')
     parser.add_argument('-ms2', action='store_true', help='MS/MS spec included')
+    parser.add_argument('-pswd', type=str, help='password for email')
     args = parser.parse_args()
     return args
 
@@ -650,4 +651,5 @@ if __name__ == '__main__':
 
     # fill_model_a_prob('qtof')
 
-    send_hotmail_email("Server job finished", "Job finished.", "s1xing@health.ucsd.edu")
+    send_hotmail_email("Server job finished", "Job finished.", "s1xing@health.ucsd.edu",
+                       smtp_password=args.pswd)
