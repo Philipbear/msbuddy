@@ -71,23 +71,36 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 if mf.ms2_processed:
                     if cf.ms2_raw_explanation:
                         exp_ms2_peak = len(cf.ms2_raw_explanation)
+                        ms2_explan_idx = ','.join([str(x) for x in cf.ms2_raw_explanation.idx_array])
+                        ms2_explan_str = ','.join([str(x.__str__) for x in cf.ms2_raw_explanation.explanation_array])
                     else:
                         exp_ms2_peak = '0'
+                        ms2_explan_idx = ''
+                        ms2_explan_str = ''
                 else:
                     exp_ms2_peak = 'None'
+                    ms2_explan_idx = 'None'
+                    ms2_explan_str = 'None'
+                # theoretical mass
+                theo_mass = (cf.formula.mass * mf.adduct.m + mf.adduct.net_formula.mass -
+                             mf.adduct.charge * 0.0005486) / abs(mf.adduct.charge)
+                mz_error_ppm = (mf.mz - theo_mass) / theo_mass * 1e6
                 all_candidates_df = all_candidates_df.append({
                     'rank': m,
                     'formula': cf.formula.__str__(),
                     'formula_feasibility': round(cf.ml_a_prob, 4),
                     'ms1_isotope_similarity': round(cf.ms1_isotope_similarity,
                                                     4) if cf.ms1_isotope_similarity is not None else 'None',
+                    'mz_error_ppm': round(mz_error_ppm, 4),
                     'explained_ms2_peak': exp_ms2_peak,
                     'total_valid_ms2_peak': len(mf.ms2_processed) if mf.ms2_processed else 'None',
                     'estimated_prob': round(cf.estimated_prob,
                                             4) if cf.estimated_prob is not None else 'None',
                     'normalized_estimated_prob': round(cf.normed_estimated_prob,
                                                        4) if cf.normed_estimated_prob is not None else 'None',
-                    'estimated_fdr': round(cf.estimated_fdr, 4) if cf.estimated_fdr is not None else 'None'
+                    'estimated_fdr': round(cf.estimated_fdr, 4) if cf.estimated_fdr is not None else 'None',
+                    'ms2_explanation_idx': ms2_explan_idx,
+                    'ms2_explanation': ms2_explan_str
                 }, ignore_index=True)
             all_candidates_df.to_csv(mf_path / 'formula_results.tsv', sep="\t", index=False)
 
