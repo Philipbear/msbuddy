@@ -51,3 +51,13 @@ Within the result summary, ``results`` is a list of Python dictionaries. ``indiv
 - ``formula_rank_4``: Molecular formula annotation ranked in the fourth place
 - ``formula_rank_5``: Molecular formula annotation ranked in the fifth place
 
+
+MS/MS spectra can also be loaded via their USIs:
+
+.. code-block:: python
+
+   # you can load multiple USIs at once
+   msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
+                        'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
+
+

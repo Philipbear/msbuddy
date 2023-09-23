@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.neural_network import MLPClassifier
 
 from msbuddy.base import read_formula, MetaFeature, Spectrum, Formula, CandidateFormula
-from msbuddy.msbuddy import Buddy, BuddyParamSet, _gen_subformula
+from msbuddy.msbuddy import Msbuddy, MsbuddyConfig, _gen_subformula
 from msbuddy.load import init_db
 from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from msbuddy.gen_candidate import _calc_ms1_iso_sim
@@ -270,9 +270,9 @@ def assign_subform_gen_training_data(instru):
         ms1_tol = 2
         ms2_tol = 5
 
-    param_set = BuddyParamSet(ms1_tol=ms1_tol, ms2_tol=ms2_tol, halogen=True)
-    buddy = Buddy(param_set)
-    shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
+    param_set = MsbuddyConfig(ms1_tol=ms1_tol, ms2_tol=ms2_tol, halogen=True)
+    buddy = Msbuddy(param_set)
+    shared_data_dict = init_db(buddy.config.db_mode)  # database initialization
 
     data_name = 'gnps_' + instru + '_mf_ls_cand_2.joblib'
     data = joblib.load(data_name)
@@ -308,7 +308,7 @@ def assign_subform_gen_training_data(instru):
         meta_feature.candidate_formula_list = cand_form_ls
 
         # assign subformula annotation
-        mf = _gen_subformula(meta_feature, buddy.param_set)
+        mf = _gen_subformula(meta_feature, buddy.config)
 
         # generate ML features for each candidate formula
         for n, cf in enumerate(mf.candidate_formula_list):
@@ -361,7 +361,7 @@ def fill_model_a_prob(instru):
     X_arr = joblib.load(X_name)
     y_arr = joblib.load(y_name)
 
-    buddy = Buddy()
+    buddy = Msbuddy()
 
     data_name = 'gnps_' + instru + '_mf_ls_cand_2.joblib'
     data = joblib.load(data_name)
