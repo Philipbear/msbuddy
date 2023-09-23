@@ -26,7 +26,7 @@ from tqdm import tqdm
 
 from msbuddy.base import MetaFeature
 from msbuddy.export import write_batch_results_cmd
-from msbuddy.gen_candidate import gen_candidate_formula, assign_subformula_cand_form
+from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single, calc_fdr
 from msbuddy.query import query_neutral_mass

@@ -6,7 +6,7 @@
 # You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
 # ==============================================================================
 """
-File: gen_candidate.py
+File: cand.py
 Author: Shipei Xing
 Email: s1xing@health.ucsd.edu
 GitHub: Philipbear
