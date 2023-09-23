@@ -35,7 +35,7 @@ pip install msbuddy
 ## Python API ([link](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 
 As a quick start, we here load a mgf file and annotate the molecular formula for each MS/MS spectrum.
-All the parameter settings are specified in the [`BuddyParamSet`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.BuddyParamSet) class.
+All the configurations are specified in the [`MsbuddyConfig`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.MsbuddyConfig) class.
 **Parallel computing** is also supported.
 
 ```python

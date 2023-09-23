@@ -27,6 +27,7 @@ We would recommend considering parallel processing for large datasets (e.g. >100
         h_range=(0, 150), # range of hydrogen numbers to consider
         ... # other parameters
         ms2_denoise=True, # denoise MS2 spectra
+        ...)
 
     # create a Msbuddy object with the specified configuration
     msb_engine = Msbuddy(msb_config)
@@ -55,4 +56,4 @@ Note that the ``halogen`` parameter is set to ``False`` by default. If you are w
 
 
 
-For more information on the parameters, see :class:`msbuddy.BuddyParamSet`.
+For more information on the parameters, see :class:`msbuddy.MsbuddyConfig`.

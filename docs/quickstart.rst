@@ -34,7 +34,7 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
 
 
 It is **highly recommended** to set up the ``ms_instr`` parameter in the :class:`msbuddy.MsbuddyConfig` to obtain the best annotation performance.
-Please see `Parameter Settings <paramset.html>`_ session for more details.
+Please see `Configuration <config.html>`_ session for more details.
 
 
 
