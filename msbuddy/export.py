@@ -39,11 +39,11 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
         result_df = result_df.append({
             'identifier': mf.identifier,
             'mz': round(mf.mz, 4),
-            'rt': round(mf.rt, 2) if mf.rt else 'None',
+            'rt': round(mf.rt, 2) if mf.rt else 'NA',
             'adduct': mf.adduct.string,
             'formula_rank_1': individual_result['formula_rank_1'],
             'estimated_fdr': round(individual_result['estimated_fdr'],
-                                   4) if individual_result['estimated_fdr'] is not None else 'None',
+                                   4) if individual_result['estimated_fdr'] is not None else 'NA',
             'formula_rank_2': individual_result['formula_rank_2'],
             'formula_rank_3': individual_result['formula_rank_3'],
             'formula_rank_4': individual_result['formula_rank_4'],
@@ -57,7 +57,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             # replace '/' with '_' in the identifier, remove special characters
             _id = str(mf.identifier).replace('/', '_').replace(':', '_').replace(' ', '_').strip()
             folder_name = _id + '_mz' + str(round(mf.mz, 4)) + '_rt'
-            folder_name += str(round(mf.rt, 2)) if mf.rt else 'None'
+            folder_name += str(round(mf.rt, 2)) if mf.rt else 'NA'
             mf_path = pathlib.Path(output_path / folder_name)
             mf_path.mkdir(parents=True, exist_ok=True)
 
@@ -72,15 +72,15 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                     if cf.ms2_raw_explanation:
                         exp_ms2_peak = len(cf.ms2_raw_explanation)
                         ms2_explan_idx = ','.join([str(x) for x in cf.ms2_raw_explanation.idx_array])
-                        ms2_explan_str = ','.join([str(x.__str__) for x in cf.ms2_raw_explanation.explanation_array])
+                        ms2_explan_str = ','.join([x.__str__() for x in cf.ms2_raw_explanation.explanation_array])
                     else:
                         exp_ms2_peak = '0'
-                        ms2_explan_idx = ''
-                        ms2_explan_str = ''
+                        ms2_explan_idx = 'None'
+                        ms2_explan_str = 'None'
                 else:
-                    exp_ms2_peak = 'None'
-                    ms2_explan_idx = 'None'
-                    ms2_explan_str = 'None'
+                    exp_ms2_peak = 'NA'
+                    ms2_explan_idx = 'NA'
+                    ms2_explan_str = 'NA'
                 # theoretical mass
                 theo_mass = (cf.formula.mass * mf.adduct.m + mf.adduct.net_formula.mass -
                              mf.adduct.charge * 0.0005486) / abs(mf.adduct.charge)
@@ -90,15 +90,15 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                     'formula': cf.formula.__str__(),
                     'formula_feasibility': round(cf.ml_a_prob, 4),
                     'ms1_isotope_similarity': round(cf.ms1_isotope_similarity,
-                                                    4) if cf.ms1_isotope_similarity is not None else 'None',
+                                                    4) if cf.ms1_isotope_similarity is not None else 'NA',
                     'mz_error_ppm': round(mz_error_ppm, 4),
                     'explained_ms2_peak': exp_ms2_peak,
-                    'total_valid_ms2_peak': len(mf.ms2_processed) if mf.ms2_processed else 'None',
+                    'total_valid_ms2_peak': len(mf.ms2_processed) if mf.ms2_processed else 'NA',
                     'estimated_prob': round(cf.estimated_prob,
-                                            4) if cf.estimated_prob is not None else 'None',
+                                            4) if cf.estimated_prob is not None else 'NA',
                     'normalized_estimated_prob': round(cf.normed_estimated_prob,
-                                                       4) if cf.normed_estimated_prob is not None else 'None',
-                    'estimated_fdr': round(cf.estimated_fdr, 4) if cf.estimated_fdr is not None else 'None',
+                                                       4) if cf.normed_estimated_prob is not None else 'NA',
+                    'estimated_fdr': round(cf.estimated_fdr, 4) if cf.estimated_fdr is not None else 'NA',
                     'ms2_explanation_idx': ms2_explan_idx,
                     'ms2_explanation': ms2_explan_str
                 }, ignore_index=True)
