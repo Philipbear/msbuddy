@@ -204,8 +204,8 @@ class MsbuddyConfig:
 
 class Msbuddy:
     """
-    Buddy main class
-    Buddy data is List[MetaFeature]; MetaFeature is a class defined in base/MetaFeature.py
+    msbuddy main class
+    msbuddy data is List[MetaFeature]; MetaFeature is a class defined in base/MetaFeature.py
     """
     # singleton pattern
     _instance = None
