@@ -25,7 +25,7 @@ def main():
     parser = argparse.ArgumentParser(description="msbuddy command line interface.")
     parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('-usi', type=str, help='A single USI string.')
-    parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column.')
+    parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column (no header row).')
     parser.add_argument('-output', '-o', type=str, help='The output file path.')
     parser.add_argument('-details', '-d', action='store_true',
                         help='Whether to write detailed results. Default: False.')
@@ -87,8 +87,8 @@ def main():
     args = parser.parse_args()
 
     # run msbuddy
-    # create a BuddyParamSet object
-    buddy_param_set = MsbuddyConfig(
+    # create a MsbuddyConfig object
+    msb_config = MsbuddyConfig(
         ms_instr=args.ms_instr,
         ppm=~args.disable_ppm,
         ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
@@ -114,20 +114,20 @@ def main():
     else:
         raise ValueError('Please specify the output path.')
 
-    buddy = Msbuddy(buddy_param_set)
+    engine = Msbuddy(msb_config)
 
     if args.mgf:
-        buddy.load_mgf(args.mgf)
+        engine.load_mgf(args.mgf)
     elif args.usi:
-        buddy.load_usi([args.usi])
+        engine.load_usi([args.usi])
     elif args.csv:
         # read and load the first column of the CSV file, no header
         df = pd.read_csv(args.csv, header=None)
-        buddy.load_usi(df.iloc[:, 0].tolist())
+        engine.load_usi(df.iloc[:, 0].tolist())
     else:
         raise ValueError('Please specify the input data source.')
 
-    buddy.annotate_formula_cmd(output_path, write_details=args.details)
+    engine.annotate_formula_cmd(output_path, write_details=args.details)
 
     print('Job finished.')
 
