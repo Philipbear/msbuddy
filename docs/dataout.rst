@@ -7,14 +7,14 @@ All the top 5 formulas will be included in the ``results``.
 .. code-block:: python
 
    # retrieve the annotation result summary
-   results = buddy.get_summary()
+   results = msb_engine.get_summary()
 
 In case you want to access all the annotation results, you can iterate through the :class:`CandidateFormula` objects stored in each :class:`MetaFeature`.
 
 .. code-block:: python
 
    # retrieve all the annotation results for each metabolic feature
-   for meta_feature in buddy.data:
+   for meta_feature in msb_engine.data:
        for i, candidate in enumerate(meta_feature.candidate_formula_list):
            print('MetaFeature mz' + str(meta_feature.mz) + '  rt: ' + str(meta_feature.rt) + \
            '  rank: ' + str(i+1) + 'Formula: ' + candidate.formula.__str__() + \

@@ -1,18 +1,18 @@
-Parameter Settings
+Configuration
 ------------------
 
-All **msbuddy** parameters are stored in a single class called :class:`msbuddy.BuddyParamSet`.
+All **msbuddy** parameters are stored in a single class called :class:`msbuddy.MsbuddyConfig`.
 
-Here is a quick example of how to create a :class:`msbuddy.BuddyParamSet` object and pass it to a :class:`msbuddy.Buddy` object.
+Here is a quick example of how to create a :class:`msbuddy.MsbuddyConfig` object and pass it to a :class:`msbuddy.Msbuddy` object.
 Of note, parallel processing is available for **msbuddy**. To use it, set ``parallel=True`` and specify the number of CPUs to use with ``n_cpu``.
 We would recommend considering parallel processing for large datasets (e.g. >1000 query metabolic features).
 
 .. code-block:: python
 
-    from msbuddy import Buddy, BuddyParamSet
+    from msbuddy import Msbuddy, MsbuddyConfig
 
-    # create a parameter set
-    buddy_param_set = BuddyParamSet(
+    # create a config object
+    msb_config = MsbuddyConfig(
         ms_instr='orbitrap', # highly recommended to fill for the best annotation performance
                              # supported MS types: "qtof", "orbitrap" and "fticr"
         ppm=True, # use ppm for mass tolerance, otherwise use Da
@@ -28,11 +28,11 @@ We would recommend considering parallel processing for large datasets (e.g. >100
         ... # other parameters
         ms2_denoise=True, # denoise MS2 spectra
 
-    # create a Buddy object with the specified parameter set
-    buddy = Buddy(buddy_param_set)
+    # create a Msbuddy object with the specified configuration
+    msb_engine = Msbuddy(msb_config)
 
 
-It is **highly recommended** to set up the ``ms_instr`` parameter in the :class:`msbuddy.BuddyParamSet` to obtain the best annotation performance. The supported MS types are ``"qtof"``, ``"orbitrap"`` and ``"fticr"``.
+It is **highly recommended** to set up ``ms_instr`` in the :class:`msbuddy.MsbuddyConfig` to obtain the best annotation performance. The supported MS types are ``"qtof"``, ``"orbitrap"`` and ``"fticr"``.
 
 The following mass tolerances will be used for each MS instrument:
 
@@ -43,11 +43,11 @@ The following mass tolerances will be used for each MS instrument:
 ``fticr``: ms1 tolerance = 2 ppm, ms2 tolerance = 5 ppm
 
 
-If you do need to use a different mass tolerance, you can set the ``ppm``, ``ms1_tol`` and ``ms2_tol`` parameters in the :class:`msbuddy.BuddyParamSet` to the desired values, but the annotation performance may be affected.
+If you do need to use a different mass tolerance, you can set the ``ppm``, ``ms1_tol`` and ``ms2_tol`` parameters in the :class:`msbuddy.MsbuddyConfig` to the desired values, but the annotation performance may be affected.
 
 .. code-block:: python
 
-   buddy_param_set = BuddyParamSet(ppm=True, ms1_tol=10, ms2_tol=10)
+   msb_config = MsbuddyConfig(ppm=True, ms1_tol=10, ms2_tol=10)
 
 
 

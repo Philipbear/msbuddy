@@ -31,7 +31,7 @@ Source codes are available at `GitHub <https://github.com/Philipbear/msbuddy>`_.
 
    install
    quickstart
-   paramset
+   config
    datain
    dataout
    pyapi

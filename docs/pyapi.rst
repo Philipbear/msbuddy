@@ -64,13 +64,13 @@ Example Usage:
 
 .. code-block:: python
 
-   from msbuddy.buddy import Buddy
+   from msbuddy import Msbuddy
 
-   # create a Buddy object
-   buddy = Buddy()
+   # create a Msbuddy object
+   engine = Msbuddy()
 
    # convert mass to formula
-   formula_list = buddy.mass_to_formula(300, 10, True)
+   formula_list = engine.mass_to_formula(300, 10, True)
    print(formula_list)
 
 .. function:: predict_formula_feasibility (formula: Union[str, np.array])
@@ -85,88 +85,76 @@ Example Usage:
 
 .. code-block:: python
 
-   from msbuddy.buddy import Buddy
+   from msbuddy import Msbuddy
 
-   # create a Buddy object
-   buddy = Buddy()
+   # create a Msbuddy object
+   engine = Msbuddy()
 
    # predict formula feasibility score
-   feasibility_score = buddy.predict_formula_feasibility("C10H20O5")
+   feasibility_score = engine.predict_formula_feasibility("C10H20O5")
    print(feasibility_score)
 
 
 Classes
 ~~~~~~~~~~~~~~~
-.. class:: msbuddy.Buddy (param_set: Union[BuddyParamSet, None] = None)
+.. class:: msbuddy.Msbuddy (config: Union[MsbuddyConfig, None] = None)
 
    Buddy main class. Note that the Buddy class is singleton, which means only one Buddy object can be created.
 
-   :param param_set: :class:`msbuddy.BuddyParamSet` object. Default is None.
+   :param config: :class:`msbuddy.MsbuddyConfig` object. Default is None.
 
-   .. attribute:: param_set
+   .. attribute:: config
 
-      :class:`msbuddy.BuddyParamSet` object. The parameter set for the Buddy object.
+      :class:`msbuddy.MsbuddyConfig` object. The configuration for the Msbuddy object.
 
    .. attribute:: data
 
-      A list of :class:`msbuddy.base.MetaFeature` objects. Data loaded into the Buddy object.
+      A list of :class:`msbuddy.base.MetaFeature` objects. Data loaded into the :class:`msbuddy.Msbuddy` object.
 
    .. attribute:: db_loaded
 
       bool. True if the database is loaded.
 
-   .. method:: update_param_set (param_set: BuddyParamSet)
+   .. method:: update_config (config: MsbuddyConfig)
 
-      Update the parameter set for the :class:`msbuddy.Buddy` object.
+      Update the configuration for the :class:`msbuddy.Msbuddy` object.
 
-      :param param_set: :class:`msbuddy.BuddyParamSet` object. The parameter set to be updated.
-      :returns: None. The ``param_set`` attribute of the :class:`Buddy` object will be updated.
+      :param param_set: :class:`msbuddy.MsbuddyConfig` object. The parameter set to be updated.
+      :returns: None. The ``config`` attribute of the :class:`msbuddy.Msbuddy` object will be updated.
 
    .. method:: load_usi (usi_list: Union[str, List[str]], adduct_list: Union[None, str, List[str]] = None)
 
-      Read from a single USI string or a sequence of USI strings, and load the data into the ``data`` attribute of the :class:`Buddy` object.
+      Read from a single USI string or a sequence of USI strings, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
       :param usi_list: str or List[str]. A single USI string or a sequence of USI strings.
       :param optional adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
-      :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
+      :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
    .. method:: load_mgf (mgf_file: str)
 
-      Read a single mgf file, and load the data into the ``data`` attribute of the :class:`msbuddy.Buddy` object.
+      Read a single mgf file, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
       :param mgf_file: str. The path to the mgf file.
-      :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
+      :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
    .. method:: add_data (data: List[MetaFeature])
 
-      Add data into the ``data`` attribute of the :class:`msbuddy.Buddy` object.
+      Add data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
       :param data: A list of :class:`msbuddy.base.MetaFeature` objects. The data to be added.
-      :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`Buddy` object.
+      :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
    .. method:: clear_data
 
-      Clear the ``data`` attribute of the :class:`msbuddy.Buddy` object.
+      Clear the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
-      :returns: None. The ``data`` attribute of the :class:`Buddy` object will be cleared to None.
-
-   .. method:: preprocess_and_generate_candidate_formula
-
-      Preprocess the loaded data and generate candidate formulas.
-
-      :returns: None. The ``candidate_formula_list`` attribute of each :class:`msbuddy.base.MetaFeature` object in the ``data`` attribute of the :class:`Buddy` object will be updated.
-
-   .. method:: assign_subformula_annotation
-
-      Assign subformula annotation for MS/MS spectra in loaded data (MetaFeature.candidate_formula_list - CandidateFormula.ms2_raw_explanation).
-
-      :returns: None. The ``candidate_formula_list`` attribute of each :class:`msbuddy.base.MetaFeature` object in the ``data`` attribute of the :class:`Buddy` object will be updated.
+      :returns: None. The ``data`` attribute of the :class:`msbuddy.Msbuddy` object will be cleared to None.
 
    .. method:: annotate_formula
 
       Perform formula annotation for loaded data.
 
-      :returns: None. The ``candidate_formula_list`` attribute of each :class:`msbuddy.base.MetaFeature` object in the ``data`` attribute of the :class:`Buddy` object will be updated.
+      :returns: None. The ``candidate_formula_list`` attribute of each :class:`msbuddy.base.MetaFeature` object in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object will be updated.
 
    .. method:: get_summary
 
@@ -179,28 +167,23 @@ Example Usage:
 
 .. code-block:: python
 
-   from msbuddy import Buddy
+   from msbuddy import Msbuddy
 
-   # create a Buddy object with default parameter set
-   buddy = Buddy()
+   # create a Msbuddy object with default configuration
+   engine = Msbuddy()
 
    # load some data here
-   buddy.load_mgf("demo.mgf")
-   # or add custom data (List[MetaFeature])
-   buddy.add_data(...)
+   engine.load_mgf("demo.mgf")
+   # add custom data (List[MetaFeature])
+   engine.add_data(...)
 
-   # generate candidate formulas for all metabolic features based on the given parameter set
-   buddy.preprocess_and_generate_candidate_formula()
-
-   # assign subformula annotation for MS/MS spectra if available
-   # Buddy.data - MetaFeature.candidate_formula_list - CandidateFormula.ms2_raw_explanation
-   buddy.assign_subformula_annotation()
+   # clear data
+   engine.clear_data()
 
 
+.. class:: msbuddy.MsbuddyConfig (ms_instr: str = 'orbitrap', ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 500, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
 
-.. class:: msbuddy.BuddyParamSet (ms_instr: str = 'orbitrap', ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 500, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
-
-   It is a class to store all the parameter settings for **msbuddy**.
+   It is a class to store all the configurations for **msbuddy**.
 
    :param ms_instr: str. The mass spectrometry instrument type, used for automated mass tolerance setting. Supported instruments are "orbitrap", "fticr" and "qtof". Default is "orbitrap".
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da. Default is True.
@@ -235,18 +218,18 @@ Example Usage:
 
 .. code-block:: python
 
-    from msbuddy import Buddy, BuddyParamSet
+    from msbuddy import Msbuddy, MsbuddyConfig
 
-    # create a parameter set
-    buddy_param_set = BuddyParamSet(
+    # create a MsbuddyConfig object
+    msb_config = MsbuddyConfig(
         ms_instr="orbitrap",
         halogen=True,
         parallel=True,
         n_cpu=12,
         timeout_secs=100)
 
-    # create a Buddy object with the specified parameter set
-    buddy = Buddy(buddy_param_set)
+    # create a Msuddy object with the specified configuration
+    msb_engine = Msbuddy(msb_config)
 
 
 
@@ -472,10 +455,6 @@ Example usage:
    .. attribute:: estimated_fdr
 
       float. The estimated FDR of the candidate formula.
-
-   .. attribute:: db_existed
-
-      bool. Whether this candidate formula exists in the chemical database.
 
 
 

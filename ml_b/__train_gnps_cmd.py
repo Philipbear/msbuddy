@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.neural_network import MLPClassifier
 
 from msbuddy.base import read_formula, MetaFeature, Spectrum, Formula, CandidateFormula
-from msbuddy.buddy import Buddy, BuddyParamSet, _gen_subformula
+from msbuddy.msbuddy import Buddy, BuddyParamSet, _gen_subformula
 from msbuddy.load import init_db
 from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from msbuddy.gen_candidate import _calc_ms1_iso_sim

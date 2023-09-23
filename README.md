@@ -39,32 +39,32 @@ All the parameter settings are specified in the [`BuddyParamSet`](https://msbudd
 **Parallel computing** is also supported.
 
 ```python
-from msbuddy import Buddy, BuddyParamSet
+from msbuddy import Msbuddy, MsbuddyConfig
 
-# instantiate a BuddyParamSet object
-param = BuddyParamSet(ms_instr='orbitrap', # supported: "qtof", "orbitrap" and "fticr"
-                                           # highly recommended to specify
-                      halogen=False, timeout_secs=300,
-                      parallel=True, n_cpu=12)
+# instantiate a MsbuddyConfig object
+msb_config = MsbuddyConfig(ms_instr='orbitrap', # supported: "qtof", "orbitrap" and "fticr"
+                                                # highly recommended to specify
+                           halogen=False, timeout_secs=300,
+                           parallel=True, n_cpu=12)
 
-# instantiate a Buddy object
-buddy = Buddy(param)
+# instantiate a Msbuddy object
+msb_engine = Msbuddy(msb_config)
 
 # load data, here we use a mgf file as an example
-buddy.load_mgf('input_file.mgf')
+msb_engine.load_mgf('input_file.mgf')
 
 # annotate molecular formula
-buddy.annotate_formula()
+msb_engine.annotate_formula()
 
 # retrieve the annotation result summary
-results = buddy.get_summary()
+result = msb_engine.get_summary()
 ```
 
 MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
 ```python
 # you can load multiple USIs at once
-buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
-                'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
+msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
+                     'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 
 ## Command-line API ([link](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))

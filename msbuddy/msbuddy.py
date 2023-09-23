@@ -6,7 +6,7 @@
 # You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
 # ==============================================================================
 """
-File: buddy.py
+File: msbuddy.py
 Author: Shipei Xing
 Email: s1xing@health.ucsd.edu
 GitHub: Philipbear
@@ -38,9 +38,9 @@ logging.basicConfig(level=logging.INFO)
 global shared_data_dict
 
 
-class BuddyParamSet:
+class MsbuddyConfig:
     """
-    Buddy parameter set
+    msbuddy configuration class
     """
 
     def __init__(self,
@@ -202,7 +202,7 @@ class BuddyParamSet:
         self.use_all_frag = use_all_frag
 
 
-class Buddy:
+class Msbuddy:
     """
     Buddy main class
     Buddy data is List[MetaFeature]; MetaFeature is a class defined in base/MetaFeature.py
@@ -212,29 +212,29 @@ class Buddy:
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(Buddy, cls).__new__(cls)
+            cls._instance = super(Msbuddy, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, param_set: Union[BuddyParamSet, None] = None):
+    def __init__(self, config: Union[MsbuddyConfig, None] = None):
 
         tqdm.write("msbuddy: molecular formula annotation in MS-based small molecule analysis. "
                    "Developed and maintained by Shipei Xing.")
         tqdm.write("DB initializing...")
 
-        if param_set is None:
-            self.param_set = BuddyParamSet()  # default parameter set
+        if config is None:
+            self.config = MsbuddyConfig()  # default configuration
         else:
-            self.param_set = param_set  # customized parameter set
+            self.config = config  # customized configuration
 
         global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_db(self.param_set.db_mode)  # database initialization
+        shared_data_dict = init_db(self.config.db_mode)  # database initialization
 
         self.data = None  # List[MetabolicFeature]
 
-    def update_param_set(self, new_param_set: BuddyParamSet):
-        self.param_set = new_param_set
+    def update_config(self, new_config: MsbuddyConfig):
+        self.config = new_config
         global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_db(self.param_set.db_mode)  # database initialization
+        shared_data_dict = init_db(self.config.db_mode)  # database initialization
 
     def load_usi(self, usi_list: Union[str, List[str]],
                  adduct_list: Union[None, str, List[str]] = None):
@@ -257,7 +257,7 @@ class Buddy:
         """
         self.data = None
 
-    def preprocess_and_generate_candidate_formula(self, batch_start_idx: int = 0, batch_end_idx: int = None):
+    def _preprocess_and_generate_candidate_formula(self, batch_start_idx: int = 0, batch_end_idx: int = None):
         """
         preprocess data and generate candidate formula space
         :param batch_start_idx: start index of batch
@@ -265,8 +265,8 @@ class Buddy:
         :return: None. Update self.data
         """
 
-        @timeout(self.param_set.timeout_secs)
-        def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
+        @timeout(self.config.timeout_secs)
+        def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: MsbuddyConfig) -> MetaFeature:
             """
             a wrapper function for data preprocessing and candidate formula space generation
             :param meta_feature: MetaFeature object
@@ -280,11 +280,11 @@ class Buddy:
         modified_mf_ls = []  # modified metabolic feature list, containing annotated results
 
         # data preprocessing and candidate space generation
-        if self.param_set.parallel:
-            with Pool(processes=int(self.param_set.n_cpu), initializer=_init_pool,
+        if self.config.parallel:
+            with Pool(processes=int(self.config.n_cpu), initializer=_init_pool,
                       initargs=(shared_data_dict,)) as pool:
                 async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
-                                                  (mf, self.param_set)) for mf in batch_data]
+                                                  (mf, self.config)) for mf in batch_data]
                 # Initialize tqdm progress bar
 
                 pbar = tqdm(total=len(batch_data), colour="green", desc="Candidate space generation",
@@ -292,7 +292,7 @@ class Buddy:
                 for i, async_result in enumerate(async_results):
                     pbar.update(1)  # Update tqdm progress bar
                     try:
-                        modified_mf = async_result.get(timeout=self.param_set.timeout_secs)
+                        modified_mf = async_result.get(timeout=self.config.timeout_secs)
                         modified_mf_ls.append(modified_mf)
                     except:
                         mf = batch_data[i]
@@ -304,7 +304,7 @@ class Buddy:
             # normal loop, timeout implemented using timeout_decorator
             for mf in tqdm(batch_data, file=sys.stdout, colour="green", desc="Candidate space generation"):
                 try:
-                    modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.param_set)
+                    modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.config)
                     modified_mf_ls.append(modified_mf)
                 except:
                     logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
@@ -314,7 +314,7 @@ class Buddy:
         self.data[batch_start_idx:batch_end_idx] = modified_mf_ls
         del modified_mf_ls
 
-    def assign_subformula_annotation(self, batch_start_idx: int = 0, batch_end_idx: int = None):
+    def _assign_subformula_annotation(self, batch_start_idx: int = 0, batch_end_idx: int = None):
         """
         assign subformula annotation for loaded data, no timeout implemented
         :param batch_start_idx: start index of batch
@@ -324,10 +324,10 @@ class Buddy:
         batch_data = self.data[batch_start_idx:batch_end_idx]
         modified_mf_ls = []  # modified metabolic feature list
 
-        if self.param_set.parallel:
-            with Pool(processes=int(self.param_set.n_cpu)) as pool:
+        if self.config.parallel:
+            with Pool(processes=int(self.config.n_cpu)) as pool:
                 async_results = [pool.apply_async(_gen_subformula,
-                                                  (mf, self.param_set)) for mf in batch_data]
+                                                  (mf, self.config)) for mf in batch_data]
 
                 pbar = tqdm(total=len(batch_data), colour="green", desc="Subformula assignment: ", file=sys.stdout)
                 for i, async_result in enumerate(async_results):
@@ -339,7 +339,7 @@ class Buddy:
         else:
             # normal loop
             for mf in tqdm(batch_data, desc="Subformula assignment: ", file=sys.stdout, colour="green"):
-                modified_mf = _gen_subformula(mf, self.param_set)
+                modified_mf = _gen_subformula(mf, self.config)
                 modified_mf_ls.append(modified_mf)
 
         # update data
@@ -401,12 +401,12 @@ class Buddy:
         query_str = f"{len(self.data)} queries loaded." if len(self.data) > 1 else "1 query loaded."
         tqdm.write(query_str)
 
-        if self.param_set.parallel:
+        if self.config.parallel:
             # parallel processing
-            tqdm.write(f"Parallel processing with {self.param_set.n_cpu} processes.")
+            tqdm.write(f"Parallel processing with {self.config.n_cpu} processes.")
 
         # batches
-        n_batch = int(np.ceil(len(self.data) / self.param_set.batch_size))
+        n_batch = int(np.ceil(len(self.data) / self.config.batch_size))
         batch_str = f"{n_batch} batches in total." if n_batch > 1 else "1 batch in total."
         tqdm.write(batch_str)
 
@@ -421,22 +421,22 @@ class Buddy:
         """
         tqdm.write(f"Batch {n + 1}/{n_batch}:")
         # get batch data
-        start_idx, end_idx = _get_batch(self.data, self.param_set.batch_size, n)
+        start_idx, end_idx = _get_batch(self.data, self.config.batch_size, n)
 
         # data preprocessing and candidate space generation
-        self.preprocess_and_generate_candidate_formula(start_idx, end_idx)
+        self._preprocess_and_generate_candidate_formula(start_idx, end_idx)
 
         # ml_a feature generation + prediction, retain top candidates
         tqdm.write("Formula feasibility assessment...")
-        pred_formula_feasibility(self.data, start_idx, end_idx, self.param_set.top_n_candidate,
-                                 self.param_set.db_mode, shared_data_dict)
+        pred_formula_feasibility(self.data, start_idx, end_idx, self.config.top_n_candidate,
+                                 self.config.db_mode, shared_data_dict)
 
         # assign subformula annotation
-        self.assign_subformula_annotation(start_idx, end_idx)
+        self._assign_subformula_annotation(start_idx, end_idx)
 
         # ml_b feature generation + prediction
         tqdm.write("Formula probability prediction...")
-        pred_formula_prob(self.data, start_idx, end_idx, self.param_set, shared_data_dict)
+        pred_formula_prob(self.data, start_idx, end_idx, self.config, shared_data_dict)
 
         # FDR calculation
         calc_fdr(self.data, start_idx, end_idx)
@@ -500,22 +500,22 @@ def _init_pool(the_dict):
     shared_data_dict = the_dict
 
 
-def _preprocess_and_gen_cand_parallel(meta_feature: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
+def _preprocess_and_gen_cand_parallel(meta_feature: MetaFeature, ps: MsbuddyConfig) -> MetaFeature:
     """
     a wrapper function for data preprocessing and candidate formula space generation
     :param meta_feature: MetaFeature object
-    :param ps: Buddy parameter set
+    :param ps: MsbuddyConfig object
     :return: MetaFeature object
     """
     mf = _generate_candidate_formula(meta_feature, ps, shared_data_dict)
     return mf
 
 
-def _gen_subformula(mf: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
+def _gen_subformula(mf: MetaFeature, ps: MsbuddyConfig) -> MetaFeature:
     """
     a wrapper function for subformula generation
     :param mf: MetaFeature object
-    :param ps: Buddy parameter set
+    :param ps: MsbuddyConfig object
     :return: MetaFeature object
     """
     if not mf.ms2_processed:
@@ -528,11 +528,11 @@ def _gen_subformula(mf: MetaFeature, ps: BuddyParamSet) -> MetaFeature:
     return mf
 
 
-def _generate_candidate_formula(mf: MetaFeature, ps: BuddyParamSet, global_dict) -> MetaFeature:
+def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict) -> MetaFeature:
     """
     preprocess data and generate candidate formula space
     :param mf: MetaFeature object
-    :param ps: Buddy parameter set
+    :param ps: MsbuddyConfig object
     :param global_dict: global dictionary containing shared data
     :return: MetaFeature object
     """
@@ -552,20 +552,24 @@ if __name__ == '__main__':
     import time
 
     #########################################
-    buddy_param_set = BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=4, batch_size=1000,
-                                    timeout_secs=300, halogen=True, max_frag_reserved=50,
-                                    i_range=(0, 20))
+    buddy_config = MsbuddyConfig(
+        ms_instr="orbitrap",
+        ppm=True,
+        ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=4, batch_size=1000,
+        timeout_secs=300, halogen=False, max_frag_reserved=50)
 
-    buddy = Buddy(buddy_param_set)
+    buddy = Msbuddy(buddy_config)
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
     # buddy.load_mgf(
-        # '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
+    # '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952"])
-    buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037',
-                    'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740038'])
-    buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037')
+    buddy.load_usi(
+        ['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
+         'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037',
+         'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00004709382'])
+    # buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037')
     #
     # # add ms1 data
     # from msbuddy.base import Spectrum

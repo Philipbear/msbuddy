@@ -7,52 +7,52 @@ Built-in Data Import
 ====================
 .. function:: load_usi (usi_list: Union[str, List[str]], adduct_list: Union[None, str, List[str]] = None)
 
-    Read from a single USI string or a sequence of USI strings, and load the data into the ``data`` attribute of the :class:`msbuddy.Buddy` object.
+    Read from a single USI string or a sequence of USI strings, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
     :param usi_list: str or List[str]. A single USI string or a sequence of USI strings.
     :param optional adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
-    :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Buddy` object.
+    :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
 Example Usage:
 
 .. code-block:: python
 
-   from msbuddy import Buddy
+   from msbuddy import Msbuddy
 
-   # instantiate a Buddy object
-   buddy = Buddy()
+   # instantiate a Msbuddy object
+   engine = Msbuddy()
 
    # load a single USI
-   buddy.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036')
+   engine.load_usi('mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036')
 
    # load a list of USIs
-   buddy.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
-                   'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000845027'])
+   engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
+                    'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000845027'])
 
    # load USIs with adducts
-   buddy.load_usi(usi_list=['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
-                            'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000845027'],
-                  adduct_list=['[M+H]+', '[M-H2O+H]+'])
+   engine.load_usi(usi_list=['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
+                             'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000845027'],
+                   adduct_list=['[M+H]+', '[M-H2O+H]+'])
 
 
 .. function:: load_mgf (mgf_file: str)
 
-   Read a single mgf file, and load the data into the ``data`` attribute of the :class:`msbuddy.Buddy` object.
+   Read a single mgf file, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
    :param mgf_file: str. The path to the mgf file.
-   :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Buddy` object.
+   :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
 Example Usage:
 
 .. code-block:: python
 
-   from msbuddy import Buddy
+   from msbuddy import Msbuddy
 
-   # instantiate a Buddy object
-   buddy = Buddy()
+   # instantiate a Msbuddy object
+   engine = Msbuddy()
 
    # load a single mgf file
-   buddy.load_mgf('input_file.mgf')
+   engine.load_mgf('input_file.mgf')
 
 
 
@@ -65,13 +65,13 @@ We first show an easy example of importing data from a pandas DataFrame (with co
 
 .. code-block:: python
 
-   from msbuddy import Buddy
+   from msbuddy import Msbuddy
    from msbuddy.base import MetaFeature, Spectrum
    import pandas as pd
    import numpy as np
 
-   # instantiate a Buddy object
-   buddy = Buddy()
+   # instantiate a Msbuddy object
+   engine = Msbuddy()
 
    # read an MS/MS spectrum from a pandas DataFrame, with columns 'mz', 'intensity'
    ms2_df = pd.read_csv('ms2_file.csv')
@@ -87,8 +87,8 @@ We first show an easy example of importing data from a pandas DataFrame (with co
                              charge = 1,
                              ms2 = ms2_spec)
 
-   # add to the Buddy object, List[MetaFeature] is accepted
-   buddy.add_data([metafeature])
+   # add to the Msbuddy object, List[MetaFeature] is accepted
+   engine.add_data([metafeature])
 
 
 Note that for :class:`msbuddy.base.MetaFeature` class, the ``identifier``, ``mz`` and ``charge`` attributes are required, while attributes ``rt``, ``ms1`` and ``ms2`` are optional. If they are not provided, ``None`` will be assigned.
@@ -97,13 +97,13 @@ A more complicated example with MS1 isotope pattern and MS/MS spectra is shown b
 
 .. code-block:: python
 
-   from msbuddy import Buddy
+   from msbuddy import Msbuddy
    from msbuddy.base import MetaFeature, Spectrum
    import pandas as pd
    import numpy as np
 
-   # instantiate a Buddy object
-   buddy = Buddy()
+   # instantiate a Msbuddy object
+   engine = Msbuddy()
 
    # read MS1 isotope pattern from a pandas DataFrame, with columns 'mz', 'intensity'
    ms1_df = pd.read_csv('ms1_file.csv')
@@ -126,5 +126,5 @@ A more complicated example with MS1 isotope pattern and MS/MS spectra is shown b
                              ms1 = ms1_spec,
                              ms2 = ms2_spec)
 
-   # add to the Buddy object, List[MetaFeature] is accepted
-   buddy.add_data([metafeature])
+   # add to the Msbuddy object, List[MetaFeature] is accepted
+   engine.add_data([metafeature])

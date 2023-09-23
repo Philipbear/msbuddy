@@ -525,19 +525,19 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     return prob_arr[:, 1]
 
 def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
-                      param_set, gd):
+                      config, gd):
     """
     predict formula probability using ML model b
     :param buddy_data: buddy data
     :param batch_start_idx: batch start index
     :param batch_end_idx: batch end index
-    :param param_set: parameter set
+    :param config: config object
     :param gd: global dependencies
     :return: fill in estimated_prob in candidate formula objects
     """
-    ppm = param_set.ppm
-    ms1_tol = param_set.ms1_tol
-    ms2_tol = param_set.ms2_tol
+    ppm = config.ppm
+    ms1_tol = config.ms1_tol
+    ms2_tol = config.ms2_tol
 
     # batch data
     batch_data = buddy_data[batch_start_idx:batch_end_idx]

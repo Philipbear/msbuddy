@@ -18,7 +18,7 @@ import pathlib
 
 import pandas as pd
 
-from msbuddy.buddy import Buddy, BuddyParamSet
+from msbuddy.msbuddy import Msbuddy, MsbuddyConfig
 
 
 def main():
@@ -88,7 +88,7 @@ def main():
 
     # run msbuddy
     # create a BuddyParamSet object
-    buddy_param_set = BuddyParamSet(
+    buddy_param_set = MsbuddyConfig(
         ms_instr=args.ms_instr,
         ppm=~args.disable_ppm,
         ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
@@ -114,7 +114,7 @@ def main():
     else:
         raise ValueError('Please specify the output path.')
 
-    buddy = Buddy(buddy_param_set)
+    buddy = Msbuddy(buddy_param_set)
 
     if args.mgf:
         buddy.load_mgf(args.mgf)

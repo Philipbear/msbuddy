@@ -5,27 +5,27 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
 
 .. code-block:: python
 
-   from msbuddy import Buddy, BuddyParamSet
+   from msbuddy import Msbuddy, MsbuddyConfig
 
-   # create a parameter set
-   buddy_param_set = BuddyParamSet(ms_instr="orbitrap", # supported: "qtof", "orbitrap" and "fticr"
-                                                        # highly recommended to fill in the instrument type
-                                   halogen=True,
-                                   parallel=True,
-                                   n_cpu=12,
-                                   timeout_secs=200)
+   # create a MsbuddyConfig object
+   msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "qtof", "orbitrap" and "fticr"
+                                                   # highly recommended to fill in the instrument type
+                              halogen=True,
+                              parallel=True,
+                              n_cpu=12,
+                              timeout_secs=200)
 
-   # instantiate a Buddy object with the parameter set
-   buddy = Buddy(buddy_param_set)
+   # instantiate a Msbuddy object with the parameter set
+   msb_engine = Msbuddy(msb_config)
 
    # load data, here we use a mgf file as an example
-   buddy.load_mgf('input_file.mgf')
+   msb_engine.load_mgf('input_file.mgf')
 
    # annotate molecular formula
-   buddy.annotate_formula()
+   msb_engine.annotate_formula()
 
    # retrieve the annotation result summary
-   results = buddy.get_summary()
+   results = msb_engine.get_summary()
 
    # print the result, results is a list of dictionaries
    for individual_result in results:
@@ -33,7 +33,7 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
            print(key, value)
 
 
-It is **highly recommended** to set up the ``ms_instr`` parameter in the :class:`msbuddy.BuddyParamSet` to obtain the best annotation performance.
+It is **highly recommended** to set up the ``ms_instr`` parameter in the :class:`msbuddy.MsbuddyConfig` to obtain the best annotation performance.
 Please see `Parameter Settings <paramset.html>`_ session for more details.
 
 
