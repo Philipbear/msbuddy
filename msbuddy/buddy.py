@@ -386,7 +386,7 @@ class Buddy:
             self.data[start_idx:end_idx] = [None] * (end_idx - start_idx)
 
         tqdm.write("Writing summary results to tsv file...")
-        result_summary_df.to_csv(output_path / 'buddy_result_summary.tsv', sep="\t", index=False)
+        result_summary_df.to_csv(output_path / 'msbuddy_result_summary.tsv', sep="\t", index=False)
 
     def _annotate_formula_prepare(self) -> int:
         """
@@ -587,11 +587,6 @@ if __name__ == '__main__':
     buddy.annotate_formula()
     results = buddy.get_summary()
 
-    # print the result, results is a list of dictionaries
-    for individual_result in results:
-        for key, value in individual_result.items():
-            print(key, value)
-
-    # # print(result_summary_)
+    # # print(results)
     # print(f"Total time: {time.time() - start_time} seconds.")
     print('done')

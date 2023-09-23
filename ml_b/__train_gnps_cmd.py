@@ -550,6 +550,54 @@ def train_model(ms1_iso, ms2_spec):
     return best_mlp
 
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+def send_hotmail_email(subject, body, to_email, smtp_server='smtp-mail.outlook.com', smtp_port=587,
+                       smtp_username='philipxsp@hotmail.com', smtp_password='?!xsphilip1014GO'):
+    """
+    Send an email using Hotmail's SMTP.
+
+    Parameters:
+        subject: The subject of the email.
+        body: The body text of the email.
+        to_email: The recipient's email address.
+        smtp_server: The SMTP server to use.
+        smtp_port: The SMTP port to use.
+        smtp_username: The SMTP username (usually the email sender's address).
+        smtp_password: The SMTP password.
+    """
+
+    # Create the message
+    msg = MIMEMultipart()
+    msg['From'] = smtp_username
+    msg['To'] = to_email
+    msg['Subject'] = subject
+
+    # Attach the body text
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        # Set up the server
+        server = smtplib.SMTP(host=smtp_server, port=smtp_port)
+        server.starttls()
+
+        # Log into the server
+        server.login(smtp_username, smtp_password)
+
+        # Send the email
+        server.sendmail(smtp_username, to_email, msg.as_string())
+
+        # Terminate the SMTP session and close the connection
+        server.quit()
+
+        print(f"Email sent successfully to {to_email}.")
+
+    except Exception as e:
+        print(f"Failed to send email. Error: {e}")
+
+
 def parse_args():
     """
     parse command line arguments
@@ -571,6 +619,7 @@ def parse_args():
 
 # test
 if __name__ == '__main__':
+
     __package__ = "msbuddy"
     # parse arguments
     args = parse_args()
@@ -601,4 +650,4 @@ if __name__ == '__main__':
 
     # fill_model_a_prob('qtof')
 
-    print("Done.")
+    send_hotmail_email("Server job finished", "Job finished.", "s1xing@health.ucsd.edu")

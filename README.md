@@ -29,7 +29,6 @@ The minimum requirement is a single _m/z_ value and its ionization polarity.
 ```commandline
 pip install msbuddy
 ```
-
 [GitHub release](https://github.com/Philipbear/msbuddy/releases) is also available for installation.
 
 
@@ -87,7 +86,7 @@ or a csv file containing multiple USI strings (one USI per line, FT-ICR in this 
 msbuddy -csv <csv_file> -output <output_folder> -ms fticr -details
 ```
 
-For mgf file or csv file, you can omit the `-output` option - results will be written in the same folder as the input file.
+For mgf file or csv file, you can omit the `-output` option, and results will be written in the same folder as the input file.
 
 
 Here is an example of processing a mgf file from Orbitrap (`-ms orbitrap`) in parallel (`-p`) using 12 cores (`-n_cpu`). Detailed results are written (`-d`).

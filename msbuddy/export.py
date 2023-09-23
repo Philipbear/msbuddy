@@ -67,7 +67,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                                                       'total_valid_ms2_peak', 'estimated_prob',
                                                       'normalized_estimated_prob', 'estimated_fdr'])
             for m, cf in enumerate(mf.candidate_formula_list):
-                # string for explained ms2 peak
+                # strings for explained ms2 peak
                 if mf.ms2_processed:
                     if cf.ms2_raw_explanation:
                         exp_ms2_peak = len(cf.ms2_raw_explanation)
@@ -109,7 +109,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 ms1_df = pd.DataFrame(columns=['raw_idx', 'mz', 'intensity'])
                 for m in range(len(mf.ms1_processed)):
                     ms1_df = ms1_df.append({
-                        'raw_idx': mf.ms1_processed.idx_array[m],
+                        'raw_idx': int(mf.ms1_processed.idx_array[m]),
                         'mz': round(mf.ms1_processed.mz_array[m], 4),
                         'intensity': round(mf.ms1_processed.int_array[m], 4)
                     }, ignore_index=True)
@@ -118,7 +118,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 ms2_df = pd.DataFrame(columns=['raw_idx', 'mz', 'intensity'])
                 for m in range(len(mf.ms2_processed)):
                     ms2_df = ms2_df.append({
-                        'raw_idx': mf.ms2_processed.idx_array[m],
+                        'raw_idx': int(mf.ms2_processed.idx_array[m]),
                         'mz': round(mf.ms2_processed.mz_array[m], 4),
                         'intensity': round(mf.ms2_processed.int_array[m], 4)
                     }, ignore_index=True)
