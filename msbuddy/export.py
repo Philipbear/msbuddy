@@ -56,7 +56,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             # make a directory for each mf
             # replace '/' with '_' in the identifier, remove special characters
             _id = str(mf.identifier).replace('/', '_').replace(':', '_').replace(' ', '_').strip()
-            folder_name = _id + '_mz' + str(round(mf.mz, 4)) + '_rt'
+            folder_name = _id + '_mz_' + str(round(mf.mz, 4)) + '_rt_'
             folder_name += str(round(mf.rt, 2)) if mf.rt else 'NA'
             mf_path = pathlib.Path(output_path / folder_name)
             mf_path.mkdir(parents=True, exist_ok=True)
