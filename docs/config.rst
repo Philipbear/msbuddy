@@ -51,7 +51,6 @@ If you do need to use a different mass tolerance, you can set the ``ppm``, ``ms1
    msb_config = MsbuddyConfig(ppm=True, ms1_tol=10, ms2_tol=10)
 
 
-
 Note that the ``halogen`` parameter is set to ``False`` by default. If you are working with halogenated compounds, you will need to set this to ``True`` to enable halgoen atoms in molecular formula annotation.
 
 

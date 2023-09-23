@@ -18,7 +18,7 @@ import pathlib
 
 import pandas as pd
 
-from msbuddy.msbuddy import Msbuddy, MsbuddyConfig
+from msbuddy.main import Msbuddy, MsbuddyConfig
 
 
 def main():

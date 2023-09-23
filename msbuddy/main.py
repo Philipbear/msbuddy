@@ -6,11 +6,11 @@
 # You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
 # ==============================================================================
 """
-File: msbuddy.py
+File: main.py
 Author: Shipei Xing
 Email: s1xing@health.ucsd.edu
 GitHub: Philipbear
-Description: main class for msbuddy; Buddy and BuddyParamSet
+Description: main class for msbuddy
 """
 
 import logging
@@ -550,6 +550,25 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
 # test
 if __name__ == '__main__':
     import time
+
+    # instantiate a MsbuddyConfig object
+    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+                               # highly recommended to specify
+                               halogen=False, timeout_secs=300,
+                               parallel=True, n_cpu=12)
+
+    # instantiate a Msbuddy object
+    msb_engine = Msbuddy(msb_config)
+
+    # you can load multiple USIs at once
+    msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
+                         'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
+
+    # annotate molecular formula
+    msb_engine.annotate_formula()
+
+    # retrieve the annotation result summary
+    result = msb_engine.get_summary()
 
     #########################################
     buddy_config = MsbuddyConfig(
