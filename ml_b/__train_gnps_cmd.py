@@ -463,7 +463,7 @@ def z_norm_smote():
     joblib.dump(y_arr, 'gnps_y_arr_SMOTE.joblib')
 
 
-def train_model(ms1_iso, ms2_spec):
+def train_model(ms1_iso, ms2_spec, pswd):
     """
     train ML model B
     :param ms1_iso: True for ms1 iso similarity included, False for not included
@@ -488,12 +488,9 @@ def train_model(ms1_iso, ms2_spec):
 
     # grid search
     all_param_grid = {
-        'hidden_layer_sizes': [(1024,),
-                               (512, 512), (256, 256),
-                               (256, 256, 128), (256, 128, 128),
-                               (256, 128, 128, 64), (128, 128, 64, 64)],
+        'hidden_layer_sizes': [(512, 512, 256, 128), (512, 512, 256),
+                               (512, 512, 512)],
         'activation': ['relu'],
-        'alpha': [1e-5, 1e-4, 1e-3, 1e-2],
         'max_iter': [800]
     }
 
@@ -506,30 +503,49 @@ def train_model(ms1_iso, ms2_spec):
 
     # grid search
     mlp = MLPClassifier(random_state=1)
-    clf = GridSearchCV(mlp, all_param_grid, cv=5, n_jobs=40, scoring='roc_auc', verbose=1)
+    clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=6, scoring='accuracy', verbose=1)
     clf.fit(X_train, y_train)
 
     # print best parameters
     print("Best parameters set found on development set:")
     print(clf.best_params_)
+    email_body = "Best parameters set found on development set:\n"
+    email_body += str(clf.best_params_)
+
     best_params = clf.best_params_
 
     print("Grid scores on development set:")
+    email_body += "\nGrid scores on development set:\n"
+
     means = clf.cv_results_['mean_test_score']
     stds = clf.cv_results_['std_test_score']
+
     for mean, std, params in zip(means, stds, clf.cv_results_['params']):
-        print("%0.3f (+/-%0.03f) for %r"
+        print("%0.5f (+/-%0.05f) for %r"
               % (mean, std * 2, params))
+        email_body += "%0.5f (+/-%0.05f) for %r\n" % (mean, std * 2, params)
+
+    # send email
+    send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
+                       smtp_password=pswd)
 
     print("train model...")
     # train model with best params for 5 times, and choose the best one
     best_score = 0
+    best_mlp = None
     for i in range(5):
-        mlp = MLPClassifier(**best_params, random_state=i).fit(X_train, y_train)
+        mlp = MLPClassifier(random_state=1, **best_params)
+        mlp.fit(X_train, y_train)
         score = mlp.score(X_test, y_test)
         if score > best_score:
             best_score = score
             best_mlp = mlp
+
+    # save model
+    model_name = 'model_b'
+    model_name += '_ms1' if ms1_iso else '_noms1'
+    model_name += '_ms2' if ms2_spec else '_noms2'
+    joblib.dump(best_mlp, model_name + '.joblib')
 
     score = best_mlp.score(X_test, y_test)  # accuracy on test data
     print("MLP acc.: " + str(score))
@@ -539,20 +555,15 @@ def train_model(ms1_iso, ms2_spec):
 
     # print performance
     print("Classification report for classifier %s:\n%s\n"
-          % (best_mlp, metrics.classification_report(y_test, y_pred)))
+          % (best_mlp, metrics.classification_report(y_test, y_pred, digits=5)))
 
-    # save model
-    model_name = 'model_b'
-    model_name += '_ms1' if ms1_iso else '_noms1'
-    model_name += '_ms2' if ms2_spec else '_noms2'
-    joblib.dump(best_mlp, model_name + '.joblib')
-
-    return best_mlp
+    return
 
 
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
 
 def send_hotmail_email(subject, body, to_email, smtp_server='smtp-mail.outlook.com', smtp_port=587,
                        smtp_username='philipxsp@hotmail.com', smtp_password='Xsp123456'):
@@ -620,7 +631,9 @@ def parse_args():
 
 # test
 if __name__ == '__main__':
+    import time
 
+    start_time = time.time()
     __package__ = "msbuddy"
     # parse arguments
     args = parse_args()
@@ -647,9 +660,15 @@ if __name__ == '__main__':
         z_norm_smote()  # z-normalization and SMOTE
 
     else:  # train model
-        train_model(args.ms1, args.ms2)
+        train_model(args.ms1, args.ms2, args.pswd)
 
     # fill_model_a_prob('qtof')
 
-    send_hotmail_email("Server job finished", "Job finished.", "s1xing@health.ucsd.edu",
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    time_elapsed = time.time() - start_time
+    time_elapsed = time_elapsed / 3600
+
+    send_hotmail_email("Server job finished", "Job finished in " + str(time_elapsed) + " hrs",
+                       "s1xing@health.ucsd.edu",
                        smtp_password=args.pswd)

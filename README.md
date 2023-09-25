@@ -22,7 +22,7 @@ The minimum requirement is a single _m/z_ value and its ionization polarity.
   * accurate formula annotation via deep learning
   * false discovery rate estimation
 
-**The entire documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
+**The official documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
 
 ## Installation ([link](https://msbuddy.readthedocs.io/en/latest/install.html))
 `msbuddy` is available on PyPI, you can install it via `pip`:

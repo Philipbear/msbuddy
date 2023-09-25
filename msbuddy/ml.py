@@ -13,7 +13,7 @@ GitHub: Philipbear
 Description: machine learning functions: model A, model B; feature generation, z-normalization, prediction, etc.
              False discovery rate (FDR) estimation
 """
-
+import math
 import sys
 import warnings
 from typing import Union
@@ -24,8 +24,8 @@ from scipy.stats import norm
 from tqdm import tqdm
 
 from msbuddy.api import read_formula
-from msbuddy.query import common_nl_from_array
 from msbuddy.base import Formula
+from msbuddy.query import common_nl_from_array
 
 # ignore warnings
 warnings.filterwarnings('ignore')
@@ -393,13 +393,9 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
 
         out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, subform_score, subform_common_loss_score,
                             radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
-                            len(valid_idx_arr)])
-        # out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, subform_score, subform_common_loss_score,
-        #                     radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
-        #                     len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
+                            len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
     else:
-        # out_arr = np.array([0] * 12)
-        out_arr = np.array([0] * 10)
+        out_arr = np.array([0] * 12)
 
     return out_arr
 

@@ -562,13 +562,13 @@ if __name__ == '__main__':
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
     # buddy.load_mgf(
     # '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
-    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952"])
-    buddy.load_usi(
-        ['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
-         'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037',
-         'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00004709382'])
+    # buddy.load_usi(
+    #     ['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
+    #      'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037',
+    #      'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00004709382'])
     #
     # # add ms1 data
     # from msbuddy.base import Spectrum
