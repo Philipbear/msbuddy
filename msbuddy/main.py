@@ -560,10 +560,10 @@ if __name__ == '__main__':
 
     buddy = Msbuddy(buddy_config)
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
-    # buddy.load_mgf(
-    # '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
-    buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
-                    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
+    buddy.load_mgf(
+    '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
+    # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
+    #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952"])
     # buddy.load_usi(
     #     ['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
@@ -581,7 +581,7 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    # buddy.data = buddy.data[:200]
+    buddy.data = buddy.data[12:14]
 
     # buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'),
     #                            write_details=True)

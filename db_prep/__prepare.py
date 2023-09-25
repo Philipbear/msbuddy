@@ -1,7 +1,53 @@
 import joblib
 import pandas as pd
 import numpy as np
+from numba import njit
 
+
+# for numba
+alphabet_np = np.array(
+    [ord(char) for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"] for char in word],
+    dtype=np.int16)
+word_lengths = np.array([len(word) for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]],
+                        dtype=np.int16)
+
+
+# @njit
+def _form_arr_to_str(form_arr: np.array):
+    """
+    Inner func: convert formula array to string. (Numba version)
+    :param form_arr: formula array
+    :return: formula_list
+    """
+    formula_list = []
+    idx = 0
+    for i in range(len(word_lengths)):
+        if form_arr[i]:
+            for _ in range(word_lengths[i]):
+                formula_list.append(alphabet_np[idx])
+                idx += 1
+            if form_arr[i] > 1:
+                for digit in str(form_arr[i]):
+                    formula_list.append(ord(digit))
+        else:
+            idx += word_lengths[i]
+    return formula_list
+
+def _ascii_to_str(ascii_arr) -> str:
+    """
+    Convert ASCII integer array to string
+    :param ascii_arr: ASCII array
+    :return: string
+    """
+    return ''.join(chr(i) for i in ascii_arr)
+
+def form_arr_to_str(form_arr) -> str:
+    """
+    Convert formula array to string. (Numba version)
+    :param form_arr: formula np.array
+    :return: formula string
+    """
+    return _ascii_to_str(_form_arr_to_str(form_arr))
 
 def load_frag_table():
     """
@@ -58,6 +104,7 @@ def formula_db_idx_arr():
     db = pd.read_csv("formulaDB_20230316.csv")
     print("db size before dereplication: ", db.shape[0])
 
+
     # rename "PubChem" to "pubchem"
     db.rename(columns={'PubChem': 'pubchem'}, inplace=True)
     # create a new column "OtherDB" for non-PubChem databases, fill in the total count of non-PubChem databases
@@ -65,8 +112,16 @@ def formula_db_idx_arr():
                          'FooDB', 'HMDB', 'HSDB', 'KEGG', 'LMSD', 'MaConDa', 'MarkerDB', 'MCDB', 'NORMAN', 'NPASS', 'NPAtlas',
                          'Plantcyc', 'SMPDB', 'STOFF_IDENT', 'T3DB', 'TTD', 'UNPD', 'YMDB']].sum(axis=1)
 
+    # drop rows with se > 0 or si > 0 or b > 0
+    db = db.loc[(db['se'] == 0) & (db['si'] == 0) & (db['b'] == 0), :]
+    db.index = range(db.shape[0])
+
+    # refill formula_str column
+    db['form_str'] = db.apply(lambda x: form_arr_to_str(np.array(x[['c', 'h', 'br', 'cl', 'f', 'i', 'k', 'n', 'na', 'o', 'p', 's']].values)), axis=1)
+
+
     # dereplicate
-    db = db.drop_duplicates(subset=['formula_str'], inplace=False)
+    db = db.drop_duplicates(subset=['form_str'], inplace=False)
     print("db size after dereplication: ", db.shape[0])
 
     # reindex
