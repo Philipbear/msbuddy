@@ -42,8 +42,8 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             'rt': round(mf.rt, 4) if mf.rt else 'NA',
             'adduct': mf.adduct.string,
             'formula_rank_1': individual_result['formula_rank_1'],
-            'estimated_fdr': round_sci_notation(individual_result['estimated_fdr'], 5) if individual_result[
-                                                                                              'estimated_fdr'] is not None else 'NA',
+            'estimated_fdr': round_to_sci(individual_result['estimated_fdr'], 5) if individual_result[
+                                                                                        'estimated_fdr'] is not None else 'NA',
             'formula_rank_2': individual_result['formula_rank_2'],
             'formula_rank_3': individual_result['formula_rank_3'],
             'formula_rank_4': individual_result['formula_rank_4'],
@@ -88,17 +88,17 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 all_candidates_df = all_candidates_df.append({
                     'rank': m,
                     'formula': cf.formula.__str__(),
-                    'formula_feasibility': round_sci_notation(cf.ml_a_prob, 5),
+                    'formula_feasibility': round_to_sci(cf.ml_a_prob, 5),
                     'ms1_isotope_similarity': round(cf.ms1_isotope_similarity,
                                                     5) if cf.ms1_isotope_similarity is not None else 'NA',
                     'mz_error_ppm': round(mz_error_ppm, 5),
                     'explained_ms2_peak': exp_ms2_peak,
                     'total_valid_ms2_peak': len(mf.ms2_processed) if mf.ms2_processed else 'NA',
-                    'estimated_prob': round_sci_notation(cf.estimated_prob,
-                                                         5) if cf.estimated_prob is not None else 'NA',
-                    'normalized_estimated_prob': round_sci_notation(cf.normed_estimated_prob,
-                                                                    5) if cf.normed_estimated_prob is not None else 'NA',
-                    'estimated_fdr': round_sci_notation(cf.estimated_fdr, 5) if cf.estimated_fdr is not None else 'NA',
+                    'estimated_prob': round_to_sci(cf.estimated_prob,
+                                                   5) if cf.estimated_prob is not None else 'NA',
+                    'normalized_estimated_prob': round_to_sci(cf.normed_estimated_prob,
+                                                              5) if cf.normed_estimated_prob is not None else 'NA',
+                    'estimated_fdr': round_to_sci(cf.estimated_fdr, 5) if cf.estimated_fdr is not None else 'NA',
                     'ms2_explanation_idx': ms2_explan_idx,
                     'ms2_explanation': ms2_explan_str
                 }, ignore_index=True)
@@ -127,7 +127,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
     return result_df
 
 
-def round_sci_notation(number, decimals):
+def round_to_sci(number, decimals):
     """
     Round a number to a given number of decimals in scientific notation.
     """
@@ -142,3 +142,4 @@ def round_sci_notation(number, decimals):
     rounded_sci_number = f"{rounded_base}e{exponent}"
 
     return rounded_sci_number
+
