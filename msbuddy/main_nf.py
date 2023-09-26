@@ -29,7 +29,7 @@ def main():
     parser.add_argument('-output', '-o', type=str, help='The output file path.')
     parser.add_argument('-details', '-d', type=int, default=0,
                         help='Whether to write detailed results. Default: False.')
-    parser.add_argument('-ms_instr', '-ms', type=str, default='orbitrap',
+    parser.add_argument('-ms_instr', '-ms', type=str, default=None,
                         help='MS instrument type. Supported types: orbitrap, qtof, fticr.')
     parser.add_argument('-disable_ppm', action='store_false',
                         help='Whether to disable ppm for mass tolerance. Default: ppm is enabled.')
@@ -37,9 +37,6 @@ def main():
     parser.add_argument('-ms2_tol', type=float, default=10, help='MS2 tolerance. Default: 10.')
     parser.add_argument('-halogen', '-hal', action='store_true',
                         help='Whether to consider halogen atoms FClBrI. Default: False.')
-    parser.add_argument('-parallel', '-p', action='store_true',
-                        help='Whether to use parallel computing. Default: False.')
-    parser.add_argument('-n_cpu', type=int, default=-1, help='Number of CPUs to use. Default: -1, use all CPUs.')
     parser.add_argument('-timeout_secs', '-t', type=int, default=300, help='Timeout in seconds. Default: 300.')
     parser.add_argument('-batch_size', '-bs', type=int, default=1000,
                         help='Batch size. Default: 1000. A larger batch size needs more memory, but is faster.')

@@ -489,9 +489,9 @@ def train_model(ms1_iso, ms2_spec, pswd):
     # grid search
     all_param_grid = {
         'hidden_layer_sizes': [
-            (256, 256),
-            (256, 128, 128), (128, 128, 128, 64),
-            (128, 128, 64, 64, 32)],
+            (512, 256),
+            (256, 256, 128), (256, 128, 128, 64),
+            (256, 128, 128, 64, 64)],
         'activation': ['relu'],
         'max_iter': [800]
     }
@@ -530,7 +530,7 @@ def train_model(ms1_iso, ms2_spec, pswd):
     # send email
     send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
                        smtp_password=pswd)
-
+    #
     # print("train model...")
     # # train model with best params for 5 times, and choose the best one
     # best_score = 0
@@ -671,6 +671,5 @@ if __name__ == '__main__':
     time_elapsed = time.time() - start_time
     time_elapsed = time_elapsed / 3600
 
-    send_hotmail_email("Server job finished", "Job finished in " + str(time_elapsed) + " hrs",
-                       "s1xing@health.ucsd.edu",
-                       smtp_password=args.pswd)
+    # send_hotmail_email("Server job finished", "Job finished in " + str(time_elapsed) + " hrs",
+    #                    "s1xing@health.ucsd.edu", smtp_password=args.pswd)
