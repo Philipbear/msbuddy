@@ -6,11 +6,11 @@
 # You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
 # ==============================================================================
 """
-File: main_cmd.py
+File: main_nf.py
 Author: Shipei Xing
 Email: s1xing@health.ucsd.edu
 GitHub: Philipbear
-Description: Command line interface for msbuddy.
+Description: Main script for msbuddy on Nextflow.
 """
 
 import argparse
@@ -22,14 +22,14 @@ from msbuddy.main import Msbuddy, MsbuddyConfig
 
 
 def main():
-    parser = argparse.ArgumentParser(description="msbuddy command line interface.")
+    parser = argparse.ArgumentParser(description="msbuddy on Nextflow.")
     parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('-usi', type=str, help='A single USI string.')
     parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column (no header row).')
     parser.add_argument('-output', '-o', type=str, help='The output file path.')
-    parser.add_argument('-details', '-d', action='store_true',
+    parser.add_argument('-details', '-d', type=int, default=0,
                         help='Whether to write detailed results. Default: False.')
-    parser.add_argument('-ms_instr', '-ms', type=str, default=None,
+    parser.add_argument('-ms_instr', '-ms', type=str, default='orbitrap',
                         help='MS instrument type. Supported types: orbitrap, qtof, fticr.')
     parser.add_argument('-disable_ppm', action='store_false',
                         help='Whether to disable ppm for mass tolerance. Default: ppm is enabled.')

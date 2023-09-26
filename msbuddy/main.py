@@ -581,6 +581,13 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
+    strs = ['C8H11NO2', 'C6H9N4O', 'C5H16NP2', 'C3H12ClN5', 'C4H7N7']
+    for s in strs:
+        print(s, buddy.predict_formula_feasibility(s))
+
+
+
+
     buddy.data = buddy.data[12:14]
 
     # buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'),

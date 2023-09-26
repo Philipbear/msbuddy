@@ -86,7 +86,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                              mf.adduct.charge * 0.0005486) / abs(mf.adduct.charge)
                 mz_error_ppm = (mf.mz - theo_mass) / theo_mass * 1e6
                 all_candidates_df = all_candidates_df.append({
-                    'rank': m,
+                    'rank': str(m + 1),
                     'formula': cf.formula.__str__(),
                     'formula_feasibility': round_to_sci(cf.ml_a_prob, 5),
                     'ms1_isotope_similarity': round(cf.ms1_isotope_similarity,

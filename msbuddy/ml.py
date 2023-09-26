@@ -242,7 +242,9 @@ def pred_form_feasibility_single(formula: Union[str, np.array], gd) -> Union[flo
     dbe = form.dbe
     mass = form.mass
 
-    if dbe < 0 or mass < 0:
+    if dbe < 0:
+        return 0
+    if mass < 0:
         return None
 
     # generate ML feature array
