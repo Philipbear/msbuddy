@@ -42,8 +42,8 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             'rt': round(mf.rt, 4) if mf.rt else 'NA',
             'adduct': mf.adduct.string,
             'formula_rank_1': individual_result['formula_rank_1'],
-            'estimated_fdr': round(individual_result['estimated_fdr'],
-                                   5) if individual_result['estimated_fdr'] is not None else 'NA',
+            'estimated_fdr': round_sci_notation(individual_result['estimated_fdr'], 5) if individual_result[
+                                                                                              'estimated_fdr'] is not None else 'NA',
             'formula_rank_2': individual_result['formula_rank_2'],
             'formula_rank_3': individual_result['formula_rank_3'],
             'formula_rank_4': individual_result['formula_rank_4'],
@@ -55,7 +55,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
         for mf in batch_data:
             # make a directory for each mf
             # replace '/' with '_' in the identifier, remove special characters
-            _id = str(mf.identifier).replace('/', '_').replace(':', '_').replace(' ', '_').strip()
+            _id = str(mf.identifier).replace('/', '').replace(':', '').replace(' ', '').strip()
             folder_name = _id + '_mz_' + str(round(mf.mz, 4)) + '_rt_'
             folder_name += str(round(mf.rt, 2)) if mf.rt else 'NA'
             mf_path = pathlib.Path(output_path / folder_name)
@@ -88,17 +88,17 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 all_candidates_df = all_candidates_df.append({
                     'rank': m,
                     'formula': cf.formula.__str__(),
-                    'formula_feasibility': round(cf.ml_a_prob, 5),
+                    'formula_feasibility': round_sci_notation(cf.ml_a_prob, 5),
                     'ms1_isotope_similarity': round(cf.ms1_isotope_similarity,
                                                     5) if cf.ms1_isotope_similarity is not None else 'NA',
                     'mz_error_ppm': round(mz_error_ppm, 5),
                     'explained_ms2_peak': exp_ms2_peak,
                     'total_valid_ms2_peak': len(mf.ms2_processed) if mf.ms2_processed else 'NA',
-                    'estimated_prob': round(cf.estimated_prob,
-                                            5) if cf.estimated_prob is not None else 'NA',
-                    'normalized_estimated_prob': round(cf.normed_estimated_prob,
-                                                       5) if cf.normed_estimated_prob is not None else 'NA',
-                    'estimated_fdr': round(cf.estimated_fdr, 5) if cf.estimated_fdr is not None else 'NA',
+                    'estimated_prob': round_sci_notation(cf.estimated_prob,
+                                                         5) if cf.estimated_prob is not None else 'NA',
+                    'normalized_estimated_prob': round_sci_notation(cf.normed_estimated_prob,
+                                                                    5) if cf.normed_estimated_prob is not None else 'NA',
+                    'estimated_fdr': round_sci_notation(cf.estimated_fdr, 5) if cf.estimated_fdr is not None else 'NA',
                     'ms2_explanation_idx': ms2_explan_idx,
                     'ms2_explanation': ms2_explan_str
                 }, ignore_index=True)
@@ -109,19 +109,36 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 ms1_df = pd.DataFrame(columns=['raw_idx', 'mz', 'intensity'])
                 for m in range(len(mf.ms1_processed)):
                     ms1_df = ms1_df.append({
-                        'raw_idx': int(mf.ms1_processed.idx_array[m]),
-                        'mz': round(mf.ms1_processed.mz_array[m], 4),
-                        'intensity': round(mf.ms1_processed.int_array[m], 4)
+                        'raw_idx': mf.ms1_processed.idx_array[m],
+                        'mz': mf.ms1_processed.mz_array[m],
+                        'intensity': mf.ms1_processed.int_array[m]
                     }, ignore_index=True)
                 ms1_df.to_csv(mf_path / 'ms1_preprocessed.tsv', sep="\t", index=False)
             if mf.ms2_processed:
                 ms2_df = pd.DataFrame(columns=['raw_idx', 'mz', 'intensity'])
                 for m in range(len(mf.ms2_processed)):
                     ms2_df = ms2_df.append({
-                        'raw_idx': int(mf.ms2_processed.idx_array[m]),
-                        'mz': round(mf.ms2_processed.mz_array[m], 4),
-                        'intensity': round(mf.ms2_processed.int_array[m], 4)
+                        'raw_idx': mf.ms2_processed.idx_array[m],
+                        'mz': mf.ms2_processed.mz_array[m],
+                        'intensity': mf.ms2_processed.int_array[m]
                     }, ignore_index=True)
                 ms2_df.to_csv(mf_path / 'ms2_preprocessed.tsv', sep="\t", index=False)
 
     return result_df
+
+
+def round_sci_notation(number, decimals):
+    """
+    Round a number to a given number of decimals in scientific notation.
+    """
+    # Convert the number to scientific notation with specified decimals
+    sci_number = "{:e}".format(number)
+    base, exponent = sci_number.split("e")
+
+    # Round the base to the specified number of decimals
+    rounded_base = round(float(base), decimals)
+
+    # Construct the rounded scientific notation
+    rounded_sci_number = f"{rounded_base}e{exponent}"
+
+    return rounded_sci_number
