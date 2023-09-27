@@ -489,9 +489,9 @@ def train_model(ms1_iso, ms2_spec, pswd):
     # grid search
     all_param_grid = {
         'hidden_layer_sizes': [
-            (512, 256),
-            (256, 256, 128), (256, 128, 128, 64),
-            (256, 128, 128, 64, 64)],
+            (256, 256, 128), (256, 128, 128), (128, 128, 64),
+            (256, 256, 128, 64), (256, 128, 128, 64), (128, 128, 64, 64)
+        ],
         'activation': ['relu'],
         'max_iter': [800]
     }
@@ -530,34 +530,34 @@ def train_model(ms1_iso, ms2_spec, pswd):
     # send email
     send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
                        smtp_password=pswd)
-    #
-    # print("train model...")
-    # # train model with best params for 5 times, and choose the best one
-    # best_score = 0
-    # best_mlp = None
-    # for i in range(5):
-    #     mlp = MLPClassifier(random_state=1, **best_params)
-    #     mlp.fit(X_train, y_train)
-    #     score = mlp.score(X_test, y_test)
-    #     if score > best_score:
-    #         best_score = score
-    #         best_mlp = mlp
-    #
-    # # save model
-    # model_name = 'model_b'
-    # model_name += '_ms1' if ms1_iso else '_noms1'
-    # model_name += '_ms2' if ms2_spec else '_noms2'
-    # joblib.dump(best_mlp, model_name + '.joblib')
-    #
-    # score = best_mlp.score(X_test, y_test)  # accuracy on test data
-    # print("MLP acc.: " + str(score))
-    #
-    # # predict on test data
-    # y_pred = best_mlp.predict(X_test)
-    #
-    # # print performance
-    # print("Classification report for classifier %s:\n%s\n"
-    #       % (best_mlp, metrics.classification_report(y_test, y_pred, digits=5)))
+
+    print("train model...")
+    # train model with best params for 5 times, and choose the best one
+    best_score = 0
+    best_mlp = None
+    for i in range(5):
+        mlp = MLPClassifier(random_state=1, **best_params)
+        mlp.fit(X_train, y_train)
+        score = mlp.score(X_test, y_test)
+        if score > best_score:
+            best_score = score
+            best_mlp = mlp
+
+    # save model
+    model_name = 'model_b'
+    model_name += '_ms1' if ms1_iso else '_noms1'
+    model_name += '_ms2' if ms2_spec else '_noms2'
+    joblib.dump(best_mlp, model_name + '.joblib')
+
+    score = best_mlp.score(X_test, y_test)  # accuracy on test data
+    print("MLP acc.: " + str(score))
+
+    # predict on test data
+    y_pred = best_mlp.predict(X_test)
+
+    # print performance
+    print("Classification report for classifier %s:\n%s\n"
+          % (best_mlp, metrics.classification_report(y_test, y_pred, digits=5)))
 
     return
 
@@ -671,5 +671,5 @@ if __name__ == '__main__':
     time_elapsed = time.time() - start_time
     time_elapsed = time_elapsed / 3600
 
-    # send_hotmail_email("Server job finished", "Job finished in " + str(time_elapsed) + " hrs",
-    #                    "s1xing@health.ucsd.edu", smtp_password=args.pswd)
+    send_hotmail_email("Server job finished", "Job finished in " + str(time_elapsed) + " hrs",
+                       "s1xing@health.ucsd.edu", smtp_password=args.pswd)

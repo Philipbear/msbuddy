@@ -101,7 +101,11 @@ class MsbuddyConfig:
         :param max_frag_reserved: max fragment number reserved, used for MS2 data
         :param use_all_frag: whether to use all fragments for annotation; by default, only top N fragments are used, top N is a function of precursor mass
         """
-        if ms_instr in ["orbitrap", "fticr", "qtof"]:
+        if ms_instr is None:
+            self.ppm = ppm
+            self.ms1_tol = ms1_tol
+            self.ms2_tol = ms2_tol
+        elif ms_instr in ["orbitrap", "fticr", "qtof"]:
             self.ppm = True
             if ms_instr == "orbitrap":
                 self.ms1_tol = 5
@@ -113,9 +117,7 @@ class MsbuddyConfig:
                 self.ms1_tol = 10
                 self.ms2_tol = 20
         else:
-            self.ppm = ppm
-            self.ms1_tol = ms1_tol
-            self.ms2_tol = ms2_tol
+            raise ValueError("Invalid mass spectrometry instrument. Please choose from 'orbitrap', 'fticr' and 'qtof'.")
 
         self.db_mode = 0 if not halogen else 1
         self.parallel = parallel
