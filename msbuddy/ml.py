@@ -23,7 +23,7 @@ from numba import njit
 from scipy.stats import norm
 from tqdm import tqdm
 
-from msbuddy.api import read_formula
+from msbuddy.utils import read_formula
 from msbuddy.base import Formula
 from msbuddy.query import common_nl_from_array
 
@@ -41,15 +41,15 @@ def _gen_ml_a_feature_from_buddy_data(buddy_data) -> (np.array, np.array, np.arr
     dbe_arr = np.array([])
     mass_arr = np.array([])
 
-    for meta_feature in buddy_data:
-        if not meta_feature.candidate_formula_list:
+    for mf in buddy_data:
+        if not mf.candidate_formula_list:
             continue
         # generate ML features for each candidate formula
-        for candidate_formula in meta_feature.candidate_formula_list:
+        for cf in mf.candidate_formula_list:
             # add formula array to all_cand_form_arr
-            all_cand_form_arr = np.append(all_cand_form_arr, [candidate_formula.formula.array], axis=0)
-            dbe_arr = np.append(dbe_arr, candidate_formula.formula.dbe)
-            mass_arr = np.append(mass_arr, candidate_formula.formula.mass)
+            all_cand_form_arr = np.append(all_cand_form_arr, [cf.formula.array], axis=0)
+            dbe_arr = np.append(dbe_arr, cf.formula.dbe)
+            mass_arr = np.append(mass_arr, cf.formula.mass)
 
     return all_cand_form_arr, dbe_arr, mass_arr
 
@@ -521,6 +521,7 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     # predict formula probability
     prob_arr = model.predict_proba(X_arr)
     return prob_arr[:, 1]
+
 
 def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
                       config, gd):

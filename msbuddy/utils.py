@@ -6,11 +6,11 @@
 # You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
 # ==============================================================================
 """
-File: api.py
+File: utils.py
 Author: Shipei Xing
 Email: s1xing@health.ucsd.edu
 GitHub: Philipbear
-Description: main API functions for msbuddy
+Description: main util functions for msbuddy
 """
 
 from typing import List

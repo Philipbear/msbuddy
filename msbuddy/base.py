@@ -19,7 +19,8 @@ from typing import Union, Tuple, List
 
 import numpy as np
 from numba import njit
-from msbuddy.api import read_formula, form_arr_to_str
+
+from msbuddy.utils import read_formula, form_arr_to_str
 
 mass_i = 1.0033548  # mass of isotope
 mass_e = 0.0005486  # mass of electron
@@ -501,6 +502,7 @@ class ProcessedMS2:
     :attr mz_array: np.array
     :attr int_array: np.array
     """
+
     def __init__(self, mz: float, raw_spec: Spectrum,
                  mz_tol: float, ppm: bool,
                  denoise: bool,
@@ -653,6 +655,7 @@ class MS2Explanation:
     """
     MS2Explanation class, used for storing MS2 explanation.
     """
+
     def __init__(self, idx_array: np.array,
                  explanation_array: List[Union[Formula, None]]):
         self.idx_array = np.array(idx_array, dtype=np.int16)  # indices of peaks in MS2 spectrum
@@ -696,7 +699,7 @@ class CandidateFormula:
 
     def __str__(self):
         cf_str = form_arr_to_str(self.formula.array) + "  ml_a: " + str(self.ml_a_prob) + \
-                    "  est_prob: " + str(self.estimated_prob) + "  est_fdr: " + str(self.estimated_fdr)
+                 "  est_prob: " + str(self.estimated_prob) + "  est_fdr: " + str(self.estimated_fdr)
         if self.ms2_raw_explanation:
             cf_str += " ms2_raw_exp: " + str(len(self.ms2_raw_explanation))
 

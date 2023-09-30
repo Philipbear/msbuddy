@@ -19,7 +19,7 @@ import numpy as np
 from brainpy import isotopic_variants
 from numba import njit
 
-from msbuddy.api import form_arr_to_str, enumerate_subformula
+from msbuddy.utils import form_arr_to_str, enumerate_subformula
 from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature
 from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
 

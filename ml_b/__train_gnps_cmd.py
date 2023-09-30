@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 
 import joblib
 import numpy as np
@@ -9,13 +10,16 @@ from scipy.stats import norm
 from sklearn import metrics
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.neural_network import MLPClassifier
+from tqdm import tqdm
 
 from msbuddy.base import read_formula, MetaFeature, Spectrum, Formula, CandidateFormula
 from msbuddy.main import Msbuddy, MsbuddyConfig, _gen_subformula
 from msbuddy.load import init_db
 from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from msbuddy.cand import _calc_ms1_iso_sim
-from msbuddy.api import form_arr_to_str
+from msbuddy.utils import form_arr_to_str
+
+from multiprocessing import Pool, cpu_count
 
 
 # This MLP model is trained using GNPS library.
@@ -486,80 +490,101 @@ def train_model(ms1_iso, ms2_spec, pswd):
     # split training and testing data
     X_train, X_test, y_train, y_test = train_test_split(X_arr, y_arr, test_size=0.2, random_state=0)
 
-    # grid search
-    all_param_grid = {
-        'hidden_layer_sizes': [
-            (256, 256, 128), (256, 128, 128), (128, 128, 64),
-            (256, 256, 128, 64), (256, 128, 128, 64), (128, 128, 64, 64)
-        ],
-        'activation': ['relu'],
-        'max_iter': [800]
-    }
-
+    #
+    # # grid search
     # all_param_grid = {
-    #     'hidden_layer_sizes': [(512,), (256, 256), (128, 128, 64), (128, 64, 64, 32)],
+    #     'hidden_layer_sizes': [
+    #         (512, 512, 256), (512, 256, 256), (512, 256, 128), (256, 256, 128)
+    #     ],
     #     'activation': ['relu'],
-    #     'alpha': [1e-5],
     #     'max_iter': [800]
     # }
+    #
+    # # grid search
+    # mlp = MLPClassifier(random_state=1)
+    # clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=6, scoring='accuracy', verbose=1)
+    # clf.fit(X_train, y_train)
+    #
+    # # print best parameters
+    # print("Best parameters set found on development set:")
+    # print(clf.best_params_)
+    # email_body = "Best parameters set found on development set:\n"
+    # email_body += str(clf.best_params_)
+    #
+    # best_params = clf.best_params_
+    #
+    # print("Grid scores on development set:")
+    # email_body += "\nGrid scores on development set:\n"
+    #
+    # means = clf.cv_results_['mean_test_score']
+    # stds = clf.cv_results_['std_test_score']
+    #
+    # for mean, std, params in zip(means, stds, clf.cv_results_['params']):
+    #     print("%0.5f (+/-%0.05f) for %r"
+    #           % (mean, std * 2, params))
+    #     email_body += "%0.5f (+/-%0.05f) for %r\n" % (mean, std * 2, params)
+    #
+    # # send email
+    # send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
+    #                    smtp_password=pswd)
 
-    # grid search
-    mlp = MLPClassifier(random_state=1)
-    clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=6, scoring='accuracy', verbose=1)
-    clf.fit(X_train, y_train)
-
-    # print best parameters
-    print("Best parameters set found on development set:")
-    print(clf.best_params_)
-    email_body = "Best parameters set found on development set:\n"
-    email_body += str(clf.best_params_)
-
-    best_params = clf.best_params_
-
-    print("Grid scores on development set:")
-    email_body += "\nGrid scores on development set:\n"
-
-    means = clf.cv_results_['mean_test_score']
-    stds = clf.cv_results_['std_test_score']
-
-    for mean, std, params in zip(means, stds, clf.cv_results_['params']):
-        print("%0.5f (+/-%0.05f) for %r"
-              % (mean, std * 2, params))
-        email_body += "%0.5f (+/-%0.05f) for %r\n" % (mean, std * 2, params)
-
-    # send email
-    send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
-                       smtp_password=pswd)
+    # best parameters
+    best_params = {'hidden_layer_sizes': (512, 512, 256), 'max_iter': 800}
 
     print("train model...")
-    # train model with best params for 5 times, and choose the best one
-    best_score = 0
-    best_mlp = None
-    for i in range(5):
-        mlp = MLPClassifier(random_state=1, **best_params)
-        mlp.fit(X_train, y_train)
-        score = mlp.score(X_test, y_test)
-        if score > best_score:
-            best_score = score
-            best_mlp = mlp
 
-    # save model
+    # train model with best params for 10 times, and save the best three
+    mlps = []
+    scores = []
+    # train 5 models in parallel
+    with Pool(processes=5) as pool:
+        async_results = [pool.apply_async(_train, args=(k, X_train, y_train, X_test, y_test, best_params))
+                         for k in range(5)]
+
+        pbar = tqdm(total=5, colour="green", desc="model training: ", file=sys.stdout)
+        for i, async_result in enumerate(async_results):
+            pbar.update(1)  # Update tqdm progress bar
+            mlp, score = async_result.get()
+            mlps.append(mlp)
+            scores.append(score)
+    pbar.close()  # Close tqdm progress bar
+    del async_results
+
+    # save the best model
+    best_mlp = mlps[np.argmax(scores)]
+    score = scores[np.argmax(scores)]
+    print("MLP acc.: " + str(score))
     model_name = 'model_b'
     model_name += '_ms1' if ms1_iso else '_noms1'
     model_name += '_ms2' if ms2_spec else '_noms2'
     joblib.dump(best_mlp, model_name + '.joblib')
 
-    score = best_mlp.score(X_test, y_test)  # accuracy on test data
-    print("MLP acc.: " + str(score))
-
-    # predict on test data
-    y_pred = best_mlp.predict(X_test)
-
-    # print performance
-    print("Classification report for classifier %s:\n%s\n"
-          % (best_mlp, metrics.classification_report(y_test, y_pred, digits=5)))
+    #
+    # # top 3 models with highest accuracy
+    # top3_idx = np.argsort(scores)[-3:]
+    # top3_scores = np.array(scores)[top3_idx]
+    # top3_mlps = np.array(mlps)[top3_idx]
+    #
+    # # save top 3 models
+    # for i in range(3):
+    #     best_mlp = top3_mlps[i]
+    #     score = top3_scores[i]
+    #     print("MLP acc.: " + str(score))
+    #     model_name = 'model_b'
+    #     model_name += '_ms1' if ms1_iso else '_noms1'
+    #     model_name += '_ms2' if ms2_spec else '_noms2'
+    #     model_name += '_' + str(i)
+    #     joblib.dump(best_mlp, model_name + '.joblib')
 
     return
+
+
+def _train(random_state, X_train, y_train, X_test, y_test, best_params):
+    mlp_cls = MLPClassifier(random_state=random_state, **best_params)
+    mlp_cls.fit(X_train, y_train)
+    mlp_score = mlp_cls.score(X_test, y_test)
+    return mlp_cls, mlp_score
+
 
 
 import smtplib

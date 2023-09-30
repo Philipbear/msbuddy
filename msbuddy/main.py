@@ -30,7 +30,7 @@ from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single, calc_fdr
 from msbuddy.query import query_neutral_mass
-from msbuddy.api import form_arr_to_str
+from msbuddy.utils import form_arr_to_str
 
 logging.basicConfig(level=logging.INFO)
 
@@ -582,13 +582,6 @@ if __name__ == '__main__':
 
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
-
-    strs = ['C8H11NO2', 'C6H9N4O', 'C5H16NP2', 'C3H12ClN5', 'C4H7N7']
-    for s in strs:
-        print(s, buddy.predict_formula_feasibility(s))
-
-
-
 
     buddy.data = buddy.data[12:14]
 
