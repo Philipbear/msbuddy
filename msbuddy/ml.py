@@ -220,7 +220,7 @@ def _calc_top_n_candidate(mz: float, max_n: int, db_mode: int) -> int:
     if db_mode == 0:
         return min(max_n, int(mz * mz / 1500) + 50)
     else:
-        return min(max_n, int(mz * mz / 1000) + 100)
+        return min(max_n, int(mz * mz / 1000) + 50)
 
 
 def pred_form_feasibility_single(formula: Union[str, np.array], gd) -> Union[float, None]:

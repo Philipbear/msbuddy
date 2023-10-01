@@ -269,8 +269,8 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
                                                                                  ele_upper_limit,
                                                                                  db_mode, gd)
 
-        # if ms2 candidate space <= 20, query precursor mass directly
-        if len(ms2_cand_form_ls) <= 20:
+        # if ms2 candidate space <= 10, query precursor mass
+        if len(ms2_cand_form_ls) <= 10:
             ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol,
                                                                                     ele_lower_limit,
                                                                                     ele_upper_limit, db_mode, gd)
@@ -285,7 +285,7 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     # calculate neutral mass of the precursor ion
     ion_mode = 1 if mf.adduct.pos_mode else -1
     t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
-    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list, 800)
+    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list, 600)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if mf.ms1_processed and len(mf.ms1_processed) > 1:

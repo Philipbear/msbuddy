@@ -533,31 +533,20 @@ def train_model(ms1_iso, ms2_spec, pswd):
 
     print("train model...")
 
-    # train model with best params for 10 times, and save the best three
-    mlps = []
-    scores = []
-    # train 5 models in parallel
-    with Pool(processes=5) as pool:
-        async_results = [pool.apply_async(_train, args=(k, X_train, y_train, X_test, y_test, best_params))
-                         for k in range(5)]
-
-        pbar = tqdm(total=5, colour="green", desc="model training: ", file=sys.stdout)
-        for i, async_result in enumerate(async_results):
-            pbar.update(1)  # Update tqdm progress bar
-            mlp, score = async_result.get()
-            mlps.append(mlp)
-            scores.append(score)
-    pbar.close()  # Close tqdm progress bar
-    del async_results
-
-    # save the best model
-    best_mlp = mlps[np.argmax(scores)]
-    score = scores[np.argmax(scores)]
-    print("MLP acc.: " + str(score))
-    model_name = 'model_b'
-    model_name += '_ms1' if ms1_iso else '_noms1'
-    model_name += '_ms2' if ms2_spec else '_noms2'
-    joblib.dump(best_mlp, model_name + '.joblib')
+    # train model with best params for 5 times, and save the best one
+    best_score = 0
+    for m in range(5):
+        this_mlp, score = _train(m, X_train, y_train, X_test, y_test, best_params)
+        if score > best_score:
+            best_score = score
+            print("MLP acc.: " + str(score))
+            model_name = 'model_b'
+            model_name += '_ms1' if ms1_iso else '_noms1'
+            model_name += '_ms2' if ms2_spec else '_noms2'
+            joblib.dump(this_mlp, model_name + '.joblib')
+            body_str = "MLP acc.: " + str(score)
+            send_hotmail_email("mlp trained", body_str,
+                               "s1xing@health.ucsd.edu", smtp_password=args.pswd)
 
     #
     # # top 3 models with highest accuracy

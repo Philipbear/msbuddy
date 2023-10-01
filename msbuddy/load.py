@@ -73,9 +73,9 @@ def init_db(db_mode: int) -> dict:
     b_std = j_load(data_path / 'ml_b_std_arr.joblib')
     global_dict['model_b_std_arr'] = b_std
 
-    # global_dict['model_b_ms1_ms2'] = j_load(data_path / 'model_b_ms1_ms2.joblib')
+    global_dict['model_b_ms1_ms2'] = j_load(data_path / 'model_b_ms1_ms2.joblib')
     global_dict['model_b_noms1_ms2'] = j_load(data_path / 'model_b_noms1_ms2.joblib')
-    # global_dict['model_b_ms1_noms2'] = j_load(data_path / 'model_b_ms1_noms2.joblib')
+    global_dict['model_b_ms1_noms2'] = j_load(data_path / 'model_b_ms1_noms2.joblib')
     # global_dict['model_b_noms1_noms2'] = j_load(data_path / 'model_b_noms1_noms2.joblib')
 
     # # load ml_b
