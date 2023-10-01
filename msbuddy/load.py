@@ -140,9 +140,9 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 else:
                     charge = abs(charge) if pos_mode else -abs(charge)
 
-                # if no peaks found, skip
-                if mz_arr.size == 0:
-                    continue
+                # # if no peaks found, skip
+                # if mz_arr.size == 0:
+                #     continue
 
                 # create MetaFeature object if the same identifier does not exist
                 mf_idx = None
@@ -154,9 +154,9 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 # if the same identifier exists, add to the existing MetaFeature
                 if mf_idx is not None:
                     if ms2_spec:
-                        meta_feature_list[mf_idx].ms2_raw = Spectrum(mz_arr, int_arr)
+                        meta_feature_list[mf_idx].ms2_raw = Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None
                     else:
-                        meta_feature_list[mf_idx].ms1_raw = Spectrum(mz_arr, int_arr)
+                        meta_feature_list[mf_idx].ms1_raw = Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None
                     continue
                 # if the same identifier does not exist, create a new MetaFeature
                 else:
@@ -164,7 +164,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                                      charge=charge,
                                      rt=rt,
                                      adduct=adduct_str,
-                                     ms2=Spectrum(mz_arr, int_arr),
+                                     ms2=Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None,
                                      identifier=identifier)
                     meta_feature_list.append(mf)
                     cnt += 1
