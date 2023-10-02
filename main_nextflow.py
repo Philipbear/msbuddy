@@ -126,7 +126,7 @@ def main():
         engine.load_mgf(args.mgf)
     elif input_path.suffix.lower() == '.csv':
         # read and load CSV file, no header
-        df = pd.read_csv(args.csv, header=None)
+        df = pd.read_csv(args.csv, header=None, keep_default_na=False, na_values=None)
         # if df has >1 columns, treat the 2nd column as adduct strings
         if df.shape[1] > 1:
             engine.load_usi(df.iloc[:, 0].tolist(), df.iloc[:, 1].tolist())

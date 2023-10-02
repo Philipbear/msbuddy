@@ -223,7 +223,6 @@ def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
         raise ValueError
 
     # get adduct
-    adduct = adduct.strip()
     if adduct == '':
         adduct = None
 
@@ -266,12 +265,14 @@ def load_usi(usi_list: Union[str, List[str]],
     if isinstance(usi_list, str):
         usi_list = [usi_list]
         if adduct_list is not None:
-            adduct_list = [adduct_list]
+            adduct_list = [adduct_str.strip() for adduct_str in adduct_list]
 
     if adduct_list is None:
         adduct_list = [None] * len(usi_list)
     elif len(adduct_list) != len(usi_list):
         logging.warning('adduct_list and usi_list must have the same length. Default adducts are used.')
+
+    usi_list = [usi.strip() for usi in usi_list]
 
     # retrieve indices of unique USIs from the list
     seen = {}

@@ -122,11 +122,12 @@ def main():
     elif args.usi:
         engine.load_usi([args.usi])
     elif args.csv:
-        # read and load CSV file, no header
-        df = pd.read_csv(args.csv, header=None)
+        # read and load CSV file, no header, treat empty cells as empty strings
+        df = pd.read_csv(args.csv, header=None, keep_default_na=False, na_values=None)
         # if df has >1 columns, treat the 2nd column as adduct strings
         if df.shape[1] > 1:
-            engine.load_usi(df.iloc[:, 0].tolist(), df.iloc[:, 1].tolist())
+            engine.load_usi(usi_list=df.iloc[:, 0].tolist(),
+                            adduct_list=df.iloc[:, 1].tolist())
         else:
             engine.load_usi(df.iloc[:, 0].tolist())
     else:
