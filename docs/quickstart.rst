@@ -33,8 +33,9 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
            print(key, value)
 
 
-It is **highly recommended** to set up the ``ms_instr`` parameter in the :class:`msbuddy.MsbuddyConfig` to obtain the best annotation performance.
-Please see `Configuration <config.html>`_ session for more details.
+.. note::
+    It is **highly recommended** to set up the ``ms_instr`` parameter in the :class:`msbuddy.MsbuddyConfig` to obtain the best annotation performance.
+    Please see `Configuration <config.html>`_ session for more details.
 
 
 
@@ -60,4 +61,11 @@ MS/MS spectra can also be loaded via their USIs:
    msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                         'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 
+   # load USIs with adducts specified, otherwise the default adducts ([M+H]+, [M-H]-) will be used
+   msb_engine.load_usi(usi_list=['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
+                                 'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00000845027'],
+                       adduct_list=['[M+H]+', '[M-H2O+H]+'])
 
+.. note::
+    **msbuddy** does not perform adduct annotation. Please make sure the adduct type is correctly specified in the input file if necessary, otherwise default adducts ([M+H]+, [M-H]-) will be used.
+    We claim that adduct annotation should be performed on the MS1 level, where chromatographic peak profiles must be involved.

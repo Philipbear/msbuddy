@@ -24,7 +24,7 @@ In case you want to access all the annotation results, you can iterate through t
 
 Please see :class:`MetaFeature` and :class:`CandidateFormula` in `Python API <pyapi.html>`_ for more details.
 
-
-If you are using the command-line interface, the result summary will be automatically written in the output directory as a ``.tsv`` file.
-To access more detailed annotation results, you can use the ``-details`` option.
+.. note::
+    If you are using the command-line interface, the result summary will be automatically written in the output directory as a ``.tsv`` file.
+    To access more detailed annotation results, you can use the ``-details`` option. See `Command-line API <cmdapi.html>`_ for more details.
 

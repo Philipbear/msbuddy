@@ -3,10 +3,11 @@ Contact
 
 To contribute to **msbuddy**, please feel free to file an issue at `GitHub <https://github.com/Philipbear/msbuddy/issues>`_, or submit a `pull request <https://github.com/Philipbear/msbuddy>`_ with improvements.
 
-You can also directly contact the maintainer Shipei Xing (philipxsp@hotmail.com / s1xing@health.ucsd.edu).
+You can also directly contact the maintainer Shipei Xing (s1xing@health.ucsd.edu / philipxsp@hotmail.com).
 
-Contributors
-~~~~~~~~~~~~
+
+msbuddy Contributors
+~~~~~~~~~~~~~~~~~~~~
 - |ghi| `Philipbear <https://github.com/Philipbear>`_ (Shipei Xing)
 - |ghi| `wykswr <https://github.com/wykswr>`_ (Yukai Wang)
 - |ghi| `tshyun <https://github.com/tshyun>`_ (Shaoyun Tong)

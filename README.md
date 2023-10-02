@@ -44,7 +44,7 @@ from msbuddy import Msbuddy, MsbuddyConfig
 # instantiate a MsbuddyConfig object
 msb_config = MsbuddyConfig(ms_instr='orbitrap', # supported: "qtof", "orbitrap" and "fticr"
                                                 # highly recommended to specify
-                           halogen=False, timeout_secs=300,
+                           halogen=False, # whether to consider halogen atoms FClBrI
                            parallel=True, n_cpu=12)
 
 # instantiate a Msbuddy object

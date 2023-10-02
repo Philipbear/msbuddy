@@ -7,7 +7,7 @@ We also provide a command-line interface for **msbuddy**. To use it, you need to
 
         pip install msbuddy
 
-Then you can use the `msbuddy` command to perform the formula annotation job.
+Then you can use the ``msbuddy`` command to perform the formula annotation job.
 By default, the result summary will be written as a tsv file in the output folder (``-output`` or ``-o`` for short).
 Here is an example for loading a mgf file from orbitrap instruments (``-ms``) and performing formula annotation in parallel (``-parallel`` or ``-p`` for short) using 12 processes:
 
@@ -44,7 +44,8 @@ Results will be written in the same folder as the input file.
 For USI string, the output folder is required.
 
 
-**In all cases, ``-ms`` option is strongly recommended. (qtof, orbitrap or fticr)**
+.. note::
+    In all cases, ``-ms`` option is strongly recommended ('qtof', 'orbitrap' or 'fticr').
 
 
 Please check out the ``--help`` (or ``-h``) option to see all the available options:
