@@ -81,7 +81,7 @@ for a single USI string (from QTOF, for example):
 ```bash
 msbuddy -usi <usi_string> -output <output_folder> -ms qtof
 ```
-or a csv file containing multiple USI strings (one USI per line, FT-ICR in this example):
+or a csv file ([templates files](https://github.com/Philipbear/msbuddy/tree/main/demo)) containing multiple USI strings (one USI per line, FT-ICR in this example):
 ```bash
 msbuddy -csv <csv_file> -output <output_folder> -ms fticr -details
 ```
