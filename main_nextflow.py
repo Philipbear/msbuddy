@@ -118,9 +118,9 @@ def main():
 
     engine = Msbuddy(msb_config)
 
-    if input_path.suffix in ['.mgf', '.MGF']:
+    if input_path.suffix.lower() == '.mgf':
         engine.load_mgf(args.mgf)
-    elif input_path.suffix in ['.csv', '.CSV']:
+    elif input_path.suffix.lower() == '.csv':
         # read and load the first column of the CSV file, no header
         df = pd.read_csv(args.csv, header=None)
         engine.load_usi(df.iloc[:, 0].tolist())
