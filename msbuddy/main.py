@@ -25,8 +25,8 @@ from timeout_decorator import timeout
 from tqdm import tqdm
 
 from msbuddy.base import MetaFeature
-from msbuddy.export import write_batch_results_cmd
 from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
+from msbuddy.export import write_batch_results_cmd
 from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single, calc_fdr
 from msbuddy.query import query_neutral_mass
@@ -229,14 +229,14 @@ class Msbuddy:
             self.config = config  # customized configuration
 
         global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_db(self.config.db_mode)  # database initialization
+        shared_data_dict = init_db()  # database initialization
 
         self.data = None  # List[MetabolicFeature]
 
     def update_config(self, new_config: MsbuddyConfig):
         self.config = new_config
         global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_db(self.config.db_mode)  # database initialization
+        shared_data_dict = init_db()  # database initialization
 
     def load_usi(self, usi_list: Union[str, List[str]],
                  adduct_list: Union[None, str, List[str]] = None):
@@ -551,8 +551,6 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
 
 # test
 if __name__ == '__main__':
-    import time
-
     #########################################
     buddy_config = MsbuddyConfig(
         ms_instr="orbitrap",
@@ -563,7 +561,7 @@ if __name__ == '__main__':
     buddy = Msbuddy(buddy_config)
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
     buddy.load_mgf(
-    '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
+        '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952"])

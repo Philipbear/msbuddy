@@ -23,9 +23,9 @@ from numba import njit
 from scipy.stats import norm
 from tqdm import tqdm
 
-from msbuddy.utils import read_formula
 from msbuddy.base import Formula
 from msbuddy.query import common_nl_from_array
+from msbuddy.utils import read_formula
 
 # ignore warnings
 warnings.filterwarnings('ignore')

@@ -41,12 +41,12 @@ def check_download_joblibload(url: str, path):
     return j_load(path)
 
 
-def init_db(db_mode: int) -> dict:
+def init_db() -> dict:
     """
     init databases used in the project
-    :param db_mode: 0: basic; 1: halogen
-    :return: True if success
+    :return: global_dict
     """
+    # get root path
     root_path = Path(__file__).parent
 
     # create data folder if not exists
@@ -68,24 +68,20 @@ def init_db(db_mode: int) -> dict:
             data_path / 'ml_a.joblib'))
 
     # load ml_b
-    global_dict['model_b_ms1_ms2'], global_dict['model_b_noms1_ms2'], global_dict['model_b_ms1_noms2'], \
-    global_dict['model_b_noms1_noms2'], global_dict['model_b_mean_arr'], global_dict['model_b_std_arr'] = (
+    global_dict['model_b_ms1_ms2'], global_dict['model_b_noms1_ms2'], global_dict['model_b_ms1_noms2'], global_dict[
+        'model_b_noms1_noms2'], global_dict['model_b_mean_arr'], global_dict['model_b_std_arr'] = (
         check_download_joblibload(
-            'https://drive.google.com/uc?id=19-htf-iifTUpAMOSB9DhFs0XkqqW1Gxm',
+            'https://drive.google.com/uc?id=1lyx6DM3RlU5NBm9w_2zE6SqDWiuUFo_P',
             data_path / 'ml_b.joblib'))
 
-    # basic_db
-    global_dict['basic_db_mass'], global_dict['basic_db_formula'], global_dict['basic_db_idx'] = (
+    # formula_db
+    basic_db, halogen_db = (
         check_download_joblibload(
-            'https://drive.google.com/uc?id=1AzULScIsPdcbvYfhgoQGVTzYsEhT_uBB',
-            data_path / 'basic_db.joblib'))
+            'https://drive.google.com/uc?id=17UjBzBe5LBzT_c8lEE-6PVBJO6xP3WSv',
+            data_path / 'formula_db.joblib'))
 
-    if db_mode == 1:
-        # halogen_db
-        global_dict['halogen_db_mass'], global_dict['halogen_db_formula'], global_dict['halogen_db_idx'] = (
-            check_download_joblibload(
-                'https://drive.google.com/uc?id=1NsKIBwCbVkhQFdqR3zh7TcdB4imHwnSB',
-                data_path / 'halogen_db.joblib'))
+    global_dict['basic_db_mass'], global_dict['basic_db_formula'], global_dict['basic_db_idx'] = basic_db
+    global_dict['halogen_db_mass'], global_dict['halogen_db_formula'], global_dict['halogen_db_idx'] = halogen_db
 
     return global_dict
 
@@ -296,10 +292,10 @@ def load_usi(usi_list: Union[str, List[str]],
 
 # test
 if __name__ == '__main__':
+    init_db(1)
 
     #################
     # compile all these databases
-    import joblib
 
     # basic_db_mass = j_load('../db_prep/basic_db_mass.joblib')
     # basic_db_formula = j_load('../db_prep/basic_db_formula.joblib')
@@ -313,12 +309,6 @@ if __name__ == '__main__':
     # formula_db = [basic_db, halogen_db]
     #
     # joblib.dump(formula_db, "data/formula_db.joblib")
-    basic_db = j_load('data/basic_db.joblib')
-    halogen_db = j_load('data/halogen_db.joblib')
-    formula_db = [basic_db, halogen_db]
-
-    joblib.dump(formula_db, "data/formula_db.joblib")
-
 
     # common_db
     # common_loss_db = j_load('data/common_loss.joblib')
@@ -327,7 +317,6 @@ if __name__ == '__main__':
     # common_db = [common_loss_db, common_frag_db]
     # joblib.dump(common_db, "data/common_db.joblib")
 
-
     # # model_a
     # model_a = j_load('data/model_a.joblib')
     # model_a_mean_arr = j_load('data/ml_a_mean_arr.joblib')
@@ -335,7 +324,6 @@ if __name__ == '__main__':
     #
     # ml_a = [model_a, model_a_mean_arr, model_a_std_arr]
     # joblib.dump(ml_a, "data/ml_a.joblib")
-
 
     # # model_b
     # model_b_ms1_ms2 = j_load('data/model_b_ms1_ms2.joblib')

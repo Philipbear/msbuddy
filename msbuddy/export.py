@@ -42,8 +42,8 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             'rt': round(mf.rt, 4) if mf.rt else 'NA',
             'adduct': mf.adduct.string,
             'formula_rank_1': individual_result['formula_rank_1'],
-            'estimated_fdr': round_to_sci(individual_result['estimated_fdr'], 5) if individual_result[
-                                                                                        'estimated_fdr'] is not None else 'NA',
+            'estimated_fdr': individual_result['estimated_fdr'] if individual_result[
+                                                                       'estimated_fdr'] is not None else 'NA',
             'formula_rank_2': individual_result['formula_rank_2'],
             'formula_rank_3': individual_result['formula_rank_3'],
             'formula_rank_4': individual_result['formula_rank_4'],
@@ -88,17 +88,15 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 all_candidates_df = all_candidates_df.append({
                     'rank': str(m + 1),
                     'formula': cf.formula.__str__(),
-                    'formula_feasibility': round_to_sci(cf.ml_a_prob, 5),
+                    'formula_feasibility': cf.ml_a_prob if cf.ml_a_prob is not None else 'NA',
                     'ms1_isotope_similarity': round(cf.ms1_isotope_similarity,
                                                     5) if cf.ms1_isotope_similarity is not None else 'NA',
                     'mz_error_ppm': round(mz_error_ppm, 5),
                     'explained_ms2_peak': exp_ms2_peak,
                     'total_valid_ms2_peak': len(mf.ms2_processed) if mf.ms2_processed else 'NA',
-                    'estimated_prob': round_to_sci(cf.estimated_prob,
-                                                   5) if cf.estimated_prob is not None else 'NA',
-                    'normalized_estimated_prob': round_to_sci(cf.normed_estimated_prob,
-                                                              5) if cf.normed_estimated_prob is not None else 'NA',
-                    'estimated_fdr': round_to_sci(cf.estimated_fdr, 5) if cf.estimated_fdr is not None else 'NA',
+                    'estimated_prob': cf.estimated_prob if cf.estimated_prob is not None else 'NA',
+                    'normalized_estimated_prob': cf.normed_estimated_prob if cf.normed_estimated_prob is not None else 'NA',
+                    'estimated_fdr': cf.estimated_fdr if cf.estimated_fdr is not None else 'NA',
                     'ms2_explanation_idx': ms2_explan_idx,
                     'ms2_explanation': ms2_explan_str
                 }, ignore_index=True)
@@ -142,4 +140,3 @@ def round_to_sci(number, decimals):
     rounded_sci_number = f"{rounded_base}e{exponent}"
 
     return rounded_sci_number
-

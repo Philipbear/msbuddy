@@ -25,7 +25,8 @@ def main():
     parser = argparse.ArgumentParser(description="msbuddy command line interface.")
     parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('-usi', type=str, help='A single USI string.')
-    parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column (no header row).')
+    parser.add_argument('-csv', type=str,
+                        help='Path to the CSV file containing USI strings in the first column (no header row).')
     parser.add_argument('-output', '-o', type=str, help='The output file path.')
     parser.add_argument('-details', '-d', action='store_true',
                         help='Whether to write detailed results. Default: False.')
