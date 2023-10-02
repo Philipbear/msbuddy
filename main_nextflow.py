@@ -105,28 +105,37 @@ def main():
         use_all_frag=True if args.use_all_frag == 1 else False
     )
 
+    # input path
     if args.input:
         input_path = pathlib.Path(args.input)
     else:
         raise ValueError('Please specify the input file.')
 
+    # output path
     if args.output:
         output_path = pathlib.Path(args.output)
     else:
         # use the parent directory of the input file as the output directory
         output_path = input_path.parent / 'msbuddy_output'
 
+    # create a Msbuddy object
     engine = Msbuddy(msb_config)
 
+    # load the input file
     if input_path.suffix.lower() == '.mgf':
         engine.load_mgf(args.mgf)
     elif input_path.suffix.lower() == '.csv':
-        # read and load the first column of the CSV file, no header
+        # read and load CSV file, no header
         df = pd.read_csv(args.csv, header=None)
-        engine.load_usi(df.iloc[:, 0].tolist())
+        # if df has >1 columns, treat the 2nd column as adduct strings
+        if df.shape[1] > 1:
+            engine.load_usi(df.iloc[:, 0].tolist(), df.iloc[:, 1].tolist())
+        else:
+            engine.load_usi(df.iloc[:, 0].tolist())
     else:
         raise ValueError('Please input a MGF or CSV file.')
 
+    # annotate formula
     engine.annotate_formula_cmd(output_path, write_details=True)
 
     print('Job finished.')

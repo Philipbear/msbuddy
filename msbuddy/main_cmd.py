@@ -122,9 +122,13 @@ def main():
     elif args.usi:
         engine.load_usi([args.usi])
     elif args.csv:
-        # read and load the first column of the CSV file, no header
+        # read and load CSV file, no header
         df = pd.read_csv(args.csv, header=None)
-        engine.load_usi(df.iloc[:, 0].tolist())
+        # if df has >1 columns, treat the 2nd column as adduct strings
+        if df.shape[1] > 1:
+            engine.load_usi(df.iloc[:, 0].tolist(), df.iloc[:, 1].tolist())
+        else:
+            engine.load_usi(df.iloc[:, 0].tolist())
     else:
         raise ValueError('Please specify the input data source.')
 

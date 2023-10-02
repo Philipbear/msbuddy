@@ -22,8 +22,8 @@ Alternatively, you can use the ``-usi`` option for a single USI string (from QTO
 
         msbuddy -usi <usi_string> -output <output_folder> -ms qtof
 
-or the ``-csv`` option for a csv file containing a list of USI strings in the first column (one USI per line, no header):
-
+or the ``-csv`` option for a csv file containing a list of USI strings:
+(no header row, one USI per line, USIs in the first column, optional: adducts in the second column):
 
 .. code-block:: bash
 
