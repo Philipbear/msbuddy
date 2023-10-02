@@ -6,7 +6,7 @@
 # You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
 # ==============================================================================
 """
-File: main_nf.py
+File: main_nextflow.py
 Author: Shipei Xing
 Email: s1xing@health.ucsd.edu
 GitHub: Philipbear
@@ -23,19 +23,20 @@ from msbuddy.main import Msbuddy, MsbuddyConfig
 
 def main():
     parser = argparse.ArgumentParser(description="msbuddy on Nextflow.")
-    parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
-    parser.add_argument('-usi', type=str, help='A single USI string.')
-    parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column (no header row).')
+    # parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
+    # parser.add_argument('-usi', type=str, help='A single USI string.')
+    # parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column (no header row).')
+    parser.add_argument('-input', type=str, default=None, help='Path to the input file.')
     parser.add_argument('-output', '-o', type=str, help='The output file path.')
-    parser.add_argument('-details', '-d', type=int, default=0,
-                        help='Whether to write detailed results. Default: False.')
+    # parser.add_argument('-details', '-d', type=int, default=0,
+    #                     help='Whether to write detailed results. Default: False.')
     parser.add_argument('-ms_instr', '-ms', type=str, default=None,
                         help='MS instrument type. Supported types: orbitrap, qtof, fticr.')
-    parser.add_argument('-disable_ppm', action='store_false',
-                        help='Whether to disable ppm for mass tolerance. Default: ppm is enabled.')
+    parser.add_argument('-ppm', type=int, default=1,
+                        help='Whether to use ppm for mass tolerance. Default: ppm is enabled.')
     parser.add_argument('-ms1_tol', type=float, default=5, help='MS1 tolerance. Default: 5.')
     parser.add_argument('-ms2_tol', type=float, default=10, help='MS2 tolerance. Default: 10.')
-    parser.add_argument('-halogen', '-hal', action='store_true',
+    parser.add_argument('-halogen', '-hal', type=int, default=0,
                         help='Whether to consider halogen atoms FClBrI. Default: False.')
     parser.add_argument('-timeout_secs', '-t', type=int, default=300, help='Timeout in seconds. Default: 300.')
     parser.add_argument('-batch_size', '-bs', type=int, default=1000,
@@ -65,10 +66,10 @@ def main():
                         help='m/z tolerance for isotope binning, used for MS1 isotope pattern, in Dalton. Default: 0.02.')
     parser.add_argument('-max_isotope_cnt', type=int, default=4,
                         help='Maximum isotope count, used for MS1 isotope pattern. Default: 4.')
-    parser.add_argument('-disable_ms2_denoise', action='store_false',
-                        help='Whether to disable denoising MS2 spectrum. Default: MS2 denoise is enabled.')
-    parser.add_argument('-disable_rel_int_denoise', action='store_false',
-                        help='Whether to disable relative intensity for MS2 denoise. Default: relative intensity denoise is enabled.')
+    parser.add_argument('-ms2_denoise', type=int, default=1,
+                        help='Whether to denoise MS2 spectrum. Default: MS2 denoise is enabled.')
+    parser.add_argument('-rel_int_denoise',  type=int, default=1,
+                        help='Whether to use relative intensity for MS2 denoise. Default: True.')
     parser.add_argument('-rel_int_denoise_cutoff', type=float, default=0.01,
                         help='Relative intensity cutoff, used for MS2 denoise. Default: 0.01.')
     parser.add_argument('-max_noise_frag_ratio', type=float, default=0.90,
@@ -77,7 +78,7 @@ def main():
                         help='Maximum noise RSD, used for MS2 denoise. Default: 0.20.')
     parser.add_argument('-max_frag_reserved', type=int, default=50,
                         help='Max fragment number reserved, used for MS2 data.')
-    parser.add_argument('-use_all_frag', action='store_true',
+    parser.add_argument('-use_all_frag',  type=int, default=0,
                         help='Whether to use all fragments for annotation; by default, only top N fragments are used, '
                              'top N is a function of precursor mass. Default: False.')
 
@@ -87,8 +88,9 @@ def main():
     # create a MsbuddyConfig object
     msb_config = MsbuddyConfig(
         ms_instr=args.ms_instr,
-        ppm=~args.disable_ppm,
-        ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
+        ppm=True if args.ppm == 1 else False,
+        ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol,
+        halogen=True if args.halogen == 1 else False,
         parallel=args.parallel, n_cpu=args.n_cpu,
         timeout_secs=args.timeout_secs, batch_size=args.batch_size, top_n_candidate=args.top_n_candidate,
         c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
@@ -96,35 +98,36 @@ def main():
         f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
         i_range=(args.i_min, args.i_max),
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
-        ms2_denoise=~args.disable_ms2_denoise,
-        rel_int_denoise=~args.disable_rel_int_denoise,
+        ms2_denoise=True if args.ms2_denoise == 1 else False,
+        rel_int_denoise=True if args.rel_int_denoise == 1 else False,
         rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_noise_frag_ratio=args.max_noise_frag_ratio,
         max_noise_rsd=args.max_noise_rsd, max_frag_reserved=args.max_frag_reserved,
-        use_all_frag=args.use_all_frag
+        use_all_frag=True if args.use_all_frag == 1 else False
     )
+
+    if args.input:
+        input_path = pathlib.Path(args.input)
+    else:
+        raise ValueError('Please specify the input file.')
 
     if args.output:
         output_path = pathlib.Path(args.output)
-    elif args.mgf or args.csv:
-        # use the parent directory of the input file as the output directory
-        output_path = pathlib.Path(args.mgf if args.mgf else args.csv).parent / 'msbuddy_output'
     else:
-        raise ValueError('Please specify the output path.')
+        # use the parent directory of the input file as the output directory
+        output_path = input_path.parent / 'msbuddy_output'
 
     engine = Msbuddy(msb_config)
 
-    if args.mgf:
+    if input_path.suffix in ['.mgf', '.MGF']:
         engine.load_mgf(args.mgf)
-    elif args.usi:
-        engine.load_usi([args.usi])
-    elif args.csv:
+    elif input_path.suffix in ['.csv', '.CSV']:
         # read and load the first column of the CSV file, no header
         df = pd.read_csv(args.csv, header=None)
         engine.load_usi(df.iloc[:, 0].tolist())
     else:
-        raise ValueError('Please specify the input data source.')
+        raise ValueError('Please input a MGF or CSV file.')
 
-    engine.annotate_formula_cmd(output_path, write_details=args.details)
+    engine.annotate_formula_cmd(output_path, write_details=True)
 
     print('Job finished.')
 
