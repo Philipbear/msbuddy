@@ -810,5 +810,9 @@ class MetaFeature:
 
 # test
 if __name__ == '__main__':
-    a = Adduct('[M+Cl]-', False)
-    print(a)
+    # a = Adduct('[M+Cl]-', False)
+    # print(a)
+
+    f = Formula(read_formula('C25H38O9'), 0)
+    p = Formula(read_formula('C27H43FS3'), 1)
+    print(f)

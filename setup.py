@@ -29,9 +29,9 @@ setuptools.setup(
     ],
     packages=["msbuddy"],
     include_package_data=True,
-    package_data={
-        'msbuddy': ['data/*'],  # Include all files in msbuddy/data
-    },
+    # package_data={
+    #     'msbuddy': ['data/*'],  # Include all files in msbuddy/data
+    # },
     install_requires=[
         "brain-isotopic-distribution",
         "numpy",
