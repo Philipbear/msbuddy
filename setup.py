@@ -28,10 +28,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=["msbuddy"],
-    include_package_data=False,
-    # package_data={
-    #     'msbuddy': ['data/*'],  # Include all files in msbuddy/data
-    # },
     install_requires=[
         "brain-isotopic-distribution",
         "numpy",
