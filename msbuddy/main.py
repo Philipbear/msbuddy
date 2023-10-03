@@ -553,9 +553,9 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
 if __name__ == '__main__':
     #########################################
     buddy_config = MsbuddyConfig(
-        ms_instr="orbitrap",
+        # ms_instr="orbitrap",
         ppm=True,
-        ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=4, batch_size=1000,
+        ms1_tol=2, ms2_tol=5, parallel=False, n_cpu=4, batch_size=1000,
         timeout_secs=300, halogen=True, max_frag_reserved=50)
 
     buddy = Msbuddy(buddy_config)
@@ -583,7 +583,7 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    # buddy.data = buddy.data[12:14]
+    buddy.data = buddy.data[7:9]
 
     # buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'),
     #                            write_details=True)

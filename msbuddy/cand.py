@@ -285,7 +285,7 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     # calculate neutral mass of the precursor ion
     ion_mode = 1 if mf.adduct.pos_mode else -1
     t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
-    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list, 600)
+    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list, 500)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if mf.ms1_processed and len(mf.ms1_processed) > 1:
@@ -710,7 +710,7 @@ def _senior_subform_filter(subform_arr: np.array) -> np.array:
     return senior_bool_arr
 
 
-@njit
+# @njit
 def _valid_subform_check(subform_arr: np.array, pre_charged_arr: np.array) -> np.array:
     """
     Check whether a subformula (frag and loss) is valid. e.g., 'C2', 'N4', 'P2'; O >= 2*P
@@ -718,11 +718,12 @@ def _valid_subform_check(subform_arr: np.array, pre_charged_arr: np.array) -> np
     :return: boolean array
     """
     # for frag or loss
-    atom_sum = np.sum(subform_arr, axis=1)
+    frag_atom_sum = np.sum(subform_arr, axis=1)
     loss_form_arr = pre_charged_arr - subform_arr
-    invalid_bool_arr = (atom_sum == subform_arr[:, 0]) | (atom_sum == subform_arr[:, 7]) | \
-                       (atom_sum == subform_arr[:, 10]) | (atom_sum == loss_form_arr[:, 0]) | \
-                       (atom_sum == loss_form_arr[:, 7]) | (atom_sum == loss_form_arr[:, 10])
+    loss_atom_sum = np.sum(loss_form_arr, axis=1)
+    invalid_bool_arr = (frag_atom_sum == subform_arr[:, 0]) | (frag_atom_sum == subform_arr[:, 7]) | \
+                       (frag_atom_sum == subform_arr[:, 10]) | (loss_atom_sum == loss_form_arr[:, 0]) | \
+                       (loss_atom_sum == loss_form_arr[:, 7]) | (loss_atom_sum == loss_form_arr[:, 10])
 
     # O >= 2*P if P > 0
     invalid_o_p_frag_bool_arr = (subform_arr[:, 9] < 2 * subform_arr[:, 10]) & (subform_arr[:, 10] > 0)

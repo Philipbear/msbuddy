@@ -276,7 +276,7 @@ def assign_subform_gen_training_data(instru):
 
     param_set = MsbuddyConfig(ms1_tol=ms1_tol, ms2_tol=ms2_tol, halogen=True)
     buddy = Msbuddy(param_set)
-    shared_data_dict = init_db(buddy.config.db_mode)  # database initialization
+    shared_data_dict = init_db()  # database initialization
 
     data_name = 'gnps_' + instru + '_mf_ls_cand_2.joblib'
     data = joblib.load(data_name)
@@ -329,7 +329,7 @@ def assign_subform_gen_training_data(instru):
                 mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
                 mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
                 log_p = np.log(mz_shift_p * 2)
-                ml_feature_arr[3] = np.clip(log_p, -4, 0)
+                ml_feature_arr[3] = np.clip(log_p, -5, 0)
 
             # add to feature array
             if X_arr.size == 0:

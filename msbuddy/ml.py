@@ -218,9 +218,9 @@ def _calc_top_n_candidate(mz: float, max_n: int, db_mode: int) -> int:
     :return: number of top candidate formulas to retain
     """
     if db_mode == 0:
-        return min(max_n, int(mz * mz / 1500) + 50)
+        return min(max_n, int(mz * mz / 4000) + 50)
     else:
-        return min(max_n, int(mz * mz / 1000) + 50)
+        return min(max_n, int(mz * mz / 2000) + 50)
 
 
 def pred_form_feasibility_single(formula: Union[str, np.array], gd) -> Union[float, None]:
@@ -314,6 +314,8 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     pre_charged_arr = this_form.array * this_adduct.m + this_adduct.net_formula.array
     pre_dbe = this_form.dbe * this_adduct.m - this_adduct.m + this_adduct.net_formula.dbe
     pre_h2c = pre_charged_arr[1] / pre_charged_arr[0] if pre_charged_arr[0] > 0 else 2  # no carbon, assign 2
+    # cho, chon, chonps, hetero_atom_category, hal_atom_category
+    form_feature_arr = _calc_formula_feature(this_form.array)
 
     # MS1 isotope similarity
     ms1_iso_sim = cand_form.ms1_isotope_similarity if cand_form.ms1_isotope_similarity else 0
@@ -325,10 +327,39 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     pos_mode = 1 if this_adduct.charge > 0 else 0
 
     # generate output array
-    out = np.array([pos_mode, ms1_iso_sim, cand_form.ml_a_prob, mz_error_log_p, pre_dbe, pre_h2c])
-    out = np.append(out, ms2_feature_arr)
+    out = np.concatenate((np.array([pos_mode]), form_feature_arr,  # 1 + 5
+                          np.array([ms1_iso_sim, cand_form.ml_a_prob, mz_error_log_p, pre_dbe, pre_h2c]),
+                          ms2_feature_arr))
 
     return out
+
+
+@njit
+def _calc_formula_feature(f: np.array) -> np.array:
+    """
+    calculate formula features
+    :param f: formula array
+    :return: numpy array of formula features: cho, chon, chonps, hetero_atom_category, hal_atom_category
+    """
+    # sum of elements other than C, H, O, N, P, S
+    ele_sum_1 = f[2] + f[3] + f[4] + f[5] + f[6] + f[8]
+    # sum of elements other than C, H, O, N
+    ele_sum_2 = ele_sum_1 + f[10] + f[11]
+    # sum of elements other than C, H, O
+    ele_sum_3 = ele_sum_2 + f[7]
+
+    cho = 1 if ele_sum_3 == 0 else 0
+    chon = 1 if ele_sum_2 == 0 else 0
+    chonps = 1 if ele_sum_1 == 0 else 0
+
+    # ele_exist_arr: np array of elements existence (0 or 1)
+    arr = np.clip(f, 0, 1)
+    # hetero_atom_category
+    hetero_atom_category = arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7] + arr[8] + arr[10] + arr[11]
+    # hal_atom_category
+    hal_atom_category = arr[2] + arr[3] + arr[4] + arr[5]
+
+    return np.array([cho, chon, chonps, hetero_atom_category, hal_atom_category])
 
 
 def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: float,
@@ -478,8 +509,8 @@ def _calc_log_p_norm_helper(arr_norm_p) -> np.array:
     """
     arr_norm_p = 1 - arr_norm_p if arr_norm_p > 0.5 else arr_norm_p
     log_p = np.log(arr_norm_p * 2)
-    # clip to the range of [-4, 0]
-    log_p = -4 if log_p < -4 else log_p
+    # clip to the range of [-5, 0]
+    log_p = -5 if log_p < -5 else log_p
 
     return log_p
 
@@ -502,7 +533,7 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         return np.array([])
 
     # z-normalize
-    X_arr[:, 1:] = (X_arr[:, 1:] - gd['model_b_mean_arr']) / gd['model_b_std_arr']
+    X_arr[:, 6:] = (X_arr[:, 6:] - gd['model_b_mean_arr']) / gd['model_b_std_arr']
 
     # load model
     if group_no == 0:
