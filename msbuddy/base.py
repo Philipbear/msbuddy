@@ -156,9 +156,9 @@ class Adduct:
                     self._calc_charge()
                     self._calc_loss_and_net_formula()
                 else:
-                    self._invalid()
+                    self._invalid(string)
         else:
-            self._invalid()
+            self._invalid(string)
 
     def __str__(self):
         return f"{self.string} has charge {self.charge}, and m is {self.m}"
@@ -180,15 +180,15 @@ class Adduct:
         return all([valid in valid_character for valid in self.string[m_index + 1: right_index]])
 
     # return default value for invalid adduct
-    def _invalid(self):
+    def _invalid(self, string):
         if self.pos_mode:
-            logging.warning("Invalid adduct for positive mode, set to [M+H]+")
+            logging.warning("Invalid adduct: " + string + ", set to [M+H]+")
             self.string = "[M+H]+"
             self.charge = +1
             self.loss_formula = None
             self.net_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
         else:
-            logging.warning("Invalid adduct for negative mode, set to [M-H]-")
+            logging.warning("Invalid adduct: " + string + ", set to [M-H]-")
             self.string = "[M-H]-"
             self.charge = -1
             self.loss_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
@@ -806,3 +806,9 @@ class MetaFeature:
             if len(self.candidate_formula_list) > 4:
                 result['formula_rank_5'] = form_arr_to_str(self.candidate_formula_list[4].formula.array)
         return result
+
+
+# test
+if __name__ == '__main__':
+    a = Adduct('[M+Cl]-', False)
+    print(a)

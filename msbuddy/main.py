@@ -556,12 +556,14 @@ if __name__ == '__main__':
         ms_instr="orbitrap",
         ppm=True,
         ms1_tol=5, ms2_tol=10, parallel=False, n_cpu=4, batch_size=1000,
-        timeout_secs=300, halogen=False, max_frag_reserved=50)
+        timeout_secs=300, halogen=True, max_frag_reserved=50)
 
     buddy = Msbuddy(buddy_config)
     # buddy.load_mgf("/Users/shipei/Documents/test_data/mgf/test.mgf")
-    buddy.load_mgf(
-        '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
+    # buddy.load_mgf(
+    #     '/Users/shipei/Documents/projects/collab/carnitine_massql/METABOLOMICS-SNETS-V2-c0226d50-download_clustered_spectra-main.mgf')
+    buddy.load_mgf('/Users/shipei/Documents/projects/msbuddy/results/casmi2022/data/casmi2022_topms2.mgf')
+
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952",
     #                 "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005716808"])
     # buddy.load_usi(["mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005467952"])
@@ -581,7 +583,7 @@ if __name__ == '__main__':
     # test adduct
     # buddy.load_mgf("/Users/philip/Documents/test_data/mgf/na_adduct.mgf")
 
-    buddy.data = buddy.data[12:14]
+    # buddy.data = buddy.data[12:14]
 
     # buddy.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/collab/carnitine_massql/buddy_result'),
     #                            write_details=True)

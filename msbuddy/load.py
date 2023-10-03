@@ -138,9 +138,9 @@ def load_mgf(file_path) -> List[MetaFeature]:
 
                 # if the same identifier exists, add to the existing MetaFeature
                 if mf_idx is not None:
-                    if ms2_spec:
+                    if ms2_spec and meta_feature_list[mf_idx].ms2_raw is None:
                         meta_feature_list[mf_idx].ms2_raw = Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None
-                    else:
+                    elif ms2_spec is False and meta_feature_list[mf_idx].ms1_raw is None:
                         meta_feature_list[mf_idx].ms1_raw = Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None
                     continue
                 # if the same identifier does not exist, create a new MetaFeature
@@ -168,14 +168,14 @@ def load_mgf(file_path) -> List[MetaFeature]:
                         identifier = value.strip()
                     # if key is 'CHARGE' and charge is not set, it is charge
                     elif key.upper() == 'CHARGE':
-                        if '+' in value:
-                            pos_mode = True
-                            value = value.replace('+', '')
-                            charge = int(value)
-                        elif '-' in value:
+                        if '-' in value:
                             pos_mode = False
                             value = value.replace('-', '')
                             charge = -int(value)
+                        else:
+                            pos_mode = True
+                            value = value.replace('+', '')
+                            charge = int(value)
                     # if key is 'ION', it is adduct type
                     elif key.upper() == 'ION':
                         adduct_str = value
