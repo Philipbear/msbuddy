@@ -193,6 +193,9 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
         # generate ML features for each candidate formula
         for candidate_formula in meta_feature.candidate_formula_list:
             candidate_formula.ml_a_prob = prob_arr[cnt]
+            # if candidate formula is in the database, set ml_a_prob
+            if candidate_formula.db_existed and prob_arr[cnt] < 0.5:
+                candidate_formula.ml_a_prob = 0.5
             cnt += 1
 
         top_n = _calc_top_n_candidate(meta_feature.mz, top_n_candidate, db_mode)

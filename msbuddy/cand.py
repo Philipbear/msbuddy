@@ -269,17 +269,18 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
                                                                                  ele_upper_limit,
                                                                                  db_mode, gd)
 
-        # if ms2 candidate space <= 10, query precursor mass
+        # query precursor mass, for fill in db_existed
+        ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol,
+                                                                                ele_lower_limit,
+                                                                                ele_upper_limit, db_mode, gd)
         if len(ms2_cand_form_ls) <= 10:
-            ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol,
-                                                                                    ele_lower_limit,
-                                                                                    ele_upper_limit, db_mode, gd)
-            # merge candidate formulas
+            # if ms2 candidate space <= 10, merge candidate formulas
             cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
                                             ms1_cand_form_str_ls, ms2_cand_form_str_ls)
         else:
-            # use ms2 data
-            cf_list = ms2_cand_form_ls
+            # fill in db_existed
+            cf_list = _fill_in_db_existence(ms1_cand_form_ls, ms2_cand_form_ls,
+                                            ms1_cand_form_str_ls, ms2_cand_form_str_ls)
 
     # retain top candidate formulas
     # calculate neutral mass of the precursor ion
@@ -612,6 +613,28 @@ def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     return out_list
 
 
+def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: List[CandidateFormula],
+                          ms1_cand_str_list: List[str], ms2_cand_str_list: List[str]) -> List[CandidateFormula]:
+    """
+    Fill in DB existence for MS2 candidate formulas.
+    :param ms1_cand_list: candidate formula list from MS1 mz search
+    :param ms2_cand_list: candidate formula list from MS2 interrogation
+    :param ms1_cand_str_list: candidate formula string list from MS1 mz search
+    :param ms2_cand_str_list: candidate formula string list from MS2 interrogation
+    :return: ms2 candidate formula list with db_existed filled in
+    """
+    for m, cf in enumerate(ms2_cand_list):
+        found = False
+        for n, cf2 in enumerate(ms1_cand_list):
+            if ms1_cand_str_list[n] == ms2_cand_str_list[m]:
+                found = True
+                break
+        if found:
+            ms2_cand_list[m].db_existed = True
+
+    return ms2_cand_list
+
+
 def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula], top_n: int) -> List[CandidateFormula]:
     """
     Retain top candidate formulas.
@@ -710,7 +733,7 @@ def _senior_subform_filter(subform_arr: np.array) -> np.array:
     return senior_bool_arr
 
 
-# @njit
+@njit
 def _valid_subform_check(subform_arr: np.array, pre_charged_arr: np.array) -> np.array:
     """
     Check whether a subformula (frag and loss) is valid. e.g., 'C2', 'N4', 'P2'; O >= 2*P
