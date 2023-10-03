@@ -7,7 +7,7 @@ setuptools.setup(
     name="msbuddy",
     version="0.1.2",
     author="Shipei Xing",
-    author_email="s1xing@health.ucsd.edu.com",
+    author_email="s1xing@health.ucsd.edu",
     description="Bottom-up MS/MS interrogation-based molecular formula annotation for mass spectrometry data.",
     long_description=long_description,
     long_description_content_type="text/markdown",
