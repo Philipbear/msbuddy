@@ -7,7 +7,7 @@ setuptools.setup(
     name="msbuddy",
     version="0.1.1",
     author="Shipei Xing",
-    author_email="philipxsp@hotmail.com",
+    author_email="s1xing@health.ucsd.edu.com",
     description="Bottom-up MS/MS interrogation-based molecular formula annotation for mass spectrometry data.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -28,7 +28,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=["msbuddy"],
-    include_package_data=True,
+    include_package_data=False,
     # package_data={
     #     'msbuddy': ['data/*'],  # Include all files in msbuddy/data
     # },
