@@ -167,7 +167,7 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     :param top_n_candidate: number of top candidate formulas to retain
     :param db_mode: whether halogen is considered
     :param gd: global dependencies
-    :return: int, number of total candidate formulas in this batch
+    :return: None
     """
     # batch data
     batch_data = buddy_data[batch_start_idx:batch_end_idx]

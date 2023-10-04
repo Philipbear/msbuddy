@@ -250,7 +250,7 @@ class Msbuddy:
         add customized data
         :param data: metabolic feature list
         """
-        self.data.append(data)
+        self.data = data
 
     def clear_data(self):
         """
@@ -395,8 +395,11 @@ class Msbuddy:
         prepare for formula annotation
         :return: batch number
         """
+        cnt_pre = len(self.data)
         # select MetaFeatures with precursor 1 < mass < 1500
         self.data = [mf for mf in self.data if 1 < mf.mz < 1500]
+        cnt_post = len(self.data)
+        tqdm.write(f"{cnt_pre - cnt_post} spectra with precursor mz > 1500 are removed.")
 
         if not self.data:
             raise ValueError("No data loaded.")

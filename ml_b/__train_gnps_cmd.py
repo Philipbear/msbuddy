@@ -19,8 +19,6 @@ from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from msbuddy.cand import _calc_ms1_iso_sim
 from msbuddy.utils import form_arr_to_str
 
-from multiprocessing import Pool, cpu_count
-
 
 # This MLP model is trained using GNPS library.
 # 4 models will be generated in total: ms1 iso similarity included or not, MS/MS spec included or not.
@@ -79,9 +77,8 @@ def load_gnps_data(path):
     """
     db = joblib.load(path)
 
-    # # test
-    # print('db size: ' + str(len(db)))
-    db = db[:200]
+    # test
+    print('db size: ' + str(len(db)))
 
     qtof_mf_ls = []  # metaFeature
     orbi_mf_ls = []
@@ -137,123 +134,47 @@ def load_gnps_data(path):
     joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
 
 
-# def calc_gnps_data(parallel, n_cpu, timeout_secs, instru='qtof'):
-#     # main
-#     param_set = BuddyParamSet(ms1_tol=10, ms2_tol=20, parallel=parallel, n_cpu=n_cpu,
-#                               halogen=True, timeout_secs=timeout_secs)
-#     buddy = Buddy(param_set)
-#     shared_data_dict = init_db(buddy.param_set.db_mode)  # database initialization
-#
-#     if instru == 'qtof':
-#         # qtof_mf_ls = joblib.load('gnps_qtof_mf_ls.joblib')
-#         # buddy.add_data(qtof_mf_ls)
-#         # buddy.preprocess_and_generate_candidate_formula()
-#         # joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
-#         # pred_formula_feasibility(buddy.data, shared_data_dict)
-#         # joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_2.joblib')
-#         data = joblib.load('gnps_qtof_mf_ls_cand_2.joblib')
-#         buddy.add_data(data)
-#         buddy.assign_subformula_annotation()
-#         joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand.joblib')
-#     elif instru == 'orbi':
-#         # orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
-#         # update parameters
-#         buddy.update_param_set(BuddyParamSet(ms1_tol=5, ms2_tol=10, parallel=parallel, n_cpu=n_cpu,
-#                                              halogen=True,
-#                                              timeout_secs=timeout_secs))
-#         # buddy.clear_data()
-#         # buddy.add_data(orbi_mf_ls)
-#         # buddy.preprocess_and_generate_candidate_formula()
-#         # joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
-#         # pred_formula_feasibility(buddy.data, shared_data_dict)
-#         # joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_2.joblib')
-#         data = joblib.load('gnps_orbi_mf_ls_cand_2.joblib')
-#         buddy.add_data(data)
-#         buddy.assign_subformula_annotation()
-#         joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand.joblib')
-#     else:  # FT-ICR
-#         # ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
-#         # update parameters
-#         buddy.update_param_set(BuddyParamSet(ms1_tol=2, ms2_tol=5, parallel=parallel, n_cpu=n_cpu,
-#                                              halogen=True,
-#                                              timeout_secs=timeout_secs))
-#         # buddy.clear_data()
-#         # buddy.add_data(ft_mf_ls)
-#         # buddy.preprocess_and_generate_candidate_formula()
-#         # joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
-#         # pred_formula_feasibility(buddy.data, shared_data_dict)
-#         # joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_2.joblib')
-#         data = joblib.load('gnps_ft_mf_ls_cand_2.joblib')
-#         buddy.add_data(data)
-#         buddy.assign_subformula_annotation()
-#         joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand.joblib')
-#
-#     return shared_data_dict
-#
-#
-# def gen_training_data(gd):
-#     """
-#     generate training data for ML model B, including precursor simulation
-#     :param gd: global data
-#     :return: write to joblib file
-#     """
-#     mf_ls_ls = [joblib.load('gnps_qtof_mf_ls_cand.joblib'),
-#                 joblib.load('gnps_orbi_mf_ls_cand.joblib'),
-#                 joblib.load('gnps_ft_mf_ls_cand.joblib')]
-#     gt_ls_ls = [joblib.load('gnps_qtof_gt_ls.joblib'),
-#                 joblib.load('gnps_orbi_gt_ls.joblib'),
-#                 joblib.load('gnps_ft_gt_ls.joblib')]
-#
-#     # generate ML features for each candidate formula, for ML model B
-#     # generate feature array
-#     X_arr = np.array([])
-#     y_arr = np.array([])
-#
-#     for cnt1, mf_ls in enumerate(mf_ls_ls):
-#         gt_ls = gt_ls_ls[cnt1]
-#         if cnt1 == 0:  # Q-TOF
-#             ms1_tol = 10
-#             ms2_tol = 20
-#         elif cnt1 == 1:  # Orbitrap
-#             ms1_tol = 5
-#             ms2_tol = 10
-#         else:  # FT-ICR
-#             ms1_tol = 2
-#             ms2_tol = 5
-#         for cnt2, mf in enumerate(mf_ls):
-#             gt_form_arr = gt_ls[cnt2]
-#             if not mf.candidate_formula_list:
-#                 continue
-#             # generate ML features for each candidate formula
-#             for cf in mf.candidate_formula_list:
-#                 # calc ms1 iso similarity
-#                 cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, 4)
-#                 this_true = False
-#                 if (gt_form_arr == cf.formula.array).all():
-#                     this_true = True
-#                 # get ML features
-#                 ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol, gd)
-#
-#                 # if true gt, perform precursor simulation
-#                 if this_true:
-#                     mz_shift = np.random.normal(0, ms1_tol / 5)
-#                     mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
-#                     mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
-#                     log_p = np.log(mz_shift_p * 2)
-#                     ml_feature_arr[3] = np.clip(log_p, -4, 0)
-#
-#                 # add to feature array
-#                 if X_arr.size == 0:
-#                     X_arr = ml_feature_arr
-#                     y_arr = np.array([1 if this_true else 0])
-#                 else:
-#                     X_arr = np.vstack((X_arr, ml_feature_arr))
-#                     y_arr = np.append(y_arr, 1 if this_true else 0)
-#
-#     print('y_arr sum: ' + str(np.sum(y_arr)))
-#     joblib.dump(X_arr, 'gnps_X_arr.joblib')
-#     joblib.dump(y_arr, 'gnps_y_arr.joblib')
-#
+def calc_gnps_data(parallel, n_cpu, timeout_secs, instru='qtof'):
+    # main
+    param_set = MsbuddyConfig(ms1_tol=10, ms2_tol=20, parallel=parallel, n_cpu=n_cpu, batch_size=999999,
+                              halogen=True, timeout_secs=timeout_secs)
+    buddy = Msbuddy(param_set)
+    shared_data_dict = init_db()  # database initialization
+
+    if instru == 'qtof':
+        qtof_mf_ls = joblib.load('gnps_qtof_mf_ls.joblib')
+        buddy.add_data(qtof_mf_ls)
+        buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
+        joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
+        pred_formula_feasibility(buddy.data, 0, len(buddy.data), 800, 1, shared_data_dict)
+        joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_2.joblib')
+    elif instru == 'orbi':
+        orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
+        # update parameters
+        buddy.update_config(MsbuddyConfig(ms1_tol=5, ms2_tol=10, parallel=parallel, n_cpu=n_cpu,
+                                          halogen=True, batch_size=999999,
+                                          timeout_secs=timeout_secs))
+        buddy.clear_data()
+        buddy.add_data(orbi_mf_ls)
+        buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
+        joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
+        pred_formula_feasibility(buddy.data, 0, len(buddy.data), 800, 1, shared_data_dict)
+        joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_2.joblib')
+    else:  # FT-ICR
+        ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
+        # update parameters
+        buddy.update_config(MsbuddyConfig(ms1_tol=2, ms2_tol=5, parallel=parallel, n_cpu=n_cpu,
+                                          halogen=True, batch_size=999999,
+                                          timeout_secs=timeout_secs))
+        buddy.clear_data()
+        buddy.add_data(ft_mf_ls)
+        buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
+        joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
+        pred_formula_feasibility(buddy.data, 0, len(buddy.data), 800, 1, shared_data_dict)
+        joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_2.joblib')
+
+    return shared_data_dict
+
 
 def assign_subform_gen_training_data(instru):
     """
@@ -287,8 +208,8 @@ def assign_subform_gen_training_data(instru):
     gt_ls = joblib.load(gt_name)
 
     for k, meta_feature in enumerate(buddy.data):
-        if k < 4000:
-            continue
+        # if k < 4000:
+        #     continue
         print('k: ' + str(k) + ' out of ' + str(len(buddy.data)))
         gt_form_arr = gt_ls[k]
         gt_form_str = form_arr_to_str(gt_form_arr)
@@ -347,8 +268,10 @@ def assign_subform_gen_training_data(instru):
         #     joblib.dump(y_arr, 'gnps_y_arr_' + instru + '_4k.joblib')
 
     print('y_arr sum: ' + str(np.sum(y_arr)))
-    X_arr_name = 'gnps_X_arr_' + instru + '_3k_filled.joblib'
-    y_arr_name = 'gnps_y_arr_' + instru + '_3k.joblib'
+    X_arr_name = 'gnps_X_arr_' + instru + '.joblib'
+    y_arr_name = 'gnps_y_arr_' + instru + '.joblib'
+    # X_arr_name = 'gnps_X_arr_' + instru + '_3k_filled.joblib'
+    # y_arr_name = 'gnps_y_arr_' + instru + '_3k.joblib'
     joblib.dump(X_arr, X_arr_name)
     joblib.dump(y_arr, y_arr_name)
 
@@ -413,11 +336,11 @@ def fill_model_a_prob(instru):
 
 def combine_and_clean_X_y():
     # load training data
-    X_arr_qtof = joblib.load('gnps_X_arr_qtof_filled.joblib')
+    X_arr_qtof = joblib.load('gnps_X_arr_qtof.joblib')
     y_arr_qtof = joblib.load('gnps_y_arr_qtof.joblib')
-    X_arr_orbi = joblib.load('gnps_X_arr_orbi_filled.joblib')
+    X_arr_orbi = joblib.load('gnps_X_arr_orbi.joblib')
     y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
-    X_arr_ft = joblib.load('gnps_X_arr_ft_filled.joblib')
+    X_arr_ft = joblib.load('gnps_X_arr_ft.joblib')
     y_arr_ft = joblib.load('gnps_y_arr_ft.joblib')
 
     X_arr = np.vstack((X_arr_qtof, X_arr_orbi, X_arr_ft))
@@ -435,11 +358,6 @@ def combine_and_clean_X_y():
     print('X_arr shape: ' + str(X_arr.shape))
     print('y_arr shape: ' + str(y_arr.shape))
 
-    # add 2 features to X_arr
-    # sqrt of 7th and 8th feature
-    X_arr = np.hstack((X_arr, np.sqrt(X_arr[:, 6:8])))
-    print('X_arr shape: ' + str(X_arr.shape))
-
     # save to joblib file
     joblib.dump(X_arr, 'gnps_X_arr.joblib')
     joblib.dump(y_arr, 'gnps_y_arr.joblib')
@@ -450,28 +368,26 @@ def z_norm_smote():
     z-normalization of X_arr
     """
     X_arr = joblib.load('gnps_X_arr.joblib')
-    # z-normalization, except for the 1st feature
-    X_mean = np.mean(X_arr[:, 1:], axis=0)
-    X_std = np.std(X_arr[:, 1:], axis=0)
-    X_arr[:, 1:] = (X_arr[:, 1:] - X_mean) / X_std
+    # z-normalization
+    X_mean = np.mean(X_arr[:, 6:], axis=0)
+    X_std = np.std(X_arr[:, 6:], axis=0)
+    X_arr[:, 6:] = (X_arr[:, 6:] - X_mean) / X_std
 
     joblib.dump(X_arr, 'gnps_X_arr_z_norm.joblib')
     joblib.dump(X_mean, 'ml_b_mean_arr.joblib')
     joblib.dump(X_std, 'ml_b_std_arr.joblib')
 
     y_arr = joblib.load('gnps_y_arr.joblib')
-    smote = SMOTE(random_state=42)
+    smote = SMOTE(random_state=0)
     X_arr, y_arr = smote.fit_resample(X_arr, y_arr)
 
     joblib.dump(X_arr, 'gnps_X_arr_SMOTE.joblib')
     joblib.dump(y_arr, 'gnps_y_arr_SMOTE.joblib')
 
 
-def train_model(ms1_iso, ms2_spec, pswd):
+def train_model(ms1_iso, ms2_spec, pswd, gen_model):
     """
     train ML model B
-    :param ms1_iso: True for ms1 iso similarity included, False for not included
-    :param ms2_spec: True for MS/MS spec included, False for not included
     :return: trained model
     """
     # load training data
@@ -490,80 +406,81 @@ def train_model(ms1_iso, ms2_spec, pswd):
     # split training and testing data
     X_train, X_test, y_train, y_test = train_test_split(X_arr, y_arr, test_size=0.2, random_state=0)
 
-    #
-    # # grid search
-    # all_param_grid = {
-    #     'hidden_layer_sizes': [
-    #         (512, 512, 256), (512, 256, 256), (512, 256, 128), (256, 256, 128)
-    #     ],
-    #     'activation': ['relu'],
-    #     'max_iter': [800]
-    # }
-    #
-    # # grid search
-    # mlp = MLPClassifier(random_state=1)
-    # clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=6, scoring='accuracy', verbose=1)
-    # clf.fit(X_train, y_train)
-    #
-    # # print best parameters
-    # print("Best parameters set found on development set:")
-    # print(clf.best_params_)
-    # email_body = "Best parameters set found on development set:\n"
-    # email_body += str(clf.best_params_)
-    #
-    # best_params = clf.best_params_
-    #
-    # print("Grid scores on development set:")
-    # email_body += "\nGrid scores on development set:\n"
-    #
-    # means = clf.cv_results_['mean_test_score']
-    # stds = clf.cv_results_['std_test_score']
-    #
-    # for mean, std, params in zip(means, stds, clf.cv_results_['params']):
-    #     print("%0.5f (+/-%0.05f) for %r"
-    #           % (mean, std * 2, params))
-    #     email_body += "%0.5f (+/-%0.05f) for %r\n" % (mean, std * 2, params)
-    #
-    # # send email
-    # send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
-    #                    smtp_password=pswd)
+    # grid search
+    all_param_grid = {
+        'hidden_layer_sizes': [
+            (512, 512, 512, 256), (512, 512, 256, 256), (512, 512, 512)
+        ],
+        'max_iter': [800]
+    }
 
-    # best parameters
-    best_params = {'hidden_layer_sizes': (512, 512, 256), 'max_iter': 800}
+    # grid search
+    mlp = MLPClassifier(random_state=1)
+    clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=6, scoring='accuracy', verbose=1)
+    clf.fit(X_train, y_train)
 
-    print("train model...")
+    # print best parameters
+    print("Best parameters set found on development set:")
+    print(clf.best_params_)
+    email_body = "Best parameters set found on development set:\n"
+    email_body += str(clf.best_params_)
 
-    # train model with best params for 5 times, and save the best one
-    best_score = 0
-    for m in range(5):
-        this_mlp, score = _train(m, X_train, y_train, X_test, y_test, best_params)
-        if score > best_score:
-            best_score = score
-            print("MLP acc.: " + str(score))
-            model_name = 'model_b'
-            model_name += '_ms1' if ms1_iso else '_noms1'
-            model_name += '_ms2' if ms2_spec else '_noms2'
-            joblib.dump(this_mlp, model_name + '.joblib')
-            body_str = "MLP acc.: " + str(score)
-            send_hotmail_email("mlp trained", body_str,
-                               "s1xing@health.ucsd.edu", smtp_password=args.pswd)
+    best_params = clf.best_params_
 
+    print("Grid scores on development set:")
+    email_body += "\nGrid scores on development set:\n"
+
+    means = clf.cv_results_['mean_test_score']
+    stds = clf.cv_results_['std_test_score']
+
+    for mean, std, params in zip(means, stds, clf.cv_results_['params']):
+        print("%0.5f (+/-%0.05f) for %r"
+              % (mean, std * 2, params))
+        email_body += "%0.5f (+/-%0.05f) for %r\n" % (mean, std * 2, params)
+
+    # send email
+    send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
+                       smtp_password=pswd)
     #
-    # # top 3 models with highest accuracy
-    # top3_idx = np.argsort(scores)[-3:]
-    # top3_scores = np.array(scores)[top3_idx]
-    # top3_mlps = np.array(mlps)[top3_idx]
-    #
-    # # save top 3 models
-    # for i in range(3):
-    #     best_mlp = top3_mlps[i]
-    #     score = top3_scores[i]
-    #     print("MLP acc.: " + str(score))
-    #     model_name = 'model_b'
-    #     model_name += '_ms1' if ms1_iso else '_noms1'
-    #     model_name += '_ms2' if ms2_spec else '_noms2'
-    #     model_name += '_' + str(i)
-    #     joblib.dump(best_mlp, model_name + '.joblib')
+    # # best parameters
+    # best_params = {'hidden_layer_sizes': (512, 512, 256), 'max_iter': 800}
+
+    if gen_model:
+        print("train model...")
+
+        # train model with best params for 3 times, and save the best one
+        best_score = 0
+        for m in range(3):
+            this_mlp, score = _train(m, X_train, y_train, X_test, y_test, best_params)
+            if score > best_score:
+                best_score = score
+                print("MLP acc.: " + str(score))
+                model_name = 'model_b'
+                model_name += '_ms1' if ms1_iso else '_noms1'
+                model_name += '_ms2' if ms2_spec else '_noms2'
+                joblib.dump(this_mlp, model_name + '.joblib')
+                body_str = "MLP acc.: " + str(score) + "\n"
+                body_str += 'ms1_' if ms1_iso else 'noms1_'
+                body_str += 'ms2' if ms2_spec else 'noms2'
+                send_hotmail_email("mlp trained", body_str,
+                                   "s1xing@health.ucsd.edu", smtp_password=args.pswd)
+
+        #
+        # # top 3 models with highest accuracy
+        # top3_idx = np.argsort(scores)[-3:]
+        # top3_scores = np.array(scores)[top3_idx]
+        # top3_mlps = np.array(mlps)[top3_idx]
+        #
+        # # save top 3 models
+        # for i in range(3):
+        #     best_mlp = top3_mlps[i]
+        #     score = top3_scores[i]
+        #     print("MLP acc.: " + str(score))
+        #     model_name = 'model_b'
+        #     model_name += '_ms1' if ms1_iso else '_noms1'
+        #     model_name += '_ms2' if ms2_spec else '_noms2'
+        #     model_name += '_' + str(i)
+        #     joblib.dump(best_mlp, model_name + '.joblib')
 
     return
 
@@ -573,7 +490,6 @@ def _train(random_state, X_train, y_train, X_test, y_test, best_params):
     mlp_cls.fit(X_train, y_train)
     mlp_score = mlp_cls.score(X_test, y_test)
     return mlp_cls, mlp_score
-
 
 
 import smtplib
@@ -631,11 +547,10 @@ def parse_args():
     :return: parsed arguments
     """
     parser = argparse.ArgumentParser(description='ML model B training')
-    parser.add_argument('-gen', action='store_true', help='generate training data')
     parser.add_argument('-calc', action='store_true', help='calculate gnps data')
     parser.add_argument('-combine', action='store_true', help='combine and clean X_arr and y_arr')
-    parser.add_argument('-instru', type=str, default='qtof', help='instrument type')
-    parser.add_argument('-parallel', action='store_true', help='parallel mode')
+    parser.add_argument('-gen', action='store_true', help='generate models')
+    parser.add_argument('-p', action='store_true', help='parallel mode')
     parser.add_argument('-n_cpu', type=int, default=16, help='number of CPU cores to use')
     parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
     parser.add_argument('-ms1', action='store_true', help='ms1 iso similarity included')
@@ -656,27 +571,25 @@ if __name__ == '__main__':
 
     # test here
     # args = argparse.Namespace(gen=False, calc=False, combine=True,
-    #                           instru='qtof', parallel=False, n_cpu=1, to=1000,
+    #                           parallel=False, n_cpu=1, to=1000,
     #                           ms1=False, ms2=True)
 
-    # /Users/shipei/Documents/projects/ms2/gnps/
-
     # load training data
-    if args.gen:
-        load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib')
-
-    elif args.calc:
-        # gd = calc_gnps_data(args.parallel, args.n_cpu, args.to, args.instru)
-        # gen_training_data(gd)
-        assign_subform_gen_training_data(args.instru)
-        print("Done.")
+    if args.calc:
+        # load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib')
+        for instru in ['qtof', 'orbi', 'ft']:
+            calc_gnps_data(args.parallel, args.n_cpu, args.to, instru)
+            assign_subform_gen_training_data(instru)
+            email_body = "assign_subform_gen_training_data finished: " + instru
+            send_hotmail_email("job finished", email_body,
+                               "s1xing@health.ucsd.edu", smtp_password=args.pswd)
 
     elif args.combine:
         combine_and_clean_X_y()
         z_norm_smote()  # z-normalization and SMOTE
 
     else:  # train model
-        train_model(args.ms1, args.ms2, args.pswd)
+        train_model(args.ms1, args.ms2, args.pswd, args.gen)
 
     # fill_model_a_prob('qtof')
 
