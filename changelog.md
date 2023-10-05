@@ -5,6 +5,7 @@ msbuddy changelog
 - First release of a working version on PyPI.
 
 0.2.0 (2023-10-10)
-- Update deep learning models for molecular formula annotation. 
-- Note: this version outputs different results from previous versions.
+- Update deep learning features & models for molecular formula annotation.
+- Use ensemble models for molecular formula annotation.
+- **Note**: this version outputs different results from previous versions.
 
