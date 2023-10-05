@@ -18,16 +18,12 @@ You can also install **msbuddy** from source:
 .. code-block:: bash
 
    git clone https://github.com/Philipbear/msbuddy.git
-   cd msbuddy
-   python setup.py install
 
-Option 3: From the latest release
+Option 3: From PyPI release
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Alternatively, you can download the latest release from `GitHub <https://github.com/Philipbear/msbuddy/releases>`_ and install it:
+Alternatively, you can download the latest release from `PyPI <https://pypi.org/project/msbuddy/#history>`_ and install it:
 
 .. code-block:: bash
 
-   tar -zxvf msbuddy-0.1.1.tar.gz
-   cd msbuddy-0.1.1
-   python setup.py install
+   tar -zxvf msbuddy-0.2.0.tar.gz
 

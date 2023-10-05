@@ -385,7 +385,7 @@ def z_norm_smote():
     joblib.dump(y_arr, 'gnps_y_arr_SMOTE.joblib')
 
 
-def train_model(ms1_iso, ms2_spec, pswd, gen_model):
+def train_model(ms1_iso, ms2_spec, pswd, n_cpu):
     """
     train ML model B
     :return: trained model
@@ -406,17 +406,18 @@ def train_model(ms1_iso, ms2_spec, pswd, gen_model):
     # split training and testing data
     X_train, X_test, y_train, y_test = train_test_split(X_arr, y_arr, test_size=0.2, random_state=0)
 
+    print('grid search...')
     # grid search
     all_param_grid = {
         'hidden_layer_sizes': [
-            (512, 512, 512, 256), (512, 512, 256, 256), (512, 512, 512)
+            (512, 512, 256), (512, 256, 256), (512, 256, 256, 128),
         ],
         'max_iter': [800]
     }
 
     # grid search
     mlp = MLPClassifier(random_state=1)
-    clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=6, scoring='accuracy', verbose=1)
+    clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=n_cpu, scoring='accuracy', verbose=1)
     clf.fit(X_train, y_train)
 
     # print best parameters
@@ -442,45 +443,47 @@ def train_model(ms1_iso, ms2_spec, pswd, gen_model):
     send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
                        smtp_password=pswd)
     #
+
+    #
     # # best parameters
-    # best_params = {'hidden_layer_sizes': (512, 512, 256), 'max_iter': 800}
+    # best_params = {'hidden_layer_sizes': (512, 512, 512, 256), 'max_iter': 800}
+    #
+    print("train model...")
 
-    if gen_model:
-        print("train model...")
+    # train model with best params for 3 times, save all
+    best_score = 0
+    for m in range(3):
+        this_mlp, score = _train(m, X_train, y_train, X_test, y_test, best_params)
+        if score > best_score:
+            best_score = score
+            print("MLP acc.: " + str(score))
+            model_name = 'model_b'
+            model_name += '_ms1' if ms1_iso else '_noms1'
+            model_name += '_ms2_' if ms2_spec else '_noms2_'
+            model_name += str(m)
+            joblib.dump(this_mlp, model_name + '.joblib')
+            body_str = "model " + str(m) + "  MLP acc.: " + str(score) + "\n"
+            body_str += 'ms1_' if ms1_iso else 'noms1_'
+            body_str += 'ms2' if ms2_spec else 'noms2'
+            send_hotmail_email("mlp trained", body_str,
+                               "s1xing@health.ucsd.edu", smtp_password=pswd)
 
-        # train model with best params for 3 times, and save the best one
-        best_score = 0
-        for m in range(3):
-            this_mlp, score = _train(m, X_train, y_train, X_test, y_test, best_params)
-            if score > best_score:
-                best_score = score
-                print("MLP acc.: " + str(score))
-                model_name = 'model_b'
-                model_name += '_ms1' if ms1_iso else '_noms1'
-                model_name += '_ms2' if ms2_spec else '_noms2'
-                joblib.dump(this_mlp, model_name + '.joblib')
-                body_str = "MLP acc.: " + str(score) + "\n"
-                body_str += 'ms1_' if ms1_iso else 'noms1_'
-                body_str += 'ms2' if ms2_spec else 'noms2'
-                send_hotmail_email("mlp trained", body_str,
-                                   "s1xing@health.ucsd.edu", smtp_password=args.pswd)
-
-        #
-        # # top 3 models with highest accuracy
-        # top3_idx = np.argsort(scores)[-3:]
-        # top3_scores = np.array(scores)[top3_idx]
-        # top3_mlps = np.array(mlps)[top3_idx]
-        #
-        # # save top 3 models
-        # for i in range(3):
-        #     best_mlp = top3_mlps[i]
-        #     score = top3_scores[i]
-        #     print("MLP acc.: " + str(score))
-        #     model_name = 'model_b'
-        #     model_name += '_ms1' if ms1_iso else '_noms1'
-        #     model_name += '_ms2' if ms2_spec else '_noms2'
-        #     model_name += '_' + str(i)
-        #     joblib.dump(best_mlp, model_name + '.joblib')
+    #
+    # # top 3 models with highest accuracy
+    # top3_idx = np.argsort(scores)[-3:]
+    # top3_scores = np.array(scores)[top3_idx]
+    # top3_mlps = np.array(mlps)[top3_idx]
+    #
+    # # save top 3 models
+    # for i in range(3):
+    #     best_mlp = top3_mlps[i]
+    #     score = top3_scores[i]
+    #     print("MLP acc.: " + str(score))
+    #     model_name = 'model_b'
+    #     model_name += '_ms1' if ms1_iso else '_noms1'
+    #     model_name += '_ms2' if ms2_spec else '_noms2'
+    #     model_name += '_' + str(i)
+    #     joblib.dump(best_mlp, model_name + '.joblib')
 
     return
 
@@ -549,7 +552,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description='ML model B training')
     parser.add_argument('-calc', action='store_true', help='calculate gnps data')
     parser.add_argument('-combine', action='store_true', help='combine and clean X_arr and y_arr')
-    parser.add_argument('-gen', action='store_true', help='generate models')
     parser.add_argument('-p', action='store_true', help='parallel mode')
     parser.add_argument('-n_cpu', type=int, default=16, help='number of CPU cores to use')
     parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
@@ -589,7 +591,7 @@ if __name__ == '__main__':
         z_norm_smote()  # z-normalization and SMOTE
 
     else:  # train model
-        train_model(args.ms1, args.ms2, args.pswd, args.gen)
+        train_model(args.ms1, args.ms2, args.pswd, args.n_cpu)
 
     # fill_model_a_prob('qtof')
 
