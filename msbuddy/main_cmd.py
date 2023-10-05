@@ -29,17 +29,17 @@ def main():
                         help='Path to the CSV file containing USI strings in the first column (no header row).')
     parser.add_argument('-output', '-o', type=str, help='The output file path.')
     parser.add_argument('-details', '-d', action='store_true',
-                        help='Whether to write detailed results. Default: False.')
+                        help='Store true. Whether to write detailed results. Default: detailed results are not written.')
     parser.add_argument('-ms_instr', '-ms', type=str, default=None,
                         help='MS instrument type. Supported types: orbitrap, qtof, fticr.')
     parser.add_argument('-disable_ppm', action='store_false',
-                        help='Whether to disable ppm for mass tolerance. Default: ppm is enabled.')
+                        help='Store false. Whether to disable ppm for mass tolerance. Default: ppm is enabled.')
     parser.add_argument('-ms1_tol', type=float, default=5, help='MS1 tolerance. Default: 5.')
     parser.add_argument('-ms2_tol', type=float, default=10, help='MS2 tolerance. Default: 10.')
     parser.add_argument('-halogen', '-hal', action='store_true',
-                        help='Whether to consider halogen atoms FClBrI. Default: False.')
+                        help='Store true. Whether to consider halogen atoms FClBrI. Default: halogen atoms are not considered.')
     parser.add_argument('-parallel', '-p', action='store_true',
-                        help='Whether to use parallel computing. Default: False.')
+                        help='Store true. Whether to use parallel computing. Default: parallel computing is disabled.')
     parser.add_argument('-n_cpu', type=int, default=-1, help='Number of CPUs to use. Default: -1, use all CPUs.')
     parser.add_argument('-timeout_secs', '-t', type=int, default=300, help='Timeout in seconds. Default: 300.')
     parser.add_argument('-batch_size', '-bs', type=int, default=1000,
@@ -70,9 +70,9 @@ def main():
     parser.add_argument('-max_isotope_cnt', type=int, default=4,
                         help='Maximum isotope count, used for MS1 isotope pattern. Default: 4.')
     parser.add_argument('-disable_ms2_denoise', action='store_false',
-                        help='Whether to disable denoising MS2 spectrum. Default: MS2 denoise is enabled.')
+                        help='Store false. Whether to disable denoising MS2 spectrum. Default: MS2 denoise is enabled.')
     parser.add_argument('-disable_rel_int_denoise', action='store_false',
-                        help='Whether to disable relative intensity for MS2 denoise. Default: relative intensity denoise is enabled.')
+                        help='Store false. Whether to disable relative intensity for MS2 denoise. Default: relative intensity denoise is enabled.')
     parser.add_argument('-rel_int_denoise_cutoff', type=float, default=0.01,
                         help='Relative intensity cutoff, used for MS2 denoise. Default: 0.01.')
     parser.add_argument('-max_noise_frag_ratio', type=float, default=0.90,
@@ -82,8 +82,7 @@ def main():
     parser.add_argument('-max_frag_reserved', type=int, default=50,
                         help='Max fragment number reserved, used for MS2 data.')
     parser.add_argument('-use_all_frag', action='store_true',
-                        help='Whether to use all fragments for annotation; by default, only top N fragments are used, '
-                             'top N is a function of precursor mass. Default: False.')
+                        help='Store true. Whether to use all fragments for annotation; by default, only top N fragments are used. top N is a function of precursor mass. Default: Not to use all fragments.')
 
     args = parser.parse_args()
 

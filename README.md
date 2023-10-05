@@ -24,7 +24,6 @@ The minimum requirement for a msbuddy query is a single _m/z_ value and its ioni
 ```commandline
 pip install msbuddy
 ```
-[GitHub release](https://github.com/Philipbear/msbuddy/releases) is also available for installation.
 
 
 ## Python API ([link](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
