@@ -29,7 +29,7 @@ To install a specific version, see PyPI [release history](https://pypi.org/proje
 
 ## Python API ([link](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 
-As a quick start, we here load a mgf file and annotate the molecular formula for each MS/MS spectrum.
+As a quick start, we here load a mgf file and annotate the molecular formula for each query.
 All the configurations are specified in the [`MsbuddyConfig`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.MsbuddyConfig) class.
 **Parallel computing** is also supported.
 
@@ -55,7 +55,7 @@ msb_engine.annotate_formula()
 result = msb_engine.get_summary()
 ```
 
-MS/MS spectra can also be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2):
+MS/MS spectra can be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2) if they are publicly available:
 ```python
 # you can load multiple USIs at once
 msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
