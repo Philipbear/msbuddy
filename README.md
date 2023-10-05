@@ -20,11 +20,12 @@ The minimum requirement for a msbuddy query is a single _m/z_ value and its ioni
 **The official documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
 
 ## Installation ([link](https://msbuddy.readthedocs.io/en/latest/install.html))
-`msbuddy` is available on PyPI, you can install it via `pip`:
+`msbuddy` is available on PyPI, you can install the latest version via `pip`:
 ```commandline
 pip install msbuddy
 ```
 
+To install a specific version, see PyPI [release history](https://pypi.org/project/msbuddy/#history).
 
 ## Python API ([link](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 
