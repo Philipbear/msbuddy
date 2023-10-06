@@ -443,7 +443,7 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
                             radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
                             len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
     else:
-        out_arr = np.array([0] * 12)
+        out_arr = np.array([0] * 14)
 
     return out_arr
 
