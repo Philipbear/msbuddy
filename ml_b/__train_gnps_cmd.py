@@ -578,13 +578,13 @@ if __name__ == '__main__':
 
     # load training data
     if args.calc:
-        # load_gnps_data('gnps_ms2db_preprocessed_20230910.joblib')
-        for instru in ['qtof', 'orbi', 'ft']:
-            calc_gnps_data(args.parallel, args.n_cpu, args.to, instru)
-            assign_subform_gen_training_data(instru)
-            email_body = "assign_subform_gen_training_data finished: " + instru
-            send_hotmail_email("job finished", email_body,
-                               "s1xing@health.ucsd.edu", smtp_password=args.pswd)
+        load_gnps_data('gnps_ms2db_preprocessed_20231005.joblib')
+        # for instru in ['qtof', 'orbi', 'ft']:
+        #     calc_gnps_data(args.parallel, args.n_cpu, args.to, instru)
+        #     assign_subform_gen_training_data(instru)
+        #     email_body = "assign_subform_gen_training_data finished: " + instru
+        #     send_hotmail_email("job finished", email_body,
+        #                        "s1xing@health.ucsd.edu", smtp_password=args.pswd)
 
     elif args.combine:
         combine_and_clean_X_y()
