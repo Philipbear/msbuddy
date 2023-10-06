@@ -555,14 +555,14 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         model = gd['model_b_ms1_ms2']
     elif group_no == 1:
         model = gd['model_b_ms1_noms2']
-        X_arr = X_arr[:, :-12]  # remove MS2-related features
+        X_arr = X_arr[:, :-14]  # remove MS2-related features
     elif group_no == 2:
         model = gd['model_b_noms1_ms2']
         X_arr = np.delete(X_arr, 5, axis=1)  # remove MS1 isotope similarity
     else:
         model = gd['model_b_noms1_noms2']
         X_arr = np.delete(X_arr, 5, axis=1)  # remove MS1 isotope similarity
-        X_arr = X_arr[:, :-12]  # remove MS2-related features
+        X_arr = X_arr[:, :-14]  # remove MS2-related features
 
     # predict formula probability
     prob_arr = model.predict_proba(X_arr)

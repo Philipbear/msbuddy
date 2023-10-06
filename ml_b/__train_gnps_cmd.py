@@ -134,9 +134,9 @@ def load_gnps_data(path):
     joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
 
 
-def calc_gnps_data(parallel, n_cpu, timeout_secs, instru='qtof'):
+def calc_gnps_data(n_cpu, timeout_secs, instru='qtof'):
     # main
-    param_set = MsbuddyConfig(ms1_tol=10, ms2_tol=20, parallel=parallel, n_cpu=n_cpu, batch_size=999999,
+    param_set = MsbuddyConfig(ms1_tol=10, ms2_tol=20, parallel=True, n_cpu=n_cpu, batch_size=999999,
                               halogen=True, timeout_secs=timeout_secs)
     buddy = Msbuddy(param_set)
     shared_data_dict = init_db()  # database initialization
@@ -151,7 +151,7 @@ def calc_gnps_data(parallel, n_cpu, timeout_secs, instru='qtof'):
     elif instru == 'orbi':
         orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
         # update parameters
-        buddy.update_config(MsbuddyConfig(ms1_tol=5, ms2_tol=10, parallel=parallel, n_cpu=n_cpu,
+        buddy.update_config(MsbuddyConfig(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=n_cpu,
                                           halogen=True, batch_size=999999,
                                           timeout_secs=timeout_secs))
         buddy.clear_data()
@@ -163,7 +163,7 @@ def calc_gnps_data(parallel, n_cpu, timeout_secs, instru='qtof'):
     else:  # FT-ICR
         ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
         # update parameters
-        buddy.update_config(MsbuddyConfig(ms1_tol=2, ms2_tol=5, parallel=parallel, n_cpu=n_cpu,
+        buddy.update_config(MsbuddyConfig(ms1_tol=2, ms2_tol=5, parallel=True, n_cpu=n_cpu,
                                           halogen=True, batch_size=999999,
                                           timeout_secs=timeout_secs))
         buddy.clear_data()
@@ -399,8 +399,8 @@ def train_model(ms1_iso, ms2_spec, pswd, n_cpu):
         # discard the 5th feature in X_arr
         X_arr = np.delete(X_arr, 5, axis=1)
     if not ms2_spec:
-        # discard the last 12 features in X_arr
-        X_arr = X_arr[:, :-12]
+        # discard the last 14 features in X_arr
+        X_arr = X_arr[:, :-14]
 
     print('splitting...')
     # split training and testing data
@@ -551,9 +551,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='ML model B training')
     parser.add_argument('-calc', action='store_true', help='calculate gnps data')
-    parser.add_argument('-combine', action='store_true', help='combine and clean X_arr and y_arr')
-    parser.add_argument('-p', action='store_true', help='parallel mode')
-    parser.add_argument('-n_cpu', type=int, default=16, help='number of CPU cores to use')
+    parser.add_argument('-cpu', type=int, default=16, help='number of CPU cores to use')
     parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
     parser.add_argument('-ms1', action='store_true', help='ms1 iso similarity included')
     parser.add_argument('-ms2', action='store_true', help='MS/MS spec included')
@@ -572,26 +570,29 @@ if __name__ == '__main__':
     args = parse_args()
 
     # test here
-    # args = argparse.Namespace(gen=False, calc=False, combine=True,
+    # args = argparse.Namespace(gen=False, calc=False,
     #                           parallel=False, n_cpu=1, to=1000,
     #                           ms1=False, ms2=True)
 
     # load training data
     if args.calc:
-        load_gnps_data('gnps_ms2db_preprocessed_20231005.joblib')
-        # for instru in ['qtof', 'orbi', 'ft']:
-        #     calc_gnps_data(args.parallel, args.n_cpu, args.to, instru)
-        #     assign_subform_gen_training_data(instru)
-        #     email_body = "assign_subform_gen_training_data finished: " + instru
-        #     send_hotmail_email("job finished", email_body,
-        #                        "s1xing@health.ucsd.edu", smtp_password=args.pswd)
+        # load_gnps_data('gnps_ms2db_preprocessed_20231005.joblib')
+        for instru in ['qtof', 'orbi', 'ft']:
+            calc_gnps_data(args.cpu, args.to, instru)
+            email_body = "cand gen finished: " + instru
+            send_hotmail_email("job finished", email_body,
+                               "s1xing@health.ucsd.edu", smtp_password=args.pswd)
+        for instru in ['qtof', 'orbi', 'ft']:
+            assign_subform_gen_training_data(instru)
+            email_body = "assign_subform and gen_training_data finished: " + instru
+            send_hotmail_email("job finished", email_body,
+                               "s1xing@health.ucsd.edu", smtp_password=args.pswd)
 
-    elif args.combine:
         combine_and_clean_X_y()
         z_norm_smote()  # z-normalization and SMOTE
 
     else:  # train model
-        train_model(args.ms1, args.ms2, args.pswd, args.n_cpu)
+        train_model(args.ms1, args.ms2, args.pswd, args.cpu)
 
     # fill_model_a_prob('qtof')
 
