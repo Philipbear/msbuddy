@@ -146,7 +146,6 @@ class CandidateSpace:
         Convert into a CandidateFormula.
         :param meta_feature: MetaFeature object
         :param ms2_iso_tol: MS2 tolerance for isotope peaks, in Da
-        :param gd: global dictionary
         :return: CandidateFormula
         """
         ms2_raw = meta_feature.ms2_raw
@@ -158,11 +157,14 @@ class CandidateSpace:
         # consider to further explain other fragments as isotope peaks
         explained_idx = [f.idx for f in self.frag_exp_list]
         for m, exp_idx in enumerate(explained_idx):
-            # if the next peak is already explained or the last peak, skip
-            if (exp_idx + 1 in explained_idx) or (m + 1 == len(explained_idx)):
+            # last peak, skip
+            if m + 1 == len(explained_idx):
                 continue
             # idx of next exp peak
             next_exp_idx = explained_idx[m + 1]
+            # if the next peak is already explained
+            if next_exp_idx in explained_idx:
+                continue
             # if this idx is not in idx_array of ms2_processed, skip
             if next_exp_idx not in ms2_processed.idx_array:
                 continue
@@ -177,7 +179,7 @@ class CandidateSpace:
                 # for iso peak, the neutral loss is actually the same as the previous one (M+0)
                 # but we denote it as '-1' isotope peak, so that frag mass + nl mass is still precursor mass
                 new_nl = Formula(this_nl.array, 0, this_nl.mass - 1.003355, -1)
-                new_frag_exp = FragExplanation(exp_idx + 1, new_frag, new_nl)
+                new_frag_exp = FragExplanation(next_exp_idx, new_frag, new_nl)
                 new_frag_exp.direct_assign_optim()
                 self.frag_exp_list.append(new_frag_exp)
 
@@ -186,7 +188,7 @@ class CandidateSpace:
 
         # convert into a CandidateFormula
         # construct MS2Explanation first
-        ms2_raw_exp = MS2Explanation(idx_array=np.array([f.idx for f in self.frag_exp_list]),
+        ms2_raw_exp = MS2Explanation(idx_array=np.array([f.idx for f in self.frag_exp_list], dtype=np.int16),
                                      explanation_array=[f.optim_frag for f in self.frag_exp_list])
 
         return CandidateFormula(formula=Formula(self.pre_neutral_array, 0, self.neutral_mass),
@@ -825,6 +827,6 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * mf.mz * 1e-6
     ms2_iso_tol = max(ms2_iso_tol, 0.02)
     candidate_form = candidate_space.refine_explanation(mf, ms2_iso_tol)
-    candidate_form.ml_a_prob = cf.ml_a_prob
+    candidate_form.ml_a_prob = cf.ml_a_prob  # copy ml_a_prob
 
     return candidate_form

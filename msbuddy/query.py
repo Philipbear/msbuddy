@@ -19,7 +19,7 @@ from typing import List, Tuple, Union
 import numpy as np
 from numba import njit
 
-from msbuddy.base import Adduct, Formula
+from msbuddy.base import Adduct, Formula, calc_formula_mass
 
 # constants
 na_h_delta = 22.989769 - 1.007825
@@ -57,15 +57,12 @@ def _get_formula_db_idx(start_idx, end_idx, db_mode: int, gd) -> Tuple[int, int]
     return int(db_start_idx), int(db_end_idx)
 
 
-def query_neutral_mass(mass: float, mz_tol: float,
-                       ppm: bool, gd) -> List[Formula]:
+def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, gd) -> List[Formula]:
     """
-    search precursor mass in neutral database
+    search neutral mass in neutral formula database
     :param mass: mass to search
-    :param adduct: adduct type
     :param mz_tol: mass tolerance
     :param ppm: whether ppm is used
-    :param db_mode: database label (0: basic, 1: halogen)
     :param gd: global dependencies dictionary
     :return: list of Formula
     """
@@ -90,11 +87,49 @@ def query_neutral_mass(mass: float, mz_tol: float,
     db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
     results_halogen_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
     results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
-    forms_halogen = _func_a(results_halogen_mass, results_halogen_formula,
-                            target_mass, mass_tol, None)
+    forms_halogen = _func_a(results_halogen_mass, results_halogen_formula, target_mass, mass_tol, None)
     formulas.extend(forms_halogen)
 
     return formulas
+
+
+def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
+    """
+    check whether this formula exists in the database
+    :param formula: formula to check
+    :param gd: global dependencies dictionary
+    :return: True if this formula exists in the database
+    """
+    form_arr = formula.array
+    radical_bool = formula.dbe % 2 == 0
+    halogen_bool = (form_arr[2] + form_arr[3] + form_arr[4] + form_arr[5]) > 0
+
+    # Na, K => H
+    form_arr = convert_na_k(form_arr)
+
+    # if not a radical fragment, convert to neutral form
+    if not radical_bool:
+        form_arr = convert_neutral(form_arr, pos_mode)
+
+    # recalculated target mass
+    target_mass = calc_formula_mass(form_arr, 0, 0)
+
+    # query database, use a tiny mass tolerance (1e-5)
+    mass_tol = 1e-4
+    db_mode = 0 if not halogen_bool else 1
+    start_idx = int((target_mass - mass_tol) * 10)
+    end_idx = ceil((target_mass + mass_tol) * 10)
+
+    db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, db_mode, gd)
+    if db_mode == 0:
+        results_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
+        results_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
+    else:
+        results_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
+        results_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
+    forms = _func_a(results_mass, results_formula, target_mass, mass_tol, None)
+
+    return len(forms) > 0
 
 
 def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
@@ -434,6 +469,7 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
     return forms
 
 
+@njit
 def convert_na_k(form_arr: np.array) -> np.array:
     """
     convert formula to Na K converted form, Na K into H
@@ -441,10 +477,27 @@ def convert_na_k(form_arr: np.array) -> np.array:
     :return: 12-dim array
     """
     # convert Na K into H
-    form_arr[1] += form_arr[8] + form_arr[6]
+    form_arr[1] = form_arr[1] + form_arr[8] + form_arr[6]
     form_arr[8] = 0
     form_arr[6] = 0
     return form_arr
+
+
+@njit
+def convert_neutral(form_arr: np.array, pos_mode: bool) -> np.array:
+    """
+    convert charged formula into neutral formula, for fragments
+    :param form_arr: 12-dim array
+    :param pos_mode: whether this is a frag in positive ion mode
+    :return: 12-dim array
+    """
+    # convert charged formula into neutral formula
+    if pos_mode:
+        form_arr[1] -= 1
+    else:
+        form_arr[1] += 1
+    return form_arr
+
 
 
 @njit
@@ -483,3 +536,25 @@ def common_nl_from_array(form_arr: np.array, nl_db: np.array) -> bool:
         elif nl[0] > form_arr[0]:
             break
     return False
+
+
+# test
+if __name__ == '__main__':
+    from msbuddy import Msbuddy
+    from msbuddy.load import init_db
+    msb = Msbuddy()
+    gd = init_db()
+
+    import time
+    time_start = time.time()
+    # test check_formula_existence
+    for i in range(1000000):
+        arr = gd['halogen_db_formula'][i]
+        arr[1] += 1  # 1, 6, 8: H, K, Na
+        form = Formula(arr, charge=0)
+        exist = check_formula_existence(form, True, gd)
+        if not exist:
+            print(form)
+            break
+    time_end = time.time()
+    print(time_end - time_start)

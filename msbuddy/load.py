@@ -67,12 +67,21 @@ def init_db() -> dict:
             'https://drive.google.com/uc?id=19-htf-iifTUpAMOSB9DhFs0XkqqW1Gxm',
             data_path / 'ml_a.joblib'))
 
-    # load ml_b
-    global_dict['model_b_ms1_ms2'], global_dict['model_b_noms1_ms2'], global_dict['model_b_ms1_noms2'], global_dict[
-        'model_b_noms1_noms2'], global_dict['model_b_mean_arr'], global_dict['model_b_std_arr'] = (
-        check_download_joblibload(
-            'https://drive.google.com/uc?id=1lyx6DM3RlU5NBm9w_2zE6SqDWiuUFo_P',
-            data_path / 'ml_b.joblib'))
+    # # load ml_b
+    # global_dict['model_b_ms1_ms2'], global_dict['model_b_noms1_ms2'], global_dict['model_b_ms1_noms2'], global_dict[
+    #     'model_b_noms1_noms2'], global_dict['model_b_mean_arr'], global_dict['model_b_std_arr'] = (
+    #     check_download_joblibload(
+    #         'https://drive.google.com/uc?id=1lyx6DM3RlU5NBm9w_2zE6SqDWiuUFo_P',
+    #         data_path / 'ml_b.joblib'))
+
+
+    # test
+    global_dict['model_b_noms1_ms2'] = j_load(data_path / 'ml_b_noms1_ms2.joblib')
+    global_dict['model_b_mean_arr'] = j_load(data_path / 'ml_b_mean_arr.joblib')
+    global_dict['model_b_std_arr'] = j_load(data_path / 'ml_b_std_arr.joblib')
+
+
+
 
     # formula_db
     basic_db, halogen_db = (

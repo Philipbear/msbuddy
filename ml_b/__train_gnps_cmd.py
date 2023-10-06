@@ -250,7 +250,7 @@ def assign_subform_gen_training_data(instru):
                 mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
                 mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
                 log_p = np.log(mz_shift_p * 2)
-                ml_feature_arr[3] = np.clip(log_p, -5, 0)
+                ml_feature_arr[3] = np.clip(log_p, -2, 0)
 
             # add to feature array
             if X_arr.size == 0:
@@ -369,9 +369,9 @@ def z_norm_smote():
     """
     X_arr = joblib.load('gnps_X_arr.joblib')
     # z-normalization
-    X_mean = np.mean(X_arr[:, 6:], axis=0)
-    X_std = np.std(X_arr[:, 6:], axis=0)
-    X_arr[:, 6:] = (X_arr[:, 6:] - X_mean) / X_std
+    X_mean = np.mean(X_arr[:, 5:], axis=0)
+    X_std = np.std(X_arr[:, 5:], axis=0)
+    X_arr[:, 5:] = (X_arr[:, 5:] - X_mean) / X_std
 
     joblib.dump(X_arr, 'gnps_X_arr_z_norm.joblib')
     joblib.dump(X_mean, 'ml_b_mean_arr.joblib')
@@ -396,8 +396,8 @@ def train_model(ms1_iso, ms2_spec, pswd, n_cpu):
 
     print("Training model ...")
     if not ms1_iso:
-        # discard the 2nd feature in X_arr
-        X_arr = np.delete(X_arr, 1, axis=1)
+        # discard the 5th feature in X_arr
+        X_arr = np.delete(X_arr, 5, axis=1)
     if not ms2_spec:
         # discard the last 12 features in X_arr
         X_arr = X_arr[:, :-12]

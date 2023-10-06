@@ -51,7 +51,7 @@ class Formula:
 
         # fill in mass directly from formula database, otherwise calculate
         if mass is None:
-            self.mass = _calc_formula_mass(np.float32(array), charge, isotope)
+            self.mass = calc_formula_mass(np.float32(array), charge, isotope)
         else:
             self.mass = mass
 
@@ -78,7 +78,7 @@ def _calc_formula_dbe(arr):
 
 
 @njit
-def _calc_formula_mass(array, charge, isotope):
+def calc_formula_mass(array, charge, isotope):
     """
     calculate monoisotopic mass of a formula, charge adjusted
     :return: mass
@@ -657,9 +657,11 @@ class MS2Explanation:
     """
 
     def __init__(self, idx_array: np.array,
-                 explanation_array: List[Union[Formula, None]]):
-        self.idx_array = np.array(idx_array, dtype=np.int16)  # indices of peaks in MS2 spectrum
+                 explanation_array: List[Union[Formula, None]],
+                 db_existence_array: Union[np.array, None] = None):
+        self.idx_array = idx_array  # indices of peaks in MS2 spectrum
         self.explanation_array = explanation_array  # List[Formula], isotope peaks are included
+        self.db_existence_array = db_existence_array  # List[bool], whether the explained formula is in the formula db
 
     def __str__(self):
         out_str = ""

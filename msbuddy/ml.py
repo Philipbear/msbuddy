@@ -24,7 +24,7 @@ from scipy.stats import norm
 from tqdm import tqdm
 
 from msbuddy.base import Formula
-from msbuddy.query import common_nl_from_array
+from msbuddy.query import common_nl_from_array, check_formula_existence
 from msbuddy.utils import read_formula
 
 # ignore warnings
@@ -317,7 +317,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     pre_charged_arr = this_form.array * this_adduct.m + this_adduct.net_formula.array
     pre_dbe = this_form.dbe * this_adduct.m - this_adduct.m + this_adduct.net_formula.dbe
     pre_h2c = pre_charged_arr[1] / pre_charged_arr[0] if pre_charged_arr[0] > 0 else 2  # no carbon, assign 2
-    # cho, chon, chonps, hetero_atom_category, hal_atom_category
+    # chon, chonps, hetero_atom_category, hal_atom_category
     form_feature_arr = _calc_formula_feature(this_form.array)
 
     # MS1 isotope similarity
@@ -330,7 +330,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     pos_mode = 1 if this_adduct.charge > 0 else 0
 
     # generate output array
-    out = np.concatenate((np.array([pos_mode]), form_feature_arr,  # 1 + 5
+    out = np.concatenate((np.array([pos_mode]), form_feature_arr,  # 1 + 4
                           np.array([ms1_iso_sim, cand_form.ml_a_prob, mz_error_log_p, pre_dbe, pre_h2c]),
                           ms2_feature_arr))
 
@@ -348,10 +348,10 @@ def _calc_formula_feature(f: np.array) -> np.array:
     ele_sum_1 = f[2] + f[3] + f[4] + f[5] + f[6] + f[8]
     # sum of elements other than C, H, O, N
     ele_sum_2 = ele_sum_1 + f[10] + f[11]
-    # sum of elements other than C, H, O
-    ele_sum_3 = ele_sum_2 + f[7]
+    # # sum of elements other than C, H, O
+    # ele_sum_3 = ele_sum_2 + f[7]
 
-    cho = 1 if ele_sum_3 == 0 else 0
+    # cho = 1 if ele_sum_3 == 0 else 0
     chon = 1 if ele_sum_2 == 0 else 0
     chonps = 1 if ele_sum_1 == 0 else 0
 
@@ -362,7 +362,7 @@ def _calc_formula_feature(f: np.array) -> np.array:
     # hal_atom_category
     hal_atom_category = arr[2] + arr[3] + arr[4] + arr[5]
 
-    return np.array([cho, chon, chonps, hetero_atom_category, hal_atom_category])
+    return np.array([chon, chonps, hetero_atom_category, hal_atom_category])
 
 
 def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: float,
@@ -396,6 +396,17 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
 
         frag_form_arr = ms2_explanation.explanation_array  # array of fragment formulas, Formula objects
 
+        # check db existence of all explained fragments
+        pos_mode = meta_feature.adduct.pos_mode
+        db_existed = np.array([check_formula_existence(f, pos_mode, gd) for f in frag_form_arr])
+        # ms2_explanation.db_existence_array = db_existed
+
+        # explained and db existed fragment ion count percentage
+        exp_db_frag_cnt_pct = np.sum(db_existed) / len(valid_idx_arr)
+
+        # explained and db existed fragment ion intensity percentage
+        exp_db_frag_int_pct = np.sum(exp_int_arr[db_existed]) / np.sum(valid_int_arr)
+
         # subformula count: how many frags are subformula of other frags
         subform_score, subform_common_loss_score = _calc_subformula_score(frag_form_arr, gd)
 
@@ -427,7 +438,8 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
         frag_nl_dbe_diff_wavg = np.sum(np.array([frag_form.dbe - (pre_dbe - frag_form.dbe + 1)
                                                  for frag_form in frag_form_arr]) * normed_exp_int_arr)
 
-        out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, subform_score, subform_common_loss_score,
+        out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, exp_db_frag_cnt_pct, exp_db_frag_int_pct,
+                            subform_score, subform_common_loss_score,
                             radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
                             len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
     else:
@@ -512,8 +524,8 @@ def _calc_log_p_norm_helper(arr_norm_p) -> np.array:
     """
     arr_norm_p = 1 - arr_norm_p if arr_norm_p > 0.5 else arr_norm_p
     log_p = np.log(arr_norm_p * 2)
-    # clip to the range of [-5, 0]
-    log_p = -5 if log_p < -5 else log_p
+    # clip to the range of [-2, 0]
+    log_p = -2 if log_p < -2 else log_p
 
     return log_p
 
@@ -536,7 +548,7 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         return np.array([])
 
     # z-normalize
-    X_arr[:, 6:] = (X_arr[:, 6:] - gd['model_b_mean_arr']) / gd['model_b_std_arr']
+    X_arr[:, 5:] = (X_arr[:, 5:] - gd['model_b_mean_arr']) / gd['model_b_std_arr']
 
     # load model
     if group_no == 0:
@@ -546,10 +558,10 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         X_arr = X_arr[:, :-12]  # remove MS2-related features
     elif group_no == 2:
         model = gd['model_b_noms1_ms2']
-        X_arr = np.delete(X_arr, 1, axis=1)  # remove MS1 isotope similarity
+        X_arr = np.delete(X_arr, 5, axis=1)  # remove MS1 isotope similarity
     else:
         model = gd['model_b_noms1_noms2']
-        X_arr = np.delete(X_arr, 1, axis=1)  # remove MS1 isotope similarity
+        X_arr = np.delete(X_arr, 5, axis=1)  # remove MS1 isotope similarity
         X_arr = X_arr[:, :-12]  # remove MS2-related features
 
     # predict formula probability
