@@ -5,17 +5,18 @@
 [![Generic badge](https://img.shields.io/badge/msbuddy-mass_spec_tools-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 
 `msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
-* `msbuddy` is able to provide formula annotations for:
-  * queries with or without MS1 isotopic pattern 
-  * queries with or without MS/MS spectra
-  * both positive and negative ionization modes
+
+`msbuddy` is able to provide formula annotations for queries:
+  * with or without MS1 isotopic pattern 
+  * with or without MS/MS spectra
+  * in either positive or negative ionization mode
 
 The minimum requirement for a msbuddy query is a single _m/z_ value and its ionization polarity.
 
 
 **The official documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
 
-**msbuddy ver 0.2.0** will be released soon, with refined models and improved performance.
+**msbuddy ver 0.2.0** will be released soon, with refined models and much improved performance.
 
 ## Installation ([link](https://msbuddy.readthedocs.io/en/latest/install.html))
 `msbuddy` is available on PyPI, you can install the latest version via `pip`:
@@ -107,6 +108,6 @@ msbuddy --help
 This work is licensed under the Apache License 2.0.
 
 ## Contact
-To contribute to `msbuddy`, please feel free to [file an issue](https://github.com/Philipbear/msbuddy/issues), or submit a pull request with improvements.
+You are welcome to directly contact the msbuddy developer & maintainer Shipei Xing via **s1xing@health.ucsd.edu** or **philipxsp@hotmail.com**.
 
-You are welcome to directly contact the msbuddy developer & maintainer Shipei Xing (s1xing@health.ucsd.edu).
+To contribute to `msbuddy`, please feel free to [file an issue](https://github.com/Philipbear/msbuddy/issues), or submit a pull request with improvements.

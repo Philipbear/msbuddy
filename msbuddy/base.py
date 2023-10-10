@@ -22,7 +22,7 @@ from numba import njit
 
 from msbuddy.utils import read_formula, form_arr_to_str
 
-mass_i = 1.0033548  # mass of isotope
+mass_i = 1.0033548  # mass of neutron
 mass_e = 0.0005486  # mass of electron
 
 logging.basicConfig(level=logging.INFO)
