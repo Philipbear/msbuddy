@@ -29,11 +29,11 @@ pip install msbuddy
 
 To install a specific version, see PyPI [release history](https://pypi.org/project/msbuddy/#history).
 
-## Python usage ([link](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
+## Python usage ([docs](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 
 As a quick start, we here load a mgf file and annotate the molecular formula for each query.
 All the configurations are specified in the [`MsbuddyConfig`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.MsbuddyConfig) class.
-**Parallel computing** is also supported.
+**Parallel computing** is supported.
 
 ```python
 from msbuddy import Msbuddy, MsbuddyConfig
@@ -64,7 +64,7 @@ msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                      'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 
-## Command-line tool ([link](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
+## Command-line tool ([docs](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
 
 **msbuddy** can also be used as a command-line tool.
 Result summary will be generated in a tsv file.
