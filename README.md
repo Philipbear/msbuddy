@@ -17,7 +17,6 @@ The minimum requirement for a msbuddy query is a single _m/z_ value and its ioni
 
 **msbuddy ver 0.2.0** will be released soon, with refined models and improved performance.
 
-
 ## Installation ([link](https://msbuddy.readthedocs.io/en/latest/install.html))
 `msbuddy` is available on PyPI, you can install the latest version via `pip`:
 ```commandline
@@ -102,7 +101,7 @@ msbuddy --help
 [GitHub repository](https://github.com/Philipbear/msbuddy)
 
 ## Citation
-S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. **Nature Methods** 2023. [DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)
+> S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. **Nature Methods** 2023. [DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)
 
 ## License
 This work is licensed under the Apache License 2.0.
