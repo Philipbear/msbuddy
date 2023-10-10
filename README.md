@@ -12,12 +12,11 @@
 
 The minimum requirement for a msbuddy query is a single _m/z_ value and its ionization polarity.
 
-* `msbuddy` enables:
-  * candidate space shrinkage via bottom-up MS/MS interrogation
-  * accurate formula annotation via deep learning
-  * false discovery rate estimation
 
 **The official documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
+
+**msbuddy ver 0.2.0** will be released soon, with refined models and improved performance.
+
 
 ## Installation ([link](https://msbuddy.readthedocs.io/en/latest/install.html))
 `msbuddy` is available on PyPI, you can install the latest version via `pip`:

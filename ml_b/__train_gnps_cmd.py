@@ -134,7 +134,17 @@ def load_gnps_data(path):
     joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
 
 
-def calc_gnps_data(n_cpu, timeout_secs, instru='qtof'):
+def pred_formula_feasibility_batch(data, top_n, db_mode, shared_data_dict, batch_size):
+    n_batch = int(np.ceil(len(data) / batch_size))
+    for n in tqdm(range(n_batch)):
+        start_idx = n * batch_size
+        end_idx = min((n + 1) * batch_size, len(data))
+        pred_formula_feasibility(data, start_idx, end_idx, top_n, db_mode, shared_data_dict)
+
+    return data
+
+
+def calc_gnps_data(n_cpu, timeout_secs, instru):
     # main
     param_set = MsbuddyConfig(ms1_tol=10, ms2_tol=20, parallel=True, n_cpu=n_cpu, batch_size=999999,
                               halogen=True, timeout_secs=timeout_secs)
@@ -146,32 +156,30 @@ def calc_gnps_data(n_cpu, timeout_secs, instru='qtof'):
         buddy.add_data(qtof_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
-        pred_formula_feasibility(buddy.data, 0, len(buddy.data), 800, 1, shared_data_dict)
-        joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_2.joblib')
+        new_data = pred_formula_feasibility_batch(buddy.data, 800, 1, shared_data_dict, 1000)
+        joblib.dump(new_data, 'gnps_qtof_mf_ls_cand_2.joblib')
     elif instru == 'orbi':
         orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
         # update parameters
         buddy.update_config(MsbuddyConfig(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=n_cpu,
                                           halogen=True, batch_size=999999,
                                           timeout_secs=timeout_secs))
-        buddy.clear_data()
         buddy.add_data(orbi_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
-        pred_formula_feasibility(buddy.data, 0, len(buddy.data), 800, 1, shared_data_dict)
-        joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_2.joblib')
+        new_data = pred_formula_feasibility_batch(buddy.data, 800, 1, shared_data_dict, 1000)
+        joblib.dump(new_data, 'gnps_orbi_mf_ls_cand_2.joblib')
     else:  # FT-ICR
         ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
         # update parameters
         buddy.update_config(MsbuddyConfig(ms1_tol=2, ms2_tol=5, parallel=True, n_cpu=n_cpu,
                                           halogen=True, batch_size=999999,
                                           timeout_secs=timeout_secs))
-        buddy.clear_data()
         buddy.add_data(ft_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
-        pred_formula_feasibility(buddy.data, 0, len(buddy.data), 800, 1, shared_data_dict)
-        joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_2.joblib')
+        new_data = pred_formula_feasibility_batch(buddy.data, 800, 1, shared_data_dict, 1000)
+        joblib.dump(new_data, 'gnps_ft_mf_ls_cand_2.joblib')
 
     return shared_data_dict
 
@@ -199,6 +207,7 @@ def assign_subform_gen_training_data(instru):
     buddy = Msbuddy(param_set)
     shared_data_dict = init_db()  # database initialization
 
+    print('loading data...')
     data_name = 'gnps_' + instru + '_mf_ls_cand_2.joblib'
     data = joblib.load(data_name)
     buddy.add_data(data)
@@ -208,8 +217,6 @@ def assign_subform_gen_training_data(instru):
     gt_ls = joblib.load(gt_name)
 
     for k, meta_feature in enumerate(buddy.data):
-        # if k < 4000:
-        #     continue
         print('k: ' + str(k) + ' out of ' + str(len(buddy.data)))
         gt_form_arr = gt_ls[k]
         gt_form_str = form_arr_to_str(gt_form_arr)
@@ -218,12 +225,13 @@ def assign_subform_gen_training_data(instru):
 
         # modify the candidate formula list, such that the ground truth formula is the first one
         ml_a_prob = buddy.predict_formula_feasibility(gt_form_arr)
+        ml_a_prob = 0.5 if ml_a_prob < 0.5 else ml_a_prob
         this_cf = CandidateFormula(Formula(gt_form_arr, 0))
         this_cf.ml_a_prob = ml_a_prob
         cand_form_ls = [this_cf]
         cand_cnt = 0
         for cf in meta_feature.candidate_formula_list:
-            if cand_cnt >= 100:
+            if cand_cnt > 100:
                 break
             if gt_form_str == form_arr_to_str(cf.formula.array):
                 continue
@@ -250,7 +258,7 @@ def assign_subform_gen_training_data(instru):
                 mz_shift_p = norm.cdf(mz_shift, loc=0, scale=ms1_tol / 3)
                 mz_shift_p = mz_shift_p if mz_shift_p < 0.5 else 1 - mz_shift_p
                 log_p = np.log(mz_shift_p * 2)
-                ml_feature_arr[3] = np.clip(log_p, -2, 0)
+                ml_feature_arr[7] = np.clip(log_p, -2, 0)
 
             # add to feature array
             if X_arr.size == 0:
@@ -263,15 +271,9 @@ def assign_subform_gen_training_data(instru):
         del mf
         buddy.data[k] = None
 
-        # if k == 4000:
-        #     joblib.dump(X_arr, 'gnps_X_arr_' + instru + '_4k.joblib')
-        #     joblib.dump(y_arr, 'gnps_y_arr_' + instru + '_4k.joblib')
-
     print('y_arr sum: ' + str(np.sum(y_arr)))
     X_arr_name = 'gnps_X_arr_' + instru + '.joblib'
     y_arr_name = 'gnps_y_arr_' + instru + '.joblib'
-    # X_arr_name = 'gnps_X_arr_' + instru + '_3k_filled.joblib'
-    # y_arr_name = 'gnps_y_arr_' + instru + '_3k.joblib'
     joblib.dump(X_arr, X_arr_name)
     joblib.dump(y_arr, y_arr_name)
 
@@ -410,7 +412,7 @@ def train_model(ms1_iso, ms2_spec, pswd, n_cpu):
     # grid search
     all_param_grid = {
         'hidden_layer_sizes': [
-            (512, 512, 256), (512, 256, 256), (512, 256, 256, 128),
+            (512, 512, 256, 256), (1024, 512, 512, 256), (1024, 1024, 512, 512),
         ],
         'max_iter': [800]
     }
@@ -551,11 +553,13 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='ML model B training')
     parser.add_argument('-calc', action='store_true', help='calculate gnps data')
+    parser.add_argument('-gen', action='store_true', help='generate training data')
+    parser.add_argument('-ms', type=str, help='instrument type')
     parser.add_argument('-cpu', type=int, default=16, help='number of CPU cores to use')
     parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
     parser.add_argument('-ms1', action='store_true', help='ms1 iso similarity included')
     parser.add_argument('-ms2', action='store_true', help='MS/MS spec included')
-    parser.add_argument('-pswd', type=str, help='password for email')
+    parser.add_argument('-p', type=str, help='password for email')
     args = parser.parse_args()
     return args
 
@@ -570,31 +574,23 @@ if __name__ == '__main__':
     args = parse_args()
 
     # test here
-    # args = argparse.Namespace(gen=False, calc=False,
-    #                           parallel=False, n_cpu=1, to=1000,
-    #                           ms1=False, ms2=True)
+    # args = argparse.Namespace(calc=True, cpu=1, ms1=False, ms2=True)
 
     # load training data
-    if args.calc:
-        # load_gnps_data('gnps_ms2db_preprocessed_20231005.joblib')
-        for instru in ['qtof', 'orbi', 'ft']:
-            calc_gnps_data(args.cpu, args.to, instru)
-            email_body = "cand gen finished: " + instru
-            send_hotmail_email("job finished", email_body,
-                               "s1xing@health.ucsd.edu", smtp_password=args.pswd)
-        for instru in ['qtof', 'orbi', 'ft']:
-            assign_subform_gen_training_data(instru)
-            email_body = "assign_subform and gen_training_data finished: " + instru
-            send_hotmail_email("job finished", email_body,
-                               "s1xing@health.ucsd.edu", smtp_password=args.pswd)
+    # load_gnps_data('gnps_ms2db_preprocessed_20231005.joblib')
 
+    if args.calc:
+        # calc_gnps_data(args.cpu, args.to, args.ms)
+        assign_subform_gen_training_data(instru=args.ms)
+        send_hotmail_email("job finished", "assign_subform and gen_training_data finished.",
+                           "s1xing@health.ucsd.edu", smtp_password=args.p)
+
+    elif args.gen:
         combine_and_clean_X_y()
         z_norm_smote()  # z-normalization and SMOTE
 
     else:  # train model
-        train_model(args.ms1, args.ms2, args.pswd, args.cpu)
-
-    # fill_model_a_prob('qtof')
+        train_model(args.ms1, args.ms2, args.p, args.cpu)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
@@ -602,4 +598,4 @@ if __name__ == '__main__':
     time_elapsed = time_elapsed / 3600
 
     send_hotmail_email("Server job finished", "Job finished in " + str(time_elapsed) + " hrs",
-                       "s1xing@health.ucsd.edu", smtp_password=args.pswd)
+                       "s1xing@health.ucsd.edu", smtp_password=args.p)

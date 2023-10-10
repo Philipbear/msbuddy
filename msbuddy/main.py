@@ -399,7 +399,8 @@ class Msbuddy:
         # select MetaFeatures with precursor 1 < mass < 1500
         self.data = [mf for mf in self.data if 1 < mf.mz < 1500]
         cnt_post = len(self.data)
-        tqdm.write(f"{cnt_pre - cnt_post} spectra with precursor mz > 1500 are removed.")
+        if cnt_pre != cnt_post:
+            tqdm.write(f"{cnt_pre - cnt_post} spectra with precursor mz > 1500 are removed.")
 
         if not self.data:
             raise ValueError("No data loaded.")
