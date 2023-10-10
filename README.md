@@ -5,7 +5,6 @@
 [![Generic badge](https://img.shields.io/badge/msbuddy-mass_spec_tools-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 
 `msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
-
 `msbuddy` is able to provide formula annotations for queries:
   * with or without MS1 isotopic pattern 
   * with or without MS/MS spectra
@@ -13,10 +12,14 @@
 
 The minimum requirement for a msbuddy query is a single _m/z_ value and its ionization polarity.
 
-
-**The official documentation is available at [msbuddy Documentation](https://msbuddy.readthedocs.io/en/latest/).**
+**Official documentation**  is available at https://msbuddy.readthedocs.io/en/latest/.
 
 **msbuddy ver 0.2.0** will be released soon, with refined models and much improved performance.
+
+##  Citation
+> S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. **Nature Methods** 2023. [DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)
+
+
 
 ## Installation ([link](https://msbuddy.readthedocs.io/en/latest/install.html))
 `msbuddy` is available on PyPI, you can install the latest version via `pip`:
@@ -100,9 +103,6 @@ msbuddy --help
 [PyPI release](https://pypi.org/project/msbuddy/)
 
 [GitHub repository](https://github.com/Philipbear/msbuddy)
-
-## Citation
-> S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. **Nature Methods** 2023. [DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)
 
 ## License
 This work is licensed under the Apache License 2.0.
