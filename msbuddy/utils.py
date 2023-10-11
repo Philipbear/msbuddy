@@ -23,7 +23,24 @@ from numba import njit
 alphabet = ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
 
 
-# functions related to formula
+class FormulaResult:
+    """
+    FormulaReturn class, for mass_to_formula function
+    """
+
+    def __init__(self, formula: str, mass: float, t_mass: float):
+        """
+        Constructor
+        :param formula: formula string
+        :param mass: exact mass of the formula
+        :param t_mass: target mass
+        """
+        self.formula = formula
+        self.exact_mass = mass
+        self.mass_error = mass - t_mass
+        self.mass_error_ppm = self.mass_error / t_mass * 1e6
+
+
 def read_formula(form: str) -> np.array:
     """
     read neutral formula string and return a 12-dim array, return None if invalid

@@ -51,12 +51,12 @@ Example Usage:
    all_subform_arr = enumerate_subform_arr([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
    print(all_subform_arr)
 
-.. function:: mass_to_formula (mass: float, mz_tol: float, ppm: bool)
+.. function:: mass_to_formula (mass: float, mass_tol: float, ppm: bool)
 
-   Convert mass to formula, return list of formula strings. This function relies on the global dependencies within the :class:`msbuddy.Buddy`. It works by database searching.
+   Convert a monoisotopic mass (neutral) to formula, return list of formula strings. This function relies on the global dependencies within the :class:`msbuddy.Buddy`. It works by database searching.
 
-   :param  mass: float. Target mass, should be <1500 Da.
-   :param mz_tol: float. The mass tolerance for searching.
+   :param mass: float. Target mass, should be <1500 Da.
+   :param mass_tol: float. The mass tolerance for searching.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
    :returns: A list of formula strings.
 

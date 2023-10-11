@@ -30,7 +30,7 @@ from msbuddy.export import write_batch_results_cmd
 from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single, calc_fdr
 from msbuddy.query import query_neutral_mass
-from msbuddy.utils import form_arr_to_str
+from msbuddy.utils import form_arr_to_str, FormulaResult
 
 logging.basicConfig(level=logging.INFO)
 
@@ -463,16 +463,19 @@ class Msbuddy:
 
         return result_summary_list
 
-    def mass_to_formula(self, mass: float, mz_tol: float, ppm: bool) -> List[str]:
+    def mass_to_formula(self, mass: float, mass_tol: float, ppm: bool) -> List[FormulaResult]:
         """
         convert mass to formula, return list of formula strings
-        :param mass: target mass, should be <1500
-        :param mz_tol: mz tolerance
-        :param ppm: whether mz_tol is in ppm
-        :return: list of formula strings
+        :param mass: target mass, should be <1500 Da
+        :param mass_tol: mass tolerance
+        :param ppm: whether mass_tol is in ppm
+        :return: list of FormulaResult objects
         """
-        formulas = query_neutral_mass(mass, mz_tol, ppm, shared_data_dict)
-        return [form_arr_to_str(f.array) for f in formulas]
+        formulas = query_neutral_mass(mass, mass_tol, ppm, shared_data_dict)
+        out = [FormulaResult(form_arr_to_str(f.array), f.mass, mass) for f in formulas]
+        # sort by absolute mass error, ascending
+        out.sort(key=lambda x: abs(x.mass_error))
+        return out
 
     def predict_formula_feasibility(self, formula: Union[str, np.array]) -> Union[float, None]:
         """
