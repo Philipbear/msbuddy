@@ -24,12 +24,12 @@ import pandas as pd
 from timeout_decorator import timeout
 from tqdm import tqdm
 
-from msbuddy.base import MetaFeature
+from msbuddy.base import MetaFeature, Adduct, check_adduct
 from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.export import write_batch_results_cmd
 from msbuddy.load import init_db, load_usi, load_mgf
 from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single, calc_fdr
-from msbuddy.query import query_neutral_mass
+from msbuddy.query import query_neutral_mass, query_precursor_mass
 from msbuddy.utils import form_arr_to_str, FormulaResult
 
 logging.basicConfig(level=logging.INFO)
@@ -477,6 +477,29 @@ class Msbuddy:
         out.sort(key=lambda x: abs(x.mass_error))
         return out
 
+    def mz_to_formula(self, mz: float, adduct: str, mz_tol: float, ppm: bool) -> List[FormulaResult]:
+        """
+        convert mz to formula, return list of formula strings
+        :param mz: target mz, should be <1500 Da
+        :param adduct: adduct string
+        :param mz_tol: mz tolerance
+        :param ppm: whether mz_tol is in ppm
+        :return: list of FormulaResult objects
+        """
+        valid_adduct, pos_mode = check_adduct(adduct)
+        if not valid_adduct:
+            raise ValueError("Invalid adduct string.")
+        # query
+        ion = Adduct(adduct, pos_mode)
+        formulas = query_precursor_mass(mz, ion, mz_tol, ppm, 1, shared_data_dict)
+        ion_int = 1 if pos_mode else -1
+        out = [FormulaResult(form_arr_to_str(f.array),
+                             (f.mass * ion.m + ion.net_formula.mass - ion_int * 0.00054858) / abs(ion.charge),
+                             mz) for f in formulas]
+        # sort by absolute mass error, ascending
+        out.sort(key=lambda x: abs(x.mass_error))
+        return out
+
     def predict_formula_feasibility(self, formula: Union[str, np.array]) -> Union[float, None]:
         """
         predict formula feasibility score for a single formula
@@ -598,8 +621,10 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    # for i in range(1000000):
-    #     buddy.mass_to_formula(100, 0.05, True)
+    formula_list = buddy.mz_to_formula(301.0076, "[M+NH4]+", 10, True)
+    # formula_list = buddy.mass_to_formula(300, 10, True)
+    for f in formula_list:
+        print(f.formula, f.mass_error, f.mass_error_ppm)
 
     buddy.annotate_formula()
     # results = buddy.get_summary()

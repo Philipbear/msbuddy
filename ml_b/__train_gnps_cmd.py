@@ -408,47 +408,47 @@ def train_model(ms1_iso, ms2_spec, pswd, n_cpu):
     # split training and testing data
     X_train, X_test, y_train, y_test = train_test_split(X_arr, y_arr, test_size=0.2, random_state=0)
 
-    print('grid search...')
-    # grid search
-    all_param_grid = {
-        'hidden_layer_sizes': [
-            (512, 512, 256, 256), (1024, 512, 512, 256), (1024, 1024, 512, 512),
-        ],
-        'max_iter': [800]
-    }
-
-    # grid search
-    mlp = MLPClassifier(random_state=1)
-    clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=n_cpu, scoring='accuracy', verbose=1)
-    clf.fit(X_train, y_train)
-
-    # print best parameters
-    print("Best parameters set found on development set:")
-    print(clf.best_params_)
-    email_body = "Best parameters set found on development set:\n"
-    email_body += str(clf.best_params_)
-
-    best_params = clf.best_params_
-
-    print("Grid scores on development set:")
-    email_body += "\nGrid scores on development set:\n"
-
-    means = clf.cv_results_['mean_test_score']
-    stds = clf.cv_results_['std_test_score']
-
-    for mean, std, params in zip(means, stds, clf.cv_results_['params']):
-        print("%0.5f (+/-%0.05f) for %r"
-              % (mean, std * 2, params))
-        email_body += "%0.5f (+/-%0.05f) for %r\n" % (mean, std * 2, params)
-
-    # send email
-    send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
-                       smtp_password=pswd)
+    # print('grid search...')
+    # # grid search
+    # all_param_grid = {
+    #     'hidden_layer_sizes': [
+    #         (512, 512, 256, 256), (1024, 512, 512, 256), (1024, 1024, 512, 512),
+    #     ],
+    #     'max_iter': [800]
+    # }
+    #
+    # # grid search
+    # mlp = MLPClassifier(random_state=1)
+    # clf = GridSearchCV(mlp, all_param_grid, cv=3, n_jobs=n_cpu, scoring='accuracy', verbose=1)
+    # clf.fit(X_train, y_train)
+    #
+    # # print best parameters
+    # print("Best parameters set found on development set:")
+    # print(clf.best_params_)
+    # email_body = "Best parameters set found on development set:\n"
+    # email_body += str(clf.best_params_)
+    #
+    # best_params = clf.best_params_
+    #
+    # print("Grid scores on development set:")
+    # email_body += "\nGrid scores on development set:\n"
+    #
+    # means = clf.cv_results_['mean_test_score']
+    # stds = clf.cv_results_['std_test_score']
+    #
+    # for mean, std, params in zip(means, stds, clf.cv_results_['params']):
+    #     print("%0.5f (+/-%0.05f) for %r"
+    #           % (mean, std * 2, params))
+    #     email_body += "%0.5f (+/-%0.05f) for %r\n" % (mean, std * 2, params)
+    #
+    # # send email
+    # send_hotmail_email("Grid search finished", email_body, "s1xing@health.ucsd.edu",
+    #                    smtp_password=pswd)
     #
 
     #
     # # best parameters
-    # best_params = {'hidden_layer_sizes': (512, 512, 512, 256), 'max_iter': 800}
+    best_params = {'hidden_layer_sizes': (1024, 1024, 512, 512), 'max_iter': 800}
     #
     print("train model...")
 

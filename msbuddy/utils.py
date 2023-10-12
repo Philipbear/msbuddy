@@ -36,7 +36,6 @@ class FormulaResult:
         :param t_mass: target mass
         """
         self.formula = formula
-        self.exact_mass = mass
         self.mass_error = mass - t_mass
         self.mass_error_ppm = self.mass_error / t_mass * 1e6
 

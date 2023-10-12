@@ -382,6 +382,25 @@ class Adduct:
         self.net_formula = Formula(array=net_array, charge=0)
         self.loss_formula = Formula(array=loss_array, charge=0)
 
+def check_adduct(adduct_str: str) -> Tuple[bool, bool]:
+    """
+    given an adduct string, check whether it is valid, and determine its ion mode
+    :param adduct_str: adduct string
+    :return: (valid, pos_mode)
+    """
+    # check whether the adduct string is valid
+    adduct_str = adduct_str.replace(" ", "")
+    # check '[' and ']' and 'M'
+    if adduct_str.count(']') != 1 or adduct_str.count('[') != 1 or 'M' not in adduct_str:
+        return False, False
+    # check sign after ']'
+    if adduct_str[len(adduct_str) - 1] not in ['+', '-']:
+        return False, False
+
+    # ion mode
+    pos_mode = True if adduct_str[len(adduct_str) - 1] == '+' else False
+    return True, pos_mode
+
 
 class ProcessedMS1:
     """

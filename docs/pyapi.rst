@@ -53,12 +53,12 @@ Example Usage:
 
 .. function:: mass_to_formula (mass: float, mass_tol: float, ppm: bool)
 
-   Convert a monoisotopic mass (neutral) to formula, return list of formula strings. This function relies on the global dependencies within the :class:`msbuddy.Buddy`. It works by database searching.
+   Convert a monoisotopic mass (neutral) to formula, return list of :class:`msbuddy.utils.FormulaResult`. This function relies on the global dependencies within the :class:`msbuddy.Buddy`. It works by database searching. Formula results are sorted by the absolute mass error.
 
    :param mass: float. Target mass, should be <1500 Da.
    :param mass_tol: float. The mass tolerance for searching.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
-   :returns: A list of formula strings.
+   :returns: A list of :class:`msbuddy.utils.FormulaResult` objects.
 
 Example Usage:
 
@@ -71,7 +71,38 @@ Example Usage:
 
    # convert mass to formula
    formula_list = engine.mass_to_formula(300, 10, True)
-   print(formula_list)
+
+   # print results
+   for f in formula_list:
+      print(f.formula, f.mass_error, f.mass_error_ppm)
+
+
+.. function:: mz_to_formula (mz: float, adduct: str, mz_tol: float, ppm: bool)
+
+   Convert a m/z value to formula, return list of :class:`msbuddy.utils.FormulaResult`. This function relies on the global dependencies within the :class:`msbuddy.Buddy`. It works by database searching. Formula results are sorted by the absolute mass error.
+
+   :param mz: float. Target m/z value, should be <1500.
+   :param adduct: str. Precursor type string, e.g. "[M+H]+", "[M-H]-".
+   :param mz_tol: float. The m/z tolerance for searching.
+   :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da.
+   :returns: A list of :class:`msbuddy.utils.FormulaResult` objects.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy import Msbuddy
+
+   # create a Msbuddy object
+   engine = Msbuddy()
+
+   # convert mz to formula
+   formula_list = engine.mz_to_formula(300, "[M+H]+", 10, True)
+
+   # print results
+   for f in formula_list:
+      print(f.formula, f.mass_error, f.mass_error_ppm)
+
 
 .. function:: predict_formula_feasibility (formula: Union[str, np.array])
 

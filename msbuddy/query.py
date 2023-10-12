@@ -147,7 +147,8 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
     # calculate mass tolerance
     mass_tol = mass * mz_tol / 1e6 if ppm else mz_tol
     # search in database
-    target_mass = (mass * abs(adduct.charge) - adduct.net_formula.mass) / adduct.m
+    ion_mode_int = 1 if adduct.pos_mode else -1
+    target_mass = (mass * abs(adduct.charge) + ion_mode_int * 0.00054858 - adduct.net_formula.mass) / adduct.m
 
     # formulas to return
     formulas = []

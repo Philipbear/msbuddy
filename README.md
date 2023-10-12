@@ -21,7 +21,7 @@ The minimum requirement for a msbuddy query is a single _m/z_ value and its ioni
 
 
 
-## Installation ([link](https://msbuddy.readthedocs.io/en/latest/install.html))
+## Installation
 `msbuddy` is available on PyPI, you can install the latest version via `pip`:
 ```commandline
 pip install msbuddy
@@ -63,6 +63,7 @@ MS/MS spectra can be loaded via their [USIs](https://www.biorxiv.org/content/10.
 msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                      'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
+**msbuddy** also provides python APIs for generating molecular formulas from [a neutral mass](https://msbuddy.readthedocs.io/en/latest/pyapi.html#mass_to_formula) or [a charged _m/z_ value](https://msbuddy.readthedocs.io/en/latest/pyapi.html#mz_to_formula).
 
 ## Command-line tool ([docs](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
 
