@@ -64,6 +64,7 @@ msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                      'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 **msbuddy** also provides python APIs for generating molecular formulas from [a neutral mass](https://msbuddy.readthedocs.io/en/latest/pyapi.html#mass_to_formula) or [a charged _m/z_ value](https://msbuddy.readthedocs.io/en/latest/pyapi.html#mz_to_formula).
+See more in the [documentation](https://msbuddy.readthedocs.io/en/latest/pyapi.html).
 
 ## Command-line tool ([docs](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
 
