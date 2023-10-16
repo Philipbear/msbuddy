@@ -19,8 +19,8 @@ We would recommend considering parallel processing for large datasets (e.g. >100
         ms1_tol=5, # ms1 tolerance, see below for default values for each MS instrument
         ms2_tol=10, # ms2 tolerance, see below for default values for each MS instrument
         halogen=True, # enable halogen atoms in molecular formula annotation
-        parallel=True, # enable parallel processing
-        n_cpu=12, # number of CPUs to use
+        # parallel=True, # enable parallel processing, see note below
+        # n_cpu=12, # number of CPUs to use
         timeout_secs=600, # timeout for each query in seconds
         batch_size=1000, # number of queries to process in each batch, a larger batch size will use more memory but will be faster
         c_range=(0, 100), # range of carbon numbers to consider
@@ -53,6 +53,8 @@ If you do need to use a different mass tolerance, you can set the ``ppm``, ``ms1
 
 Note that the ``halogen`` parameter is set to ``False`` by default. If you are working with halogenated compounds, you will need to set this to ``True`` to enable halgoen atoms in molecular formula annotation.
 
+.. note::
+    To enable parallel processing, set ``parallel=True`` and specify the number of CPUs to use with ``n_cpu``. The code has to be run in ``if __name__ == '__main__':`` block.
 
 
 For more information on the parameters, see :class:`msbuddy.MsbuddyConfig`.
