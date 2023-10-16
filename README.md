@@ -33,7 +33,7 @@ To install a specific version, see PyPI [release history](https://pypi.org/proje
 
 As a quick start, we here load a mgf file and annotate the molecular formula for each query.
 All the configurations are specified in the [`MsbuddyConfig`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.MsbuddyConfig) class.
-**Parallel computing** is supported.
+**Parallel computing** is [supported](https://msbuddy.readthedocs.io/en/latest/quickstart.html).
 
 ```python
 from msbuddy import Msbuddy, MsbuddyConfig

@@ -255,8 +255,6 @@ Example Usage:
     msb_config = MsbuddyConfig(
         ms_instr="orbitrap",
         halogen=True,
-        parallel=True,
-        n_cpu=12,
         timeout_secs=100)
 
     # create a Msuddy object with the specified configuration
