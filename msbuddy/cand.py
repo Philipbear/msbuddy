@@ -292,8 +292,8 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if mf.ms1_processed and len(mf.ms1_processed) > 1:
-        for cf in mf.candidate_formula_list:
-            cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, max_isotope_cnt)
+        for k, cf in enumerate(mf.candidate_formula_list):
+            mf.candidate_formula_list[k].ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, max_isotope_cnt)
 
     return mf
 
@@ -828,5 +828,6 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     ms2_iso_tol = max(ms2_iso_tol, 0.02)
     candidate_form = candidate_space.refine_explanation(mf, ms2_iso_tol)
     candidate_form.ml_a_prob = cf.ml_a_prob  # copy ml_a_prob
+    candidate_form.ms1_isotope_similarity = cf.ms1_isotope_similarity  # copy ms1_isotope_similarity
 
     return candidate_form

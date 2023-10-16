@@ -827,13 +827,3 @@ class MetaFeature:
             if len(self.candidate_formula_list) > 4:
                 result['formula_rank_5'] = form_arr_to_str(self.candidate_formula_list[4].formula.array)
         return result
-
-
-# test
-if __name__ == '__main__':
-    # a = Adduct('[M+Cl]-', False)
-    # print(a)
-
-    f = Formula(read_formula('C25H38O9'), 0)
-    p = Formula(read_formula('C27H43FS3'), 1)
-    print(f)

@@ -67,21 +67,12 @@ def init_db() -> dict:
             'https://drive.google.com/uc?id=19-htf-iifTUpAMOSB9DhFs0XkqqW1Gxm',
             data_path / 'ml_a.joblib'))
 
-    # # load ml_b
-    # global_dict['model_b_ms1_ms2'], global_dict['model_b_noms1_ms2'], global_dict['model_b_ms1_noms2'], global_dict[
-    #     'model_b_noms1_noms2'], global_dict['model_b_mean_arr'], global_dict['model_b_std_arr'] = (
-    #     check_download_joblibload(
-    #         'https://drive.google.com/uc?id=1lyx6DM3RlU5NBm9w_2zE6SqDWiuUFo_P',
-    #         data_path / 'ml_b.joblib'))
-
-
-    # test
-    # global_dict['model_b_noms1_ms2'] = j_load(data_path / 'ml_b_noms1_ms2.joblib')
-    # global_dict['model_b_mean_arr'] = j_load(data_path / 'ml_b_mean_arr.joblib')
-    # global_dict['model_b_std_arr'] = j_load(data_path / 'ml_b_std_arr.joblib')
-
-
-
+    # load ml_b
+    global_dict['model_b_ms1_ms2'], global_dict['model_b_noms1_ms2'], global_dict['model_b_ms1_noms2'], global_dict[
+        'model_b_noms1_noms2'], global_dict['model_b_mean_arr'], global_dict['model_b_std_arr'] = (
+        check_download_joblibload(
+            'https://drive.google.com/uc?id=17fuTj7oZdFu6TRQDUaFvWNrm1UFt1JZG',
+            data_path / 'ml_b.joblib'))
 
     # formula_db
     basic_db, halogen_db = (
@@ -304,12 +295,13 @@ def load_usi(usi_list: Union[str, List[str]],
             continue
     return data_list
 
-
-# test
-if __name__ == '__main__':
-    init_db(1)
+#
+# # test
+# if __name__ == '__main__':
+#     init_db()
 
     #################
+    # import joblib
     # compile all these databases
 
     # basic_db_mass = j_load('../db_prep/basic_db_mass.joblib')
@@ -341,10 +333,10 @@ if __name__ == '__main__':
     # joblib.dump(ml_a, "data/ml_a.joblib")
 
     # # model_b
-    # model_b_ms1_ms2 = j_load('data/model_b_ms1_ms2.joblib')
-    # model_b_noms1_ms2 = j_load('data/model_b_noms1_ms2.joblib')
-    # model_b_ms1_noms2 = j_load('data/model_b_ms1_noms2.joblib')
-    # model_b_noms1_noms2 = j_load('data/model_b_noms1_noms2.joblib')
+    # model_b_ms1_ms2 = j_load('data/ml_b_ms1_ms2.joblib')
+    # model_b_noms1_ms2 = j_load('data/ml_b_noms1_ms2.joblib')
+    # model_b_ms1_noms2 = j_load('data/ml_b_ms1_noms2.joblib')
+    # model_b_noms1_noms2 = j_load('data/ml_b_noms1_noms2.joblib')
     # model_b_mean_arr = j_load('data/ml_b_mean_arr.joblib')
     # model_b_std_arr = j_load('data/ml_b_std_arr.joblib')
     #

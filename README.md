@@ -14,7 +14,7 @@ The minimum requirement for a msbuddy query is a single _m/z_ value and its ioni
 
 **Official documentation**  is available at https://msbuddy.readthedocs.io/en/latest/.
 
-**msbuddy ver 0.2.0** will be released soon, with refined models and much improved performance.
+**msbuddy ver 0.2.0** is now released, with refined models and much improved performance. See [change log](https://github.com/Philipbear/msbuddy/blob/main/changelog.md) for details.
 
 ##  Citation
 > S. Xing et al. BUDDY: molecular formula discovery via bottom-up MS/MS interrogation. **Nature Methods** 2023. [DOI: 10.1038/s41592-023-01850-x](https://doi.org/10.1038/s41592-023-01850-x)

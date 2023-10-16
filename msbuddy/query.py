@@ -537,25 +537,3 @@ def common_nl_from_array(form_arr: np.array, nl_db: np.array) -> bool:
         elif nl[0] > form_arr[0]:
             break
     return False
-
-
-# test
-if __name__ == '__main__':
-    from msbuddy import Msbuddy
-    from msbuddy.load import init_db
-    msb = Msbuddy()
-    gd = init_db()
-
-    import time
-    time_start = time.time()
-    # test check_formula_existence
-    for i in range(1000000):
-        arr = gd['halogen_db_formula'][i]
-        arr[1] += 1  # 1, 6, 8: H, K, Na
-        form = Formula(arr, charge=0)
-        exist = check_formula_existence(form, True, gd)
-        if not exist:
-            print(form)
-            break
-    time_end = time.time()
-    print(time_end - time_start)

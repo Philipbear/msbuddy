@@ -448,7 +448,7 @@ def train_model(ms1_iso, ms2_spec, pswd, n_cpu):
 
     #
     # # best parameters
-    best_params = {'hidden_layer_sizes': (1024, 1024, 512, 512), 'max_iter': 800}
+    best_params = {'hidden_layer_sizes': (512, 512, 256, 256), 'max_iter': 800}
     #
     print("train model...")
 
