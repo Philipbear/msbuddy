@@ -39,10 +39,10 @@ All the configurations are specified in the [`MsbuddyConfig`](https://msbuddy.re
 from msbuddy import Msbuddy, MsbuddyConfig
 
 # instantiate a MsbuddyConfig object
-msb_config = MsbuddyConfig(ms_instr='orbitrap', # supported: "qtof", "orbitrap" and "fticr"
-                                                # highly recommended to specify
-                           halogen=False, # whether to consider halogen atoms FClBrI
-                           parallel=True, n_cpu=12)
+msb_config = MsbuddyConfig(# highly recommended to specify
+                           ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+                           # whether to consider halogen atoms FClBrI
+                           halogen=False)
 
 # instantiate a Msbuddy object
 msb_engine = Msbuddy(msb_config)

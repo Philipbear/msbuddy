@@ -11,8 +11,6 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
    msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "qtof", "orbitrap" and "fticr"
                                                    # highly recommended to fill in the instrument type
                               halogen=True,
-                              parallel=True,
-                              n_cpu=12,
                               timeout_secs=200)
 
    # instantiate a Msbuddy object with the parameter set
@@ -69,3 +67,17 @@ MS/MS spectra can also be loaded via their USIs:
 .. note::
     **msbuddy** does not perform adduct annotation. Please make sure the adduct type is correctly specified in the input file if necessary, otherwise default adducts ([M+H]+, [M-H]-) will be used.
     We claim that adduct annotation should be performed on the MS1 level, where chromatographic peak profiles must be involved.
+
+
+If parallel computing is needed, you can specify the number of CPUs to be used, but the code has to be run in ``if __name__ == '__main__':`` block:
+.. code-block:: python
+
+   if __name__ == '__main__':
+       from msbuddy import Msbuddy, MsbuddyConfig
+       # create a MsbuddyConfig object
+       msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "qtof", "orbitrap" and "fticr"
+                                                       # highly recommended to fill in the instrument type
+                                  halogen=True,
+                                  parallel=True, # enable parallel computing
+                                  n_cpu=12) # number of CPUs to be used
+       ...(other code remains the same)
