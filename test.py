@@ -73,6 +73,15 @@ def test_pred_formula_feasibility():
     feasibility_score = engine.predict_formula_feasibility("C10H20O5")
     print(feasibility_score)
 
+
+def test_subformula():
+    from msbuddy import assign_subformula
+
+    subformla_list = assign_subformula([107.05, 149.02, 209.04, 221.04, 230.96],
+                                       precursor_formula="C15H16O5", adduct="[M+H]+",
+                                       ms2_tol=0.02, ppm=False, dbe_cutoff=-1.0)
+    print(len(subformla_list))
+
 #
 # # test parallel computing
 # if __name__ == '__main__':
@@ -102,3 +111,4 @@ if __name__ == '__main__':
     # test_formula()
     # test_mass_formula()
     # test_pred_formula_feasibility()
+    # test_subformula()

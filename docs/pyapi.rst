@@ -35,6 +35,32 @@ Example Usage:
    formula_str = form_arr_to_str([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
    print(formula_str)
 
+
+.. function:: assign_subformula (ms2_mz: List[float], precursor_formula: str, adduct: str, ms2_tol: float = 10, ppm: bool = True, dbe_cutoff: float = -1.0）
+
+   Assign subformulas to an MS/MS spectrum with a given precursor formula and adduct. Radical ions are considered. Double bond equivalent (DBE) cutoff is used to filter out subformulas.
+   A soft version of SENIOR rules and other rules (remove subformulas such as "C4", "N3") are also applied.
+
+   :param ms2_mz: List[float]. A list-like object (or 1D numpy array) of the m/z values of the MS/MS spectrum.
+   :param precursor_formula: str. The precursor formula string. e.g., "C10H20O5".
+   :param adduct: str. The adduct type string. e.g., "[M+H]+".
+   :param ms2_tol: float. The m/z tolerance for MS/MS spectra. Default is 10 ppm.
+   :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da.
+   :param dbe_cutoff: float. The DBE cutoff for filtering out subformulas. Default is -1.0.
+   :returns: A list of :class:`msbuddy.utils.SubformulaResult` objects.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy import assign_subformula
+
+   subformla_list = assign_subformula([107.05, 149.02, 209.04, 221.04, 230.96],
+                                      precursor_formula="C15H16O5", adduct="[M+H]+",
+                                      ms2_tol=0.02, ppm=False, dbe_cutoff=-1.0)
+
+
+
 .. function:: enumerate_subform_arr (formula_array: List[int])
 
    Enumerate all possible sub-formula arrays of a given formula array.
@@ -53,7 +79,7 @@ Example Usage:
 
 .. function:: mass_to_formula (mass: float, mass_tol: float, ppm: bool)
 
-   Convert a monoisotopic mass (neutral) to formula, return list of :class:`msbuddy.utils.FormulaResult`. This function relies on the global dependencies within the :class:`msbuddy.Buddy`. It works by database searching. Formula results are sorted by the absolute mass error.
+   Convert a monoisotopic mass (neutral) to formula, return list of :class:`msbuddy.utils.FormulaResult`. This function relies on the global dependencies within the :class:`msbuddy.Msbuddy`. It works by database searching. Formula results are sorted by the absolute mass error.
 
    :param mass: float. Target mass, should be <1500 Da.
    :param mass_tol: float. The mass tolerance for searching.
@@ -79,7 +105,7 @@ Example Usage:
 
 .. function:: mz_to_formula (mz: float, adduct: str, mz_tol: float, ppm: bool)
 
-   Convert a m/z value to formula, return list of :class:`msbuddy.utils.FormulaResult`. This function relies on the global dependencies within the :class:`msbuddy.Buddy`. It works by database searching. Formula results are sorted by the absolute mass error.
+   Convert a m/z value to formula, return list of :class:`msbuddy.utils.FormulaResult`. This function relies on the global dependencies within the :class:`msbuddy.Msbuddy`. It works by database searching. Formula results are sorted by the absolute mass error.
 
    :param mz: float. Target m/z value, should be <1500.
    :param adduct: str. Precursor type string, e.g. "[M+H]+", "[M-H]-".
@@ -541,4 +567,38 @@ Example usage:
 
 
 
+.. class:: msbuddy.utils.FormulaResult (formula: str, mass: float, t_mass: float)
 
+    FormulaResult class, for API output usage.
+
+   :param formula: str. The molecular formula string.
+   :param mass: float. The exact mass of the formula
+   :param t_mass: float. The target mass.
+
+   .. attribute:: formula
+
+      str. The molecular formula string.
+
+   .. attribute:: mass_error
+
+      float. Mass error (Da) between the formula and the target mass.
+
+   .. attribute:: mass_error_ppm
+
+      float. Mass error in ppm.
+
+
+.. class:: msbuddy.utils.SubformulaResult (idx: int, subform_list: List[FormulaResult])
+
+    SubformulaResult class, for API output usage.
+
+   :param idx: int. The index of the fragment ion.
+   :param subform_list: List[FormulaResult]. A list of :class:`msbuddy.utils.FormulaResult` objects.
+
+   .. attribute:: idx
+
+      int. The index of the fragment ion.
+
+   .. attribute:: subform_list
+
+      A list of :class:`msbuddy.utils.FormulaResult` objects.

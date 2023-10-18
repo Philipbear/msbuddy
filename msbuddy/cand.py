@@ -19,9 +19,9 @@ import numpy as np
 from brainpy import isotopic_variants
 from numba import njit
 
-from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature
+from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature, check_adduct, Adduct
 from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
-from msbuddy.utils import form_arr_to_str, enumerate_subformula
+from msbuddy.utils import form_arr_to_str, enumerate_subformula, read_formula, SubformulaResult, FormulaResult
 
 
 class FragExplanation:
@@ -705,7 +705,7 @@ def _calc_subform_mass(subform_arr: np.array, adduct_charge: int) -> np.array:
 
 
 @njit
-def _dbe_subform_filter(subform_arr: np.array) -> np.array:
+def _dbe_subform_filter(subform_arr: np.array, cutoff: float) -> np.array:
     """
     Filter subformulas by DBE.
     :param subform_arr: 2D array, each row is a subformula array
@@ -714,7 +714,7 @@ def _dbe_subform_filter(subform_arr: np.array) -> np.array:
     dbe_arr = subform_arr[:, 0] + 1 - (subform_arr[:, 1] + subform_arr[:, 4] + subform_arr[:, 3] + subform_arr[:, 2]
                                        + subform_arr[:, 5] + subform_arr[:, 8] + subform_arr[:, 6]) / 2 + \
               (subform_arr[:, 7] + subform_arr[:, 10]) / 2
-    dbe_bool_arr = dbe_arr >= -1
+    dbe_bool_arr = dbe_arr >= cutoff
     return dbe_bool_arr
 
 
@@ -774,6 +774,7 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     :return: CandidateFormula object
     """
     candidate_space = None
+    ion_mode_int = 1 if mf.adduct.pos_mode else -1
     for i in range(len(mf.ms2_processed.mz_array)):
         # retrieve all indices of mass within tolerance
         this_ms2_tol = ms2_tol if not ppm else ms2_tol * mf.ms2_processed.mz_array[i] * 1e-6
@@ -785,10 +786,9 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
         # retrieve all subformulas within tolerance
         this_subform_arr = subform_arr[idx_list, :]
         this_mass = mass_arr[idx_list]
-        ion_mode_int = 1 if mf.adduct.pos_mode else -1
 
         # dbe filter (DBE >= -1)
-        bool_arr_1 = _dbe_subform_filter(this_subform_arr)
+        bool_arr_1 = _dbe_subform_filter(this_subform_arr, -1.)
 
         # SENIOR rules filter, a soft version
         bool_arr_2 = _senior_subform_filter(this_subform_arr)
@@ -831,3 +831,81 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     candidate_form.ms1_isotope_similarity = cf.ms1_isotope_similarity  # copy ms1_isotope_similarity
 
     return candidate_form
+
+
+def assign_subformula(ms2_mz: List, precursor_formula: str, adduct: str,
+                      ms2_tol: float = 10, ppm: bool = True,
+                      dbe_cutoff: float = -1.0) -> Union[List[SubformulaResult], None]:
+    """
+    Assign subformulas to a given MS2 spectrum with a given precursor formula and adduct. Radical ions are considered.
+    :param ms2_mz: MS2 m/z list
+    :param precursor_formula: precursor formula string, uncharged
+    :param adduct: adduct string, e.g., [M+H]+
+    :param ms2_tol: MS2 tolerance
+    :param ppm: whether MS2 tolerance is in ppm
+    :param dbe_cutoff: float, DBE cutoff
+    :return: a list of SubformulaResult objects
+    """
+    assert len(ms2_mz) > 0, "MS2 m/z list is empty."
+
+    # convert precursor formula to array
+    form_arr = read_formula(precursor_formula)
+    if form_arr is None:
+        return None
+
+    # convert adduct to array
+    valid_adduct, pos_mode = check_adduct(adduct)
+    if not valid_adduct:
+        raise ValueError("Invalid adduct string.")
+    ion = Adduct(adduct, pos_mode)
+    ion_mode_int = 1 if pos_mode else -1
+
+    # enumerate all subformulas
+    pre_charged_arr = form_arr * ion.m + ion.net_formula.array
+    subform_arr = enumerate_subformula(pre_charged_arr)
+
+    # mono mass
+    mass_arr = _calc_subform_mass(subform_arr, ion.charge)
+
+    # assign ms2 explanation
+    out_list = []
+    for k, mz in enumerate(ms2_mz):
+        # retrieve all indices of mass within tolerance
+        this_ms2_tol = ms2_tol if not ppm else ms2_tol * mz * 1e-6
+        idx_list = np.where(abs(mz - mass_arr) <= this_ms2_tol)[0]
+
+        if len(idx_list) == 0:
+            out_list.append(SubformulaResult(k, []))
+            continue
+
+        # retrieve all subformulas within tolerance
+        this_subform_arr = subform_arr[idx_list, :]
+        this_mass = mass_arr[idx_list]
+
+        # dbe filter (DBE >= dbe_cutoff)
+        bool_arr_1 = _dbe_subform_filter(this_subform_arr, dbe_cutoff)
+
+        # SENIOR rules filter, a soft version
+        bool_arr_2 = _senior_subform_filter(this_subform_arr)
+
+        # valid subformula check
+        bool_arr_3 = _valid_subform_check(this_subform_arr, pre_charged_arr)
+
+        # combine filters
+        bool_arr = bool_arr_1 & bool_arr_2 & bool_arr_3
+        this_subform_arr = this_subform_arr[bool_arr, :]
+        this_mass = this_mass[bool_arr]
+
+        # if no valid subformula, skip
+        if this_subform_arr.shape[0] == 0:
+            out_list.append(SubformulaResult(k, []))
+            continue
+
+        # create SubformulaResult object
+        subform_list = []
+        for j in range(this_subform_arr.shape[0]):
+            form = Formula(this_subform_arr[j, :], ion_mode_int, this_mass[j])
+            subform_list.append(FormulaResult(form.__str__(), form.mass, mz))
+        out_list.append(SubformulaResult(k, subform_list))
+
+    return out_list
