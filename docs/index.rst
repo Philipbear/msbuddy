@@ -20,6 +20,12 @@ msbuddy
 
 The minimum requirement for a **msbuddy** query is a single m/z value and its ionization polarity.
 
+.. image:: https://github.com/Philipbear/msbuddy/blob/main/logo/logo.svg?raw=true
+    :alt: Alternative text
+    :align: center
+
+
+
 **msbuddy** enables candidate space shrinkage via bottom-up MS/MS interrogation, accurate formula annotation via machine learning and false discovery rate estimation.
 Please refer to `our paper <https://doi.org/10.1038/s41592-023-01850-x>`_ for more details.
 
