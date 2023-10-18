@@ -36,6 +36,7 @@ To install a specific version, see PyPI [release history](https://pypi.org/proje
 
 ## Python usage ([docs](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 
+### Quick start
 As a quick start, we here load a mgf file and annotate the molecular formula for each query.
 All the configurations are specified in the [`MsbuddyConfig`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.MsbuddyConfig) class.
 **Parallel computing** is [supported](https://msbuddy.readthedocs.io/en/latest/quickstart.html).
@@ -70,7 +71,13 @@ MS/MS spectra can be loaded via their [USIs](https://www.biorxiv.org/content/10.
 msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                      'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
-**msbuddy** also provides python APIs for generating molecular formulas from [a neutral mass](https://msbuddy.readthedocs.io/en/latest/pyapi.html#mass_to_formula) or [a charged _m/z_ value](https://msbuddy.readthedocs.io/en/latest/pyapi.html#mz_to_formula).
+
+### Other API functions
+- generate molecular formulas from a neutral mass (mass_to_formula)
+- generate molecular formulas from a charged _m/z_ value (mz_to_formula)
+- predict formula feasibility using a deep learning model (predict_formula_feasibility)
+- enumerate all possible subformulas of a given precursor formula (enumerate_subform_arr)
+
 See more in the [documentation](https://msbuddy.readthedocs.io/en/latest/pyapi.html).
 
 ## Command-line tool ([docs](https://msbuddy.readthedocs.io/en/latest/cmdapi.html))
