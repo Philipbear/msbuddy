@@ -129,6 +129,4 @@ msbuddy --help
 This work is licensed under the Apache License 2.0.
 
 ## Contact
-You are welcome to directly contact the msbuddy developer & maintainer Shipei Xing via **s1xing@health.ucsd.edu** or **philipxsp@hotmail.com**.
-
-To contribute to `msbuddy`, please feel free to [file an issue](https://github.com/Philipbear/msbuddy/issues), or submit a pull request with improvements.
+Please contact the msbuddy developer & maintainer Shipei Xing via **s1xing@health.ucsd.edu** or **philipxsp@hotmail.com**.
