@@ -161,10 +161,10 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     key, value = _line.split('=', 1)
                     key, value = key.strip(), value.strip()
                     # if key (into all upper case) is 'PEPMASS', it is precursor mz
-                    if key.upper() == 'PEPMASS':
+                    if key.upper() in ['PEPMASS', 'PRECURSOR_MZ']:
                         precursor_mz = float(value)
                     # if key is 'TITLE', it is identifier
-                    elif key.upper() in ['TITLE', 'SCANS', 'SPECTRUMID']:
+                    elif key.upper() in ['TITLE', 'SPECTRUMID']:
                         identifier = value.strip()
                     # if key is 'CHARGE' and charge is not set, it is charge
                     elif key.upper() == 'CHARGE':

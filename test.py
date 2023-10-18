@@ -13,8 +13,7 @@ def test_main():
     msb_engine = Msbuddy(msb_config)
 
     # you can load multiple USIs at once
-    msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
-                         'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
+    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
 
     # annotate molecular formula
     msb_engine.annotate_formula()
@@ -100,6 +99,6 @@ def test_pred_formula_feasibility():
 
 if __name__ == '__main__':
     test_main()
-    test_formula()
-    test_mass_formula()
-    test_pred_formula_feasibility()
+    # test_formula()
+    # test_mass_formula()
+    # test_pred_formula_feasibility()
