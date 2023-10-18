@@ -13,3 +13,6 @@ msbuddy changelog
 0.2.1 (2023-10-18)
 - Bug fixes for load_mgf.
 - Add mgf demo file.
+
+0.2.2 (2023-10-18)
+- Add new API function 'assign_subformula'.
