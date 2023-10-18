@@ -76,6 +76,7 @@ msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 - generate molecular formulas from a neutral mass (mass_to_formula)
 - generate molecular formulas from a charged _m/z_ value (mz_to_formula)
 - predict formula feasibility using a deep learning model (predict_formula_feasibility)
+- assign subformulas for an MS/MS with a given precursor formula (assign_subformula)
 - enumerate all possible subformulas of a given precursor formula (enumerate_subform_arr)
 
 See more in the [documentation](https://msbuddy.readthedocs.io/en/latest/pyapi.html).
