@@ -9,7 +9,7 @@
 </p>
 
 
-`msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
+`msbuddy` is developed for molecular formula analysis in MS-based metabolomics studies.
 `msbuddy` is able to provide formula annotations for queries:
   * with or without MS1 isotopic pattern 
   * with or without MS/MS spectra
