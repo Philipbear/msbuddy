@@ -10,3 +10,6 @@ msbuddy changelog
 - Add new API function 'mz_to_formula', for charged ions. Ion type (adduct form) is required.
 - **Note**: this version outputs different results from previous versions.
 
+0.2.1 (2023-10-18)
+- Bug fixes for load_mgf.
+- Add mgf demo file.
