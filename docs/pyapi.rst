@@ -39,7 +39,7 @@ Example Usage:
 .. function:: assign_subformula (ms2_mz: List[float], precursor_formula: str, adduct: str, ms2_tol: float = 10, ppm: bool = True, dbe_cutoff: float = -1.0）
 
    Assign subformulas to an MS/MS spectrum with a given precursor formula and adduct. Radical ions are considered. Double bond equivalent (DBE) cutoff is used to filter out subformulas.
-   A soft version of SENIOR rules and other rules (remove subformulas such as "C4", "N3") are also applied.
+   A soft version of SENIOR rules and other rules (remove subformulas such as "C4", "N3") are also applied. Note that formula strings should only contain CHNOPSFClBrINaK.
 
    :param ms2_mz: List[float]. A list-like object (or 1D numpy array) of the m/z values of the MS/MS spectrum.
    :param precursor_formula: str. The precursor formula string. e.g., "C10H20O5".
