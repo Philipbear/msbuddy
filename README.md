@@ -4,6 +4,8 @@
 [![docs](https://readthedocs.org/projects/msbuddy/badge/?version=latest)](https://msbuddy.readthedocs.io/en/latest/?badge=latest)
 [![Generic badge](https://img.shields.io/badge/msbuddy-mass_spec_tools-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 
+<img src = "https://github.com/Philipbear/msbuddy/blob/main/logo/logo_msbuddy1018.svg" width = "150" height = "150">
+
 `msbuddy` is developed for molecular formula annotation in mass spectrometry-based small molecule analysis.
 `msbuddy` is able to provide formula annotations for queries:
   * with or without MS1 isotopic pattern 
