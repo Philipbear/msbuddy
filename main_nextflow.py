@@ -27,7 +27,7 @@ def main():
     # parser.add_argument('-usi', type=str, help='A single USI string.')
     # parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column (no header row).')
     parser.add_argument('-input', type=str, default=None, help='Path to the input file.')
-    parser.add_argument('-output', '-o', type=str, help='The output file path.')
+    # parser.add_argument('-output', '-o', type=str, help='The output file path.')
     # parser.add_argument('-details', '-d', type=int, default=0,
     #                     help='Whether to write detailed results. Default: False.')
     parser.add_argument('-ms_instr', '-ms', type=str, default=None,
@@ -91,7 +91,7 @@ def main():
         ppm=True if args.ppm == 1 else False,
         ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol,
         halogen=True if args.halogen == 1 else False,
-        parallel=args.parallel, n_cpu=args.n_cpu,
+        # parallel=args.parallel, n_cpu=args.n_cpu,
         timeout_secs=args.timeout_secs, batch_size=args.batch_size, top_n_candidate=args.top_n_candidate,
         c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
         o_range=(args.o_min, args.o_max), p_range=(args.p_min, args.p_max), s_range=(args.s_min, args.s_max),
@@ -105,6 +105,8 @@ def main():
         use_all_frag=True if args.use_all_frag == 1 else False
     )
 
+    import os
+
     # input path
     if args.input:
         input_path = pathlib.Path(args.input)
@@ -112,8 +114,9 @@ def main():
         raise ValueError('Please specify the input file.')
 
     # output path
-    if args.output:
-        output_path = pathlib.Path(args.output)
+    # When running in Nextflow, write to the current working directory
+    if 'NXF_WORK' in os.environ:
+        output_path = pathlib.Path('./msbuddy_output')
     else:
         # use the parent directory of the input file as the output directory
         output_path = input_path.parent / 'msbuddy_output'
