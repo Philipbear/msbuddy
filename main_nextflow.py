@@ -39,8 +39,8 @@ def main():
     parser.add_argument('-halogen', '-hal', type=int, default=0,
                         help='Whether to consider halogen atoms FClBrI. Default: False.')
     parser.add_argument('-timeout_secs', '-t', type=int, default=300, help='Timeout in seconds. Default: 300.')
-    parser.add_argument('-batch_size', '-bs', type=int, default=1000,
-                        help='Batch size. Default: 1000. A larger batch size needs more memory, but is faster.')
+    parser.add_argument('-batch_size', '-bs', type=int, default=5000,
+                        help='Batch size. Default: 5000. A larger batch size needs more memory, but is faster.')
     parser.add_argument('-top_n_candidate', type=int, default=500, help='Max top N candidates to keep. Default: 500.')
     parser.add_argument('-c_min', type=int, default=0, help='Minimum number of C atoms. Default: 0.')
     parser.add_argument('-c_max', type=int, default=80, help='Maximum number of C atoms. Default: 80.')

@@ -789,14 +789,20 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
 
         # dbe filter (DBE >= -1)
         bool_arr_1 = _dbe_subform_filter(this_subform_arr, -1.)
+        # this_subform_arr = this_subform_arr[bool_arr_1, :]
+        # this_mass = this_mass[bool_arr_1]
 
         # SENIOR rules filter, a soft version
         bool_arr_2 = _senior_subform_filter(this_subform_arr)
+        # this_subform_arr = this_subform_arr[bool_arr_2, :]
+        # this_mass = this_mass[bool_arr_2]
 
         # valid subformula check
         bool_arr_3 = _valid_subform_check(this_subform_arr, pre_charged_arr)
+        # this_subform_arr = this_subform_arr[bool_arr_3, :]
+        # this_mass = this_mass[bool_arr_3]
 
-        # combine filters
+        # # combine filters
         bool_arr = bool_arr_1 & bool_arr_2 & bool_arr_3
         this_subform_arr = this_subform_arr[bool_arr, :]
         this_mass = this_mass[bool_arr]
@@ -808,18 +814,19 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
         frag_exp = FragExplanation(mf.ms2_processed.idx_array[i],
                                    Formula(this_subform_arr[0, :], ion_mode_int, this_mass[0]),
                                    Formula(pre_charged_arr - this_subform_arr[0, :], 0))
-        if candidate_space is None:  # first time
-            candidate_space = (CandidateSpace(cf.formula.array, pre_charged_arr, [frag_exp]))
-            if len(this_mass) > 1:
-                for j in range(1, len(this_mass)):
-                    frag_exp.add_frag_nl(Formula(this_subform_arr[j, :], ion_mode_int, this_mass[j]),
-                                         Formula(pre_charged_arr - this_subform_arr[j, :], 0))
+        # add all subformulas
+        if len(this_mass) > 1:
+            for j in range(1, len(this_mass)):
+                frag_exp.add_frag_nl(Formula(this_subform_arr[j, :], ion_mode_int, this_mass[j]),
+                                     Formula(pre_charged_arr - this_subform_arr[j, :], 0))
+
+        if candidate_space is None:
+            # create CandidateSpace object
+            candidate_space = CandidateSpace(cf.formula.array, pre_charged_arr, [frag_exp])
         else:
             candidate_space.add_frag_exp(frag_exp)
-            if len(this_mass) > 1:
-                for j in range(1, len(this_mass)):
-                    frag_exp.add_frag_nl(Formula(this_subform_arr[j, :], ion_mode_int, this_mass[j]),
-                                         Formula(pre_charged_arr - this_subform_arr[j, :], 0))
+
+    # if no MS2 explanation, return original candidate formula
     if not candidate_space:
         return cf
 
