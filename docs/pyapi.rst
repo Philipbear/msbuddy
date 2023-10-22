@@ -36,7 +36,7 @@ Example Usage:
    print(formula_str)
 
 
-.. function:: assign_subformula (ms2_mz: List[float], precursor_formula: str, adduct: str, ms2_tol: float = 10, ppm: bool = True, dbe_cutoff: float = -1.0）
+.. function:: assign_subformula (ms2_mz: List[float], precursor_formula: str, adduct: str, ms2_tol: float, ppm: bool, dbe_cutoff: float）
 
    Assign subformulas to an MS/MS spectrum with a given precursor formula and adduct. Radical ions are considered. Double bond equivalent (DBE) cutoff is used to filter out subformulas.
    A soft version of SENIOR rules and other rules (remove subformulas such as "C4", "N3") are also applied. Note that formula strings should only contain CHNOPSFClBrINaK.
@@ -45,7 +45,7 @@ Example Usage:
    :param precursor_formula: str. The precursor formula string. e.g., "C10H20O5".
    :param adduct: str. The adduct type string. e.g., "[M+H]+".
    :param ms2_tol: float. The m/z tolerance for MS/MS spectra. Default is 10 ppm.
-   :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da.
+   :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da. Default is True.
    :param dbe_cutoff: float. The DBE cutoff for filtering out subformulas. Default is -1.0.
    :returns: A list of :class:`msbuddy.utils.SubformulaResult` objects.
 
