@@ -19,7 +19,7 @@ import pandas as pd
 
 
 def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details: bool,
-                            start_idx: int, end_idx: int, result_df: pd.DataFrame) -> pd.DataFrame:
+                            start_idx: int, end_idx: int) -> pd.DataFrame:
     """
     write out batch results
     :param buddy_data: buddy data
@@ -27,16 +27,16 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
     :param write_details: whether to write out detailed results
     :param start_idx: start index of batch
     :param end_idx: end index of batch
-    :param result_df: result summary DataFrame
     :return: updated summary results DataFrame
     """
     # get batch data
     batch_data = buddy_data[start_idx:end_idx]
+    result_df_rows = []
 
     # update summary results DataFrame
     for mf in batch_data:
         individual_result = mf.summarize_result()
-        result_df = result_df.append({
+        result_df_rows = result_df_rows.append({
             'identifier': mf.identifier,
             'mz': round(mf.mz, 4),
             'rt': round(mf.rt, 4) if mf.rt else 'NA',
@@ -48,7 +48,8 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             'formula_rank_3': individual_result['formula_rank_3'],
             'formula_rank_4': individual_result['formula_rank_4'],
             'formula_rank_5': individual_result['formula_rank_5']
-        }, ignore_index=True)
+        })
+    result_df = pd.DataFrame(result_df_rows)
 
     # write out detailed results
     if write_details:
@@ -62,10 +63,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             mf_path.mkdir(parents=True, exist_ok=True)
 
             # write the tsv file containing all the candidate formulas
-            all_candidates_df = pd.DataFrame(columns=['rank', 'formula', 'formula_feasibility',
-                                                      'ms1_isotope_similarity', 'explained_ms2_peak',
-                                                      'total_valid_ms2_peak', 'estimated_prob',
-                                                      'normalized_estimated_prob', 'estimated_fdr'])
+            all_candidates_df_rows = []
             for m, cf in enumerate(mf.candidate_formula_list):
                 # strings for explained ms2 peak
                 if mf.ms2_processed:
@@ -85,7 +83,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 theo_mass = (cf.formula.mass * mf.adduct.m + mf.adduct.net_formula.mass -
                              mf.adduct.charge * 0.0005486) / abs(mf.adduct.charge)
                 mz_error_ppm = (mf.mz - theo_mass) / theo_mass * 1e6
-                all_candidates_df = all_candidates_df.append({
+                all_candidates_df_rows = all_candidates_df_rows.append({
                     'rank': str(m + 1),
                     'formula': cf.formula.__str__(),
                     'formula_feasibility': cf.ml_a_prob if cf.ml_a_prob is not None else 'NA',
@@ -99,27 +97,31 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                     'estimated_fdr': cf.estimated_fdr if cf.estimated_fdr is not None else 'NA',
                     'ms2_explanation_idx': ms2_explan_idx,
                     'ms2_explanation': ms2_explan_str
-                }, ignore_index=True)
+                })
+
+            all_candidates_df = pd.DataFrame(all_candidates_df_rows)
             all_candidates_df.to_csv(mf_path / 'formula_results.tsv', sep="\t", index=False)
 
             # write the tsv file containing preprocessed spectrum
             if mf.ms1_processed:
-                ms1_df = pd.DataFrame(columns=['raw_idx', 'mz', 'intensity'])
+                ms1_df_rows = []
                 for m in range(len(mf.ms1_processed)):
-                    ms1_df = ms1_df.append({
+                    ms1_df_rows = ms1_df_rows.append({
                         'raw_idx': mf.ms1_processed.idx_array[m],
                         'mz': mf.ms1_processed.mz_array[m],
                         'intensity': mf.ms1_processed.int_array[m]
-                    }, ignore_index=True)
+                    })
+                ms1_df = pd.DataFrame(ms1_df_rows)
                 ms1_df.to_csv(mf_path / 'ms1_preprocessed.tsv', sep="\t", index=False)
             if mf.ms2_processed:
-                ms2_df = pd.DataFrame(columns=['raw_idx', 'mz', 'intensity'])
+                ms2_df_rows = []
                 for m in range(len(mf.ms2_processed)):
-                    ms2_df = ms2_df.append({
+                    ms2_df_rows = ms2_df_rows.append({
                         'raw_idx': mf.ms2_processed.idx_array[m],
                         'mz': mf.ms2_processed.mz_array[m],
                         'intensity': mf.ms2_processed.int_array[m]
-                    }, ignore_index=True)
+                    })
+                ms2_df = pd.DataFrame(ms2_df_rows)
                 ms2_df.to_csv(mf_path / 'ms2_preprocessed.tsv', sep="\t", index=False)
 
     return result_df

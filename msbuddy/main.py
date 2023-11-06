@@ -383,7 +383,7 @@ class Msbuddy:
             start_idx, end_idx = self._annotate_formula_main_batch(n, n_batch)
             tqdm.write("Writing batch results...")
             result_summary_df = write_batch_results_cmd(self.data, output_path, write_details,
-                                                        start_idx, end_idx, result_summary_df)
+                                                        start_idx, end_idx)
             # clear computed data to save memory, convert to None of the same size
             self.data[start_idx:end_idx] = [None] * (end_idx - start_idx)
 
