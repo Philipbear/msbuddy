@@ -121,13 +121,10 @@ def main():
     else:
         raise ValueError('Please specify the input file.')
 
-    # output path
-    # When running in Nextflow, write to the current working directory
-    if 'NXF_WORK' in os.environ:
-        output_path = pathlib.Path('./msbuddy_output')
-    else:
-        # use the parent directory of the input file as the output directory
-        output_path = input_path.parent / 'msbuddy_output'
+    # output path, create a folder if not exist
+    if not os.path.exists('./msbuddy_output'):
+        os.mkdir('./msbuddy_output')
+    output_path = pathlib.Path('./msbuddy_output')
 
     # create a Msbuddy object
     engine = Msbuddy(msb_config)
