@@ -36,7 +36,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
     # update summary results DataFrame
     for mf in batch_data:
         individual_result = mf.summarize_result()
-        result_df_rows = result_df_rows.append({
+        result_df_rows.append({
             'identifier': mf.identifier,
             'mz': round(mf.mz, 4),
             'rt': round(mf.rt, 4) if mf.rt else 'NA',
@@ -83,7 +83,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 theo_mass = (cf.formula.mass * mf.adduct.m + mf.adduct.net_formula.mass -
                              mf.adduct.charge * 0.0005486) / abs(mf.adduct.charge)
                 mz_error_ppm = (mf.mz - theo_mass) / theo_mass * 1e6
-                all_candidates_df_rows = all_candidates_df_rows.append({
+                all_candidates_df_rows.append({
                     'rank': str(m + 1),
                     'formula': cf.formula.__str__(),
                     'formula_feasibility': cf.ml_a_prob if cf.ml_a_prob is not None else 'NA',
@@ -106,7 +106,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             if mf.ms1_processed:
                 ms1_df_rows = []
                 for m in range(len(mf.ms1_processed)):
-                    ms1_df_rows = ms1_df_rows.append({
+                    ms1_df_rows.append({
                         'raw_idx': mf.ms1_processed.idx_array[m],
                         'mz': mf.ms1_processed.mz_array[m],
                         'intensity': mf.ms1_processed.int_array[m]
@@ -116,7 +116,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             if mf.ms2_processed:
                 ms2_df_rows = []
                 for m in range(len(mf.ms2_processed)):
-                    ms2_df_rows = ms2_df_rows.append({
+                    ms2_df_rows.append({
                         'raw_idx': mf.ms2_processed.idx_array[m],
                         'mz': mf.ms2_processed.mz_array[m],
                         'intensity': mf.ms2_processed.int_array[m]

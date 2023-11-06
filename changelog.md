@@ -16,3 +16,6 @@ msbuddy changelog
 
 0.2.2 (2023-10-18)
 - Add new API function 'assign_subformula'.
+
+0.2.3 (2023-11-05)
+- Update export: pd.Dataframe 'append' deprecated.
