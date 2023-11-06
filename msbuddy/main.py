@@ -579,6 +579,7 @@ if __name__ == '__main__':
 
     import time
     start = time.time()
+
     # instantiate a MsbuddyConfig object
     msb_config = MsbuddyConfig(# highly recommended to specify
                                ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
