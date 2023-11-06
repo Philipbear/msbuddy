@@ -5,7 +5,7 @@ Functions
 ~~~~~~~~~~~~~~~
 .. function:: read_formula (formula_string: str)
 
-   Read a neutral formula string and return a numpy array, return None if invalid
+   Read a formula string (in neutral form) and return a numpy array, return None if invalid
 
    :param formula_string: str. The molecular formula string.
    :returns: A numpy array of the molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S]. None if invalid.
@@ -38,12 +38,12 @@ Example Usage:
 
 .. function:: assign_subformula (ms2_mz: List[float], precursor_formula: str, adduct: str, ms2_tol: float, ppm: bool, dbe_cutoff: float)
 
-   Assign subformulas to an MS/MS spectrum with a given precursor formula and adduct. Radical ions are considered. Double bond equivalent (DBE) cutoff is used to filter out subformulas.
-   A soft version of SENIOR rules and other rules (remove subformulas such as "C4", "N4") are also applied. Note that formula strings should only contain CHNOPSFClBrINaK.
+   Assign subformulas to an MS/MS spectrum with a given precursor formula and adduct. Radical fragment ions are considered. Double bond equivalent (DBE) cutoff is used to filter out subformulas.
+   A soft version of SENIOR rules and other rules (remove invalid subformulas such as "C4", "N4") are also applied. Note that input precursor formula strings should only contain CHNOPSFClBrINaK.
 
    :param ms2_mz: List[float]. A list-like object (or 1D numpy array) of the m/z values of the MS/MS spectrum.
-   :param precursor_formula: str. The precursor formula string. e.g., "C10H20O5".
-   :param adduct: str. The adduct type string. e.g., "[M+H]+". If the adduct is not recognized, the default adduct type (+/-H) will be used.
+   :param precursor_formula: str. The precursor formula string (in uncharged form). e.g., "C10H20O5".
+   :param adduct: str. The adduct type string. e.g., "[M+H]+". If the input adduct is not recognized, the default adduct type (M +/- H) will be used.
    :param ms2_tol: float. The m/z tolerance for MS/MS spectra. Default is 10 ppm.
    :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da. Default is True.
    :param dbe_cutoff: float. The DBE cutoff for filtering out subformulas. Default is -1.0.
