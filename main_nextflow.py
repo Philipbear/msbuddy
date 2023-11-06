@@ -131,10 +131,10 @@ def main():
 
     # load the input file
     if input_path.suffix.lower() == '.mgf':
-        engine.load_mgf(args.mgf)
+        engine.load_mgf(args.input)
     elif input_path.suffix.lower() == '.csv':
         # read and load CSV file
-        df = pd.read_csv(args.csv, keep_default_na=False, na_values=None)
+        df = pd.read_csv(args.input, keep_default_na=False, na_values=None)
         # if df has >1 columns, treat the 2nd column as adduct strings
         if df.shape[1] > 1:
             engine.load_usi(df.iloc[:, 0].tolist(), df.iloc[:, 1].tolist())
