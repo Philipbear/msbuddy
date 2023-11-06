@@ -591,6 +591,7 @@ if __name__ == '__main__':
     # you can load multiple USIs at once
     msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
 
+    # cmd version
     # msb_engine.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/msbuddy/demo/msbuddy_output'), True)
 
     # annotate molecular formula
