@@ -9,7 +9,7 @@
 </p>
 
 
-`msbuddy` is developed for molecular formula analysis in MS-based small molecule studies.
+`msbuddy` is developed for molecular formula analysis in MS-based small molecule (<1500 Da) studies.
 
 `msbuddy` is able to provide formula annotations for queries:
   * with or without MS1 isotopic pattern 
