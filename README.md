@@ -58,7 +58,7 @@ msb_engine.annotate_formula()
 # retrieve the annotation result summary
 result = msb_engine.get_summary()
 ```
-See [demo mgf file](https://github.com/Philipbear/msbuddy/tree/main/demo).
+See [demo mgf file](https://github.com/Philipbear/msbuddy/tree/main/demo). One of the following fields is recommended to be included, which will be used as the query identifier: `TITLE`, `SPECTRUMID`, or `SPECTRUM_ID`.
 
 
 MS/MS spectra can be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2) if they are publicly available:
