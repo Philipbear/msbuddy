@@ -7,7 +7,7 @@ Built-in Data Import
 ====================
 .. function:: load_usi (usi_list: Union[str, List[str]], adduct_list: Union[None, str, List[str]] = None)
 
-    Read from a single USI string or a sequence of USI strings, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
+    Read from a single USI string or a sequence of USI strings, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object. The USI string will be used as the unique identifier in `msbuddy`.
 
     :param usi_list: str or List[str]. A single USI string or a sequence of USI strings.
     :param optional adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
@@ -37,7 +37,7 @@ Example Usage:
 
 .. function:: load_mgf (mgf_file: str)
 
-   Read a single mgf file, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
+   Read a single mgf file, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object. In mgf files, the field ``TITLE``, ``SPECTRUMID`` or ``SPECTRUM_ID`` will be used as the unique identifier in `msbuddy`. Please include one of these fields in the mgf file. See `demo mgf file <https://github.com/Philipbear/msbuddy/tree/main/demo>`_
 
    :param mgf_file: str. The path to the mgf file.
    :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
