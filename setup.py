@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="msbuddy",
-    version="0.2.3",
+    version="0.2.4",
     author="Shipei Xing",
     author_email="s1xing@health.ucsd.edu",
     description="Bottom-up MS/MS interrogation-based molecular formula annotation for mass spectrometry data.",

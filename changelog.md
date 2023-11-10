@@ -19,3 +19,7 @@ msbuddy changelog
 
 0.2.3 (2023-11-05)
 - Update export: pd.Dataframe 'append' deprecated.
+
+0.2.4 (2023-11-09)
+- Bug fixes for export results in cmd line version.
+- Add version control for downloaded data.
