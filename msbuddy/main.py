@@ -374,17 +374,20 @@ class Msbuddy:
         n_batch = self._annotate_formula_prepare()
         output_path.mkdir(parents=True, exist_ok=True)
 
+        result_summary_df_all = pd.DataFrame()
+
         # loop over batches
         for n in range(n_batch):
             start_idx, end_idx = self._annotate_formula_main_batch(n, n_batch)
             tqdm.write("Writing batch results...")
             result_summary_df = write_batch_results_cmd(self.data, output_path, write_details,
                                                         start_idx, end_idx)
+            result_summary_df_all = pd.concat([result_summary_df_all, result_summary_df], ignore_index=True, axis=0)
             # clear computed data to save memory, convert to None of the same size
             self.data[start_idx:end_idx] = [None] * (end_idx - start_idx)
 
         tqdm.write("Writing summary results to tsv file...")
-        result_summary_df.to_csv(output_path / 'msbuddy_result_summary.tsv', sep="\t", index=False)
+        result_summary_df_all.to_csv(output_path / 'msbuddy_result_summary.tsv', sep="\t", index=False)
 
     def _annotate_formula_prepare(self) -> int:
         """
