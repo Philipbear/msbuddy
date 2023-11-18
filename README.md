@@ -16,7 +16,7 @@
   * with or without MS/MS spectra
   * in either positive or negative ionization mode
 
-The minimum requirement for a msbuddy query is a single _m/z_ value and its ionization polarity.
+The minimum requirement for an msbuddy query is a single _m/z_ value and its ionization polarity.
 
 **Official documentation**  is available at https://msbuddy.readthedocs.io/en/latest/.
 
