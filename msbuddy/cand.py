@@ -98,11 +98,13 @@ class FragExplanation:
         :return: fill in self.optim_frag, self.optim_nl
         """
         if len(self) == 1:
-            self.direct_assign_optim()
+            self.optim_frag = self.frag_list[0]
+            self.optim_nl = self.nl_list[0]
             return
 
         # if multiple explanations, select the closest to the raw MS2 m/z
         idx = _find_closest_mass_idx(raw_ms2_mz_arr[self.idx], np.array([f.mass for f in self.frag_list]))
+        # idx = np.argmin(np.abs(raw_ms2_mz_arr[self.idx] - np.array([f.mass for f in self.frag_list])))
         self.optim_frag = self.frag_list[idx]
         self.optim_nl = self.nl_list[idx]
         return
@@ -115,13 +117,11 @@ class CandidateSpace:
     """
 
     def __init__(self, pre_neutral_array: np.array, pre_charged_array: np.array,
-                 frag_exp_ls: Union[List[FragExplanation], None] = None,
-                 pre_dbfreq: Union[float, None] = None):
+                 frag_exp_ls: Union[List[FragExplanation], None] = None):
         self.pre_neutral_array = np.int16(pre_neutral_array)  # precursor neutral array
-        self.pre_charged_array = np.int16(pre_charged_array)
+        self.pre_charged_array = np.int16(pre_charged_array)  # used for ms2 global optim.
         self.neutral_mass = float(np.sum(pre_neutral_array * Formula.mass_arr))
         self.frag_exp_list = frag_exp_ls  # List[FragExplanation]
-        self.pre_dbfreq = pre_dbfreq  # precursor db frequency
 
     def add_frag_exp(self, frag_exp: FragExplanation):
         self.frag_exp_list.append(frag_exp)
@@ -148,7 +148,6 @@ class CandidateSpace:
             # last peak, skip
             if m + 1 == len(explained_idx):
                 continue
-
             # idx of next exp peak
             next_exp_idx = explained_idx[m + 1]
             # if the next peak is already explained
@@ -157,18 +156,14 @@ class CandidateSpace:
             # if this idx is not in idx_array of ms2_processed, skip
             if next_exp_idx not in ms2_processed.idx_array:
                 continue
-
             # if the next peak is close enough, add it as an isotope peak
             if (ms2_raw.mz_array[next_exp_idx] - ms2_raw.mz_array[exp_idx] - 1.003355) <= ms2_iso_tol and \
                     ms2_raw.int_array[next_exp_idx] <= ms2_raw.int_array[exp_idx]:
-
+                # if the next peak is close enough, add it as an isotope peak
                 this_frag = self.frag_exp_list[m].optim_frag
                 this_nl = self.frag_exp_list[m].optim_nl
-
-                # if the next peak is close enough, add it as an isotope peak
                 # add a new FragExplanation
                 new_frag = Formula(this_frag.array, this_frag.charge, this_frag.mass + 1.003355, 1)
-
                 # for iso peak, the neutral loss is actually the same as the previous one (M+0)
                 # but we denote it as '-1' isotope peak, so that frag mass + nl mass is still precursor mass
                 new_nl = Formula(this_nl.array, 0, this_nl.mass - 1.003355, -1)
@@ -285,8 +280,8 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
             cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
                                             ms1_cand_form_str_ls, ms2_cand_form_str_ls)
         else:
-            # fill in db frequency
-            cf_list = _fill_in_db_frequency(ms1_cand_form_ls, ms2_cand_form_ls,
+            # fill in db_existed
+            cf_list = _fill_in_db_existence(ms1_cand_form_ls, ms2_cand_form_ls,
                                             ms1_cand_form_str_ls, ms2_cand_form_str_ls)
 
     # retain top candidate formulas
@@ -426,14 +421,18 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     :return: list of candidate formulas (CandidateFormula), list of candidate formula strings
     """
     # query precursor mz
-    formulas = query_precursor_mass(meta_feature.mz, meta_feature.adduct, ms1_tol, ppm, db_mode, gd)
+    formulas, db_freqs = query_precursor_mass(meta_feature.mz, meta_feature.adduct, ms1_tol, ppm, db_mode, gd)
     # filter out formulas that exceed element limits
-    forms = [f for f in formulas if _element_check(f.array, lower_limit, upper_limit) and
-             _senior_rules(f.array) and _o_p_check(f.array) and _dbe_check(f.array) and
-             _adduct_loss_check(f.array, meta_feature.adduct.loss_formula)]
+    forms = []
+    dbfreqs = []
+    for k, f in enumerate(formulas):
+        if _element_check(f.array, lower_limit, upper_limit) and _senior_rules(f.array) and _o_p_check(
+                f.array) and _dbe_check(f.array) and _adduct_loss_check(f.array, meta_feature.adduct.loss_formula):
+            forms.append(f)
+            dbfreqs.append(db_freqs[k])
 
     # convert neutral formulas into CandidateFormula objects
-    cand_form_list = [CandidateFormula(form) for form in forms]
+    cand_form_list = [CandidateFormula(form, db_freq=dbfreq) for form, dbfreq in zip(forms, dbfreqs)]
     cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in cand_form_list]
 
     return cand_form_list, cand_form_str_list
@@ -474,15 +473,20 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
         nl_mz = mf.mz - frag_mz
 
         # query mass in formula database
-        frag_form_ls, nl_form_ls = _query_frag_nl_pair(frag_mz, nl_mz, mf.adduct.pos_mode,
-                                                       na_bool, k_bool, ms2_tol, ppm, db_mode, gd)
+        frag_form_ls, frag_dbfreq_ls, nl_form_ls, nl_dbfreq_ls = _query_frag_nl_pair(frag_mz, nl_mz, mf.adduct.pos_mode,
+                                                                                     na_bool, k_bool,
+                                                                                     ms2_tol, ppm, db_mode, gd)
         if not frag_form_ls or not nl_form_ls:
             continue
 
         # formula stitching
         # iterate fragment formula list and neutral loss formula list
-        for frag in frag_form_ls:
-            for nl in nl_form_ls:
+        for m in range(len(frag_form_ls)):
+            frag = frag_form_ls[m]
+            f_dbfreq = frag_dbfreq_ls[m]
+            for n in range(len(nl_form_ls)):
+                nl = nl_form_ls[n]
+                nl_dbfreq = nl_dbfreq_ls[n]
 
                 # DBE check, sum of DBE should be a non-integer
                 if (frag.dbe + nl.dbe) % 1 == 0 or (frag.dbe + nl.dbe) < 0:
@@ -526,7 +530,7 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
 
 def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: bool, k_bool: bool,
                         ms2_tol: float, ppm: bool,
-                        db_mode: int, gd) -> Tuple[List[Formula], List[Formula]]:
+                        db_mode: int, gd) -> Tuple[List[Formula], List, List[Formula], List]:
     """
     query fragment and neutral loss formulas from database
     :param frag_mz: fragment m/z
@@ -542,23 +546,23 @@ def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: b
     """
     if nl_mz < frag_mz:
         # search neutral loss first, for faster search
-        nl_forms = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
-                                     ms2_tol, ppm, db_mode, gd)
+        nl_forms, nl_dbfreqs = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
+                                                 ms2_tol, ppm, db_mode, gd)
         if nl_forms:
-            frag_forms = query_fragnl_mass(frag_mz, True, pos_mode,
-                                           na_bool, k_bool, ms2_tol, ppm, db_mode, gd)
+            frag_forms, frag_dbfreqs = query_fragnl_mass(frag_mz, True, pos_mode,
+                                                         na_bool, k_bool, ms2_tol, ppm, db_mode, gd)
         else:
-            return [], []
+            return [], [], [], []
     else:
-        frag_forms = query_fragnl_mass(frag_mz, True, pos_mode, na_bool, k_bool,
-                                       ms2_tol, ppm, db_mode, gd)
+        frag_forms, frag_dbfreqs = query_fragnl_mass(frag_mz, True, pos_mode, na_bool, k_bool,
+                                                     ms2_tol, ppm, db_mode, gd)
         if frag_forms:
-            nl_forms = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
-                                         ms2_tol, ppm, db_mode, gd)
+            nl_forms, nl_dbfreqs = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
+                                                     ms2_tol, ppm, db_mode, gd)
         else:
-            return [], []
+            return [], [], [], []
 
-    return frag_forms, nl_forms
+    return frag_forms, frag_dbfreqs, nl_forms, nl_dbfreqs
 
 
 def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], existing_cand_str_list: List[str],
@@ -621,7 +625,7 @@ def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     return out_list
 
 
-def _fill_in_db_frequency(ms1_cand_list: List[CandidateFormula], ms2_cand_list: List[CandidateFormula],
+def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: List[CandidateFormula],
                           ms1_cand_str_list: List[str], ms2_cand_str_list: List[str]) -> List[CandidateFormula]:
     """
     Fill in DB existence for MS2 candidate formulas.
@@ -632,10 +636,13 @@ def _fill_in_db_frequency(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     :return: ms2 candidate formula list with db_existed filled in
     """
     for m, cf in enumerate(ms2_cand_list):
+        found = False
         for n, cf2 in enumerate(ms1_cand_list):
             if ms1_cand_str_list[n] == ms2_cand_str_list[m]:
-                ms2_cand_list[m].formula.db_freq = ms1_cand_list[n].formula.db_freq
+                found = True
                 break
+        if found:
+            ms2_cand_list[m].db_existed = True
 
     return ms2_cand_list
 
@@ -829,13 +836,11 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     # refine MS2 explanation
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * mf.mz * 1e-6
     ms2_iso_tol = max(ms2_iso_tol, 0.02)
-    cand_form = candidate_space.refine_explanation(mf, ms2_iso_tol)
+    candidate_form = candidate_space.refine_explanation(mf, ms2_iso_tol)
+    candidate_form.ml_a_prob = cf.ml_a_prob  # copy ml_a_prob
+    candidate_form.ms1_isotope_similarity = cf.ms1_isotope_similarity  # copy ms1_isotope_similarity
 
-    cand_form.ml_a_prob = cf.ml_a_prob  # copy ml_a_prob
-    cand_form.ms1_isotope_similarity = cf.ms1_isotope_similarity  # copy ms1_isotope_similarity
-    cand_form.formula.db_freq = cf.formula.db_freq  # copy db_freq
-
-    return cand_form
+    return candidate_form
 
 
 def assign_subformula(ms2_mz: List, precursor_formula: str, adduct: str,

@@ -24,7 +24,7 @@ from scipy.stats import norm
 from tqdm import tqdm
 
 from msbuddy.base import Formula
-from msbuddy.query import common_nl_from_array, check_formula_db_freq
+from msbuddy.query import common_nl_from_array, check_formula_existence
 from msbuddy.utils import read_formula
 
 # ignore warnings
@@ -193,9 +193,9 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
         # generate ML features for each candidate formula
         for candidate_formula in meta_feature.candidate_formula_list:
             candidate_formula.ml_a_prob = prob_arr[cnt]
-            # # if candidate formula is in the database, set ml_a_prob
-            # if candidate_formula.formula.db_freq is not None and prob_arr[cnt] < 0.5:
-            #     candidate_formula.ml_a_prob = 0.5
+            # if candidate formula is in the database, set ml_a_prob
+            if candidate_formula.db_existed and prob_arr[cnt] < 0.5:
+                candidate_formula.ml_a_prob = 0.5
             cnt += 1
 
         top_n = _calc_top_n_candidate(meta_feature.mz, top_n_candidate, db_mode)
@@ -398,10 +398,14 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
 
         # check db existence of all explained fragments
         pos_mode = meta_feature.adduct.pos_mode
-        db_freqs = np.array([check_formula_db_freq(f, pos_mode, gd) for f in frag_form_arr])
+        db_existed = np.array([check_formula_existence(f, pos_mode, gd) for f in frag_form_arr])
+        # ms2_explanation.db_existence_array = db_existed
 
-        # fragment db freq avg
-        frag_dbfreq_avg = np.sum(db_freqs) / len(valid_idx_arr)
+        # explained and db existed fragment ion count percentage
+        exp_db_frag_cnt_pct = np.sum(db_existed) / len(valid_idx_arr)
+
+        # explained and db existed fragment ion intensity percentage
+        exp_db_frag_int_pct = np.sum(exp_int_arr[db_existed]) / np.sum(valid_int_arr)
 
         # subformula count: how many frags are subformula of other frags
         subform_score, subform_common_loss_score = _calc_subformula_score(frag_form_arr, gd)
@@ -411,9 +415,6 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
 
         # normalized explained intensity array
         normed_exp_int_arr = exp_int_arr / np.sum(exp_int_arr)
-
-        # weighted average of fragment db freqs
-        frag_dbfreq_wavg = np.sum(db_freqs * normed_exp_int_arr)
 
         # weighted average of fragment DBEs
         frag_dbe_wavg = np.sum(np.array([frag_form.dbe for frag_form in frag_form_arr]) * normed_exp_int_arr)
@@ -437,7 +438,7 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
         frag_nl_dbe_diff_wavg = np.sum(np.array([frag_form.dbe - (pre_dbe - frag_form.dbe + 1)
                                                  for frag_form in frag_form_arr]) * normed_exp_int_arr)
 
-        out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, frag_dbfreq_avg, frag_dbfreq_wavg,
+        out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, exp_db_frag_cnt_pct, exp_db_frag_int_pct,
                             subform_score, subform_common_loss_score,
                             radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
                             len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
