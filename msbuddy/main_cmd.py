@@ -71,8 +71,8 @@ def main():
                         help='Maximum isotope count, used for MS1 isotope pattern. Default: 4.')
     parser.add_argument('-disable_ms2_denoise', action='store_false',
                         help='Store false. Whether to disable denoising MS2 spectrum. Default: MS2 denoise is enabled.')
-    parser.add_argument('-disable_rel_int_denoise', action='store_false',
-                        help='Store false. Whether to disable relative intensity for MS2 denoise. Default: relative intensity denoise is enabled.')
+    parser.add_argument('-use_rel_int_denoise', action='store_true',
+                        help='Store true. Whether to use relative intensity for MS2 denoise. Default: our own denoising approach will be used.')
     parser.add_argument('-rel_int_denoise_cutoff', type=float, default=0.01,
                         help='Relative intensity cutoff, used for MS2 denoise. Default: 0.01.')
     parser.add_argument('-max_noise_frag_ratio', type=float, default=0.90,
@@ -98,7 +98,7 @@ def main():
         i_range=(args.i_min, args.i_max),
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
         ms2_denoise=~args.disable_ms2_denoise,
-        rel_int_denoise=~args.disable_rel_int_denoise,
+        rel_int_denoise=args.use_rel_int_denoise,
         rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_noise_frag_ratio=args.max_noise_frag_ratio,
         max_noise_rsd=args.max_noise_rsd, max_frag_reserved=args.max_frag_reserved
     )

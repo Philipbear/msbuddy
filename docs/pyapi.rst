@@ -263,7 +263,7 @@ Example Usage:
    :param isotope_bin_mztol: float. The mass tolerance for MS1 isotope binning, in Da. Default is 0.02 Da.
    :param max_isotope_cnt: int. The maximum number of isotopes to consider. Default is 4.
    :param ms2_denoise: bool. If True, the MS/MS spectra are denoised. Default is True.
-   :param rel_int_denoise: bool. If True, the MS/MS spectra are denoised based on relative intensity; if False, (see details in `our paper <https://doi.org/10.1038/s41592-023-01850-x>`_). Default is False.
+   :param rel_int_denoise: bool. If True, the MS/MS spectra are denoised based on relative intensity; if False, our own methods will be used (see details in `our paper <https://doi.org/10.1038/s41592-023-01850-x>`_). Default is False.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising. Default is 0.01 (1%).
    :param max_noise_frag_ratio: float. The maximum ratio of noise fragments to total fragments. Default is 0.90 (90%).
    :param max_noise_rsd: float. The maximum relative standard deviation of noise fragments. Default is 0.20 (20%).

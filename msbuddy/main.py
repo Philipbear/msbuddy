@@ -66,7 +66,7 @@ class MsbuddyConfig:
                  i_range: Tuple[int, int] = (0, 10),
                  isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4,
                  ms2_denoise: bool = True,
-                 rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01,
+                 rel_int_denoise: bool = False, rel_int_denoise_cutoff: float = 0.01,
                  max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20,
                  max_frag_reserved: int = 50):
         """
