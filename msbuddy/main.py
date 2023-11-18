@@ -218,9 +218,8 @@ class Msbuddy:
         return cls._instance
 
     def __init__(self, config: Union[MsbuddyConfig, None] = None):
-
-        tqdm.write("msbuddy: molecular formula annotation in MS-based small molecule analysis. "
-                   "Developed and maintained by Shipei Xing.")
+        tqdm.write("msbuddy: molecular formula annotation in MS-based small molecule analysis.")
+        tqdm.write("Current version: 0.3.0; Developed and maintained by Shipei Xing.")
         tqdm.write("DB initializing...")
 
         if config is None:
@@ -228,7 +227,7 @@ class Msbuddy:
         else:
             self.config = config  # customized configuration
 
-        global shared_data_dict  # Declare it as a global variable
+        global shared_data_dict
         shared_data_dict = init_db()  # database initialization
 
         self.data = None  # List[MetabolicFeature]

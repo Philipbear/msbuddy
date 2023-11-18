@@ -110,18 +110,6 @@ class FragExplanation:
         return
 
 
-@njit
-def _find_closest_mass_idx(mass: float, mass_arr: np.array) -> int:
-    """
-    find the closest mass in mass_arr to mass
-    :param mass: float
-    :param mass_arr: np.array
-    :return: index of the closest mass
-    """
-    idx = np.argmin(np.abs(mass - mass_arr))
-    return idx
-
-
 class CandidateSpace:
     """
     CandidateSpace is a class for bottom-up MS/MS interrogation.
@@ -193,6 +181,18 @@ class CandidateSpace:
 
         return CandidateFormula(formula=Formula(self.pre_neutral_array, 0, self.neutral_mass),
                                 ms2_raw_explanation=ms2_raw_exp)
+
+
+@njit
+def _find_closest_mass_idx(mass: float, mass_arr: np.array) -> int:
+    """
+    find the closest mass in mass_arr to mass
+    :param mass: float
+    :param mass_arr: np.array
+    :return: index of the closest mass
+    """
+    idx = np.argmin(np.abs(mass - mass_arr))
+    return idx
 
 
 def calc_isotope_pattern(formula: Formula,
@@ -271,7 +271,7 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
                                                                                  ele_upper_limit,
                                                                                  db_mode, gd)
 
-        # query precursor mass, for fill in db_existed
+        # query precursor mass, for fill in db frequency
         ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol,
                                                                                 ele_lower_limit,
                                                                                 ele_upper_limit, db_mode, gd)
@@ -421,14 +421,17 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     :return: list of candidate formulas (CandidateFormula), list of candidate formula strings
     """
     # query precursor mz
-    formulas = query_precursor_mass(meta_feature.mz, meta_feature.adduct, ms1_tol, ppm, db_mode, gd)
+    formulas, db_freqs = query_precursor_mass(meta_feature.mz, meta_feature.adduct, ms1_tol, ppm, db_mode, gd)
     # filter out formulas that exceed element limits
-    forms = [f for f in formulas if _element_check(f.array, lower_limit, upper_limit)
-             and _senior_rules(f.array) and _o_p_check(f.array) and _dbe_check(f.array) and
-             _adduct_loss_check(f.array, meta_feature.adduct.loss_formula)]
+    forms = []
+    dbfreqs = []
+    for k, f in enumerate(formulas):
+        if _element_check(f.array, lower_limit, upper_limit) and _senior_rules(f.array) and _o_p_check(f.array) and _dbe_check(f.array) and _adduct_loss_check(f.array, meta_feature.adduct.loss_formula):
+            forms.append(f)
+            dbfreqs.append(db_freqs[k])
 
     # convert neutral formulas into CandidateFormula objects
-    cand_form_list = [CandidateFormula(form, db_existed=True) for form in forms]
+    cand_form_list = [CandidateFormula(form, db_freq=dbfreq) for form, dbfreq in zip(forms, dbfreqs)]
     cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in cand_form_list]
 
     return cand_form_list, cand_form_str_list
@@ -789,20 +792,13 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
 
         # dbe filter (DBE >= -1)
         bool_arr_1 = _dbe_subform_filter(this_subform_arr, -1.)
-        # this_subform_arr = this_subform_arr[bool_arr_1, :]
-        # this_mass = this_mass[bool_arr_1]
 
         # SENIOR rules filter, a soft version
         bool_arr_2 = _senior_subform_filter(this_subform_arr)
-        # this_subform_arr = this_subform_arr[bool_arr_2, :]
-        # this_mass = this_mass[bool_arr_2]
-
         # valid subformula check
         bool_arr_3 = _valid_subform_check(this_subform_arr, pre_charged_arr)
-        # this_subform_arr = this_subform_arr[bool_arr_3, :]
-        # this_mass = this_mass[bool_arr_3]
 
-        # # combine filters
+        # combine filters
         bool_arr = bool_arr_1 & bool_arr_2 & bool_arr_3
         this_subform_arr = this_subform_arr[bool_arr, :]
         this_mass = this_mass[bool_arr]
