@@ -137,7 +137,7 @@ def check_formula_db_freq(formula: Formula, pos_mode: bool, gd) -> float:
 
     if len(forms) == 0:
         return 0
-    return forms[0].db_freq if forms[0].db_freq > 3 else 3
+    return forms[0].db_freq if forms[0].db_freq > 2 else 2
 
 
 def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
