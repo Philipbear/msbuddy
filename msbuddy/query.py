@@ -82,16 +82,16 @@ def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, gd) -> List[Formul
     results_basic_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
     results_basic_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
     results_basic_dbfreq = gd['basic_db_logfreq'][db_start_idx:db_end_idx]
-    forms_basic = _func_a(results_basic_mass, results_basic_formula, results_basic_dbfreq,
-                          target_mass, mass_tol, None)
+    forms_basic, _ = _func_a(results_basic_mass, results_basic_formula, results_basic_dbfreq,
+                             target_mass, mass_tol, None)
     formulas.extend(forms_basic)
 
     db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
     results_halogen_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
     results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
     results_halogen_dbfreq = gd['halogen_db_logfreq'][db_start_idx:db_end_idx]
-    forms_halogen = _func_a(results_halogen_mass, results_halogen_formula, results_halogen_dbfreq,
-                            target_mass, mass_tol, None)
+    forms_halogen, _ = _func_a(results_halogen_mass, results_halogen_formula, results_halogen_dbfreq,
+                               target_mass, mass_tol, None)
     formulas.extend(forms_halogen)
 
     return formulas
@@ -133,13 +133,13 @@ def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
         results_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
         results_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
         results_dbfreq = gd['halogen_db_logfreq'][db_start_idx:db_end_idx]
-    forms = _func_a(results_mass, results_formula, results_dbfreq, target_mass, mass_tol, None)
+    forms, _ = _func_a(results_mass, results_formula, results_dbfreq, target_mass, mass_tol, None)
 
     return len(forms) > 0
 
 
 def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
-                         ppm: bool, db_mode: int, gd) -> List[Formula]:
+                         ppm: bool, db_mode: int, gd) -> Tuple[List[Formula], List]:
     """
     search precursor mass in neutral database
     :param mass: mass to search
@@ -148,7 +148,7 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
     :param ppm: whether ppm is used
     :param db_mode: database label (0: basic, 1: halogen)
     :param gd: global dependencies dictionary
-    :return: list of Formula
+    :return: list of Formula, list of database frequency
     """
     # calculate mass tolerance
     mass_tol = mass * mz_tol / 1e6 if ppm else mz_tol
@@ -158,6 +158,7 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
 
     # formulas to return
     formulas = []
+    dbfreqs = []
 
     # query database, quick filter by in-memory index array
     # quick filter by in-memory index array
@@ -168,20 +169,22 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
     results_basic_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
     results_basic_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
     results_basic_dbfreq = gd['basic_db_logfreq'][db_start_idx:db_end_idx]
-    forms_basic = _func_a(results_basic_mass, results_basic_formula, results_basic_dbfreq,
-                          target_mass, mass_tol, adduct.loss_formula)
+    forms_basic, dbfreqs_basic = _func_a(results_basic_mass, results_basic_formula, results_basic_dbfreq,
+                                         target_mass, mass_tol, adduct.loss_formula)
     formulas.extend(forms_basic)
+    dbfreqs.extend(dbfreqs_basic)
 
     if db_mode > 0:
         db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
         results_halogen_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
         results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
         results_halogen_dbfreq = gd['halogen_db_logfreq'][db_start_idx:db_end_idx]
-        forms_halogen = _func_a(results_halogen_mass, results_halogen_formula, results_halogen_dbfreq,
-                                target_mass, mass_tol, adduct.loss_formula)
+        forms_halogen, dbfreqs_halogen = _func_a(results_halogen_mass, results_halogen_formula, results_halogen_dbfreq,
+                                                 target_mass, mass_tol, adduct.loss_formula)
         formulas.extend(forms_halogen)
+        dbfreqs.extend(dbfreqs_halogen)
 
-    return formulas
+    return formulas, dbfreqs
 
 
 def query_fragnl_mass(mass: float, fragment: bool, pos_mode: bool, na_contain: bool, k_contain: bool,
@@ -210,38 +213,32 @@ def query_fragnl_mass(mass: float, fragment: bool, pos_mode: bool, na_contain: b
     # search in database
     # consider non-radical ions (even-electron)
     t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, False, 0, pos_mode, mass_tol)
-    forms = _func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False,
-                    False, False, pos_mode, db_mode, gd)
-    formulas.extend(forms)
+    formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False,
+                            False, False, pos_mode, db_mode, gd))
 
     # consider radical ions (odd-electron)
     t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, True, 0, pos_mode, mass_tol)
-    forms = _func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True,
-                    False, False, pos_mode, db_mode, gd)
-    formulas.extend(forms)
+    formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True,
+                            False, False, pos_mode, db_mode, gd))
 
     # consider Na and K
     if na_contain:
         t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, False, na_h_delta, pos_mode, mass_tol)
-        forms = _func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False,
-                        True, False, pos_mode, db_mode, gd)
-        formulas.extend(forms)
+        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False,
+                                True, False, pos_mode, db_mode, gd))
 
         t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, True, na_h_delta, pos_mode, mass_tol)
-        forms = _func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True,
-                        True, False, pos_mode, db_mode, gd)
-        formulas.extend(forms)
+        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True,
+                                True, False, pos_mode, db_mode, gd))
 
     if k_contain:
         t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, False, k_h_delta, pos_mode, mass_tol)
-        forms = _func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False,
-                        False, True, pos_mode, db_mode, gd)
-        formulas.extend(forms)
+        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, False,
+                                False, True, pos_mode, db_mode, gd))
 
         t_mass, start_idx, end_idx = _calc_t_mass_db_idx(mass, fragment, True, k_h_delta, pos_mode, mass_tol)
-        forms = _func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True,
-                        False, True, pos_mode, db_mode, gd)
-        formulas.extend(forms)
+        formulas.extend(_func_b(t_mass, mass_tol, start_idx, end_idx, fragment, True,
+                                False, True, pos_mode, db_mode, gd))
 
     return formulas
 
@@ -307,7 +304,7 @@ def _calc_t_mass_db_idx(mass: float, fragment: bool, radical: bool, convert_mass
 
 def _func_a(results_mass, results_formula, results_dbfreq,
             target_mass: float, mass_tol: float,
-            adduct_loss_form: Union[Formula, None]) -> List[Formula]:
+            adduct_loss_form: Union[Formula, None]) -> Tuple[List[Formula], List]:
     """
     a helper function for query_precursor_mass
     filter and convert the sql query results to Formula objects
@@ -323,23 +320,24 @@ def _func_a(results_mass, results_formula, results_dbfreq,
     all_idx = np.where(np.abs(results_mass - target_mass) <= mass_tol)[0]
 
     if len(all_idx) == 0:
-        return []
+        return [], []
 
     # convert to Formula in neutral form
     formulas = []
+    dbfreqs = []
     # if adduct has loss formula
     if adduct_loss_form is not None:
         l_arr = adduct_loss_form.array
         for idx in all_idx:
             if np.all(results_formula[idx] >= l_arr):
-                formulas.append(
-                    Formula(results_formula[idx], charge=0, mass=results_mass[idx], db_freq=results_dbfreq[idx]))
+                formulas.append(Formula(results_formula[idx], charge=0, mass=results_mass[idx]))
+                dbfreqs.append(results_dbfreq[idx])
     # if adduct has no loss formula
     else:
         for idx in all_idx:
-            formulas.append(
-                Formula(results_formula[idx], charge=0, mass=results_mass[idx], db_freq=results_dbfreq[idx]))
-    return formulas
+            formulas.append(Formula(results_formula[idx], charge=0, mass=results_mass[idx]))
+            dbfreqs.append(results_dbfreq[idx])
+    return formulas, dbfreqs
 
 
 def _func_b(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: bool,
@@ -358,17 +356,16 @@ def _func_b(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
     :param pos_mode: whether this is a frag in positive ion mode
     :param db_mode: database label (0: basic, 1: halogen, 2: all)
     :param gd: global dependencies dictionary
-    :return: list of Formula, list of database frequency
+    :return: list of Formula
     """
 
     forms = []
     forms_basic = _func_c(target_mass, mass_tol, start_idx, end_idx, fragment, radical, na_contain,
                           k_contain, pos_mode, 0, gd)
     forms.extend(forms_basic)
-
     if db_mode > 0:
-        forms_halogen = _func_c(target_mass, mass_tol, start_idx, end_idx, fragment, radical,
-                                na_contain, k_contain, pos_mode, 1, gd)
+        forms_halogen = _func_c(target_mass, mass_tol, start_idx, end_idx, fragment, radical, na_contain,
+                                k_contain, pos_mode, 1, gd)
         forms.extend(forms_halogen)
     return forms
 
@@ -395,11 +392,9 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
     if db_mode == 0:
         results_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
         results_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
-        results_dbfreq = gd['basic_db_logfreq'][db_start_idx:db_end_idx]
     else:
         results_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
         results_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
-        results_dbfreq = gd['halogen_db_logfreq'][db_start_idx:db_end_idx]
 
     all_idx = np.where(np.abs(results_mass - target_mass) <= mass_tol)[0]
 
@@ -417,16 +412,14 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
                     arr[8] += 1
                     arr[1] -= 1
                     forms.append(Formula(arr, charge=ion_mode_int,
-                                         mass=results_mass[idx] - ion_mode_int * 0.00054858 + na_h_delta,
-                                         db_freq=results_dbfreq[idx]))
+                                         mass=results_mass[idx] - ion_mode_int * 0.00054858 + na_h_delta))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[8] += 1
                     arr[1] = arr[1] - 1 + ion_mode_int
                     forms.append(Formula(arr, charge=ion_mode_int,
-                                         mass=results_mass[idx] + ion_mode_int * 1.007276 + na_h_delta,
-                                         db_freq=results_dbfreq[idx]))
+                                         mass=results_mass[idx] + ion_mode_int * 1.007276 + na_h_delta))
         elif k_contain:
             if radical:
                 for idx in all_idx:
@@ -434,28 +427,24 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
                     arr[6] += 1
                     arr[1] -= 1
                     forms.append(Formula(arr, charge=ion_mode_int,
-                                         mass=results_mass[idx] - ion_mode_int * 0.00054858 + k_h_delta,
-                                         db_freq=results_dbfreq[idx]))
+                                         mass=results_mass[idx] - ion_mode_int * 0.00054858 + k_h_delta))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[6] += 1
                     arr[1] = arr[1] - 1 + ion_mode_int
                     forms.append(Formula(arr, charge=ion_mode_int,
-                                         mass=results_mass[idx] + ion_mode_int * 1.007276 + k_h_delta,
-                                         db_freq=results_dbfreq[idx]))
+                                         mass=results_mass[idx] + ion_mode_int * 1.007276 + k_h_delta))
         else:
             if radical:
                 for idx in all_idx:
                     forms.append(Formula(results_formula[idx], charge=ion_mode_int,
-                                         mass=results_mass[idx] - ion_mode_int * 0.00054858,
-                                         db_freq=results_dbfreq[idx]))
+                                         mass=results_mass[idx] - ion_mode_int * 0.00054858))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[1] += ion_mode_int
-                    forms.append(Formula(arr, charge=ion_mode_int, mass=results_mass[idx] + ion_mode_int * 1.007276,
-                                         db_freq=results_dbfreq[idx]))
+                    forms.append(Formula(arr, charge=ion_mode_int, mass=results_mass[idx] + ion_mode_int * 1.007276))
     else:  # neutral loss
         if na_contain:
             if radical:
@@ -464,15 +453,13 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
                     arr[8] += 1
                     arr[1] = arr[1] - 1 + ion_mode_int
                     forms.append(Formula(arr, charge=0,
-                                         mass=results_mass[idx] + ion_mode_int * 1.007825 + na_h_delta,
-                                         db_freq=results_dbfreq[idx]))
+                                         mass=results_mass[idx] + ion_mode_int * 1.007825 + na_h_delta))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[8] += 1
                     arr[1] -= 1
-                    forms.append(Formula(arr, charge=0, mass=results_mass[idx] + na_h_delta,
-                                         db_freq=results_dbfreq[idx]))
+                    forms.append(Formula(arr, charge=0, mass=results_mass[idx] + na_h_delta))
         elif k_contain:
             if radical:
                 for idx in all_idx:
@@ -480,26 +467,22 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
                     arr[6] += 1
                     arr[1] = arr[1] - 1 + ion_mode_int
                     forms.append(Formula(arr, charge=0,
-                                         mass=results_mass[idx] + ion_mode_int * 1.007825 + k_h_delta,
-                                         db_freq=results_dbfreq[idx]))
+                                         mass=results_mass[idx] + ion_mode_int * 1.007825 + k_h_delta))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[6] += 1
                     arr[1] -= 1
-                    forms.append(Formula(arr, charge=0, mass=results_mass[idx] + k_h_delta,
-                                         db_freq=results_dbfreq[idx]))
+                    forms.append(Formula(arr, charge=0, mass=results_mass[idx] + k_h_delta))
         else:
             if radical:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[1] += ion_mode_int
-                    forms.append(Formula(arr, charge=0, mass=results_mass[idx] + ion_mode_int * 1.007825,
-                                         db_freq=results_dbfreq[idx]))
+                    forms.append(Formula(arr, charge=0, mass=results_mass[idx] + ion_mode_int * 1.007825))
             else:
                 for idx in all_idx:
-                    forms.append(Formula(results_formula[idx], charge=0, mass=results_mass[idx],
-                                         db_freq=results_dbfreq[idx]))
+                    forms.append(Formula(results_formula[idx], charge=0, mass=results_mass[idx]))
 
     return forms
 
