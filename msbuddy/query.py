@@ -118,7 +118,7 @@ def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
     # recalculated target mass
     target_mass = calc_formula_mass(form_arr, 0, 0)
 
-    # query database, use a tiny mass tolerance (1e-4)
+    # query database, use a tiny mass tolerance (1e-5)
     mass_tol = 1e-4
     db_mode = 0 if not halogen_bool else 1
     start_idx = int((target_mass - mass_tol) * 10)
