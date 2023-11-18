@@ -204,4 +204,17 @@ def formula_db_idx_arr():
 if __name__ == '__main__':
     # load_frag_table()
     # load_loss_table()
-    formula_db_idx_arr()
+    # formula_db_idx_arr()
+
+    # test
+    import numpy as np
+    basic_db, halogen_db = joblib.load("formula_db_v0.3.0.joblib")
+
+    data_np = np.array(basic_db[2])
+
+    # Calculating statistics using numpy
+    mean_np = np.mean(data_np)
+    median_np = np.median(data_np)
+    quantiles_np = np.quantile(data_np, [0.25, 0.5, 0.75])  # 25th, 50th (median), 75th percentiles
+
+    print('done')

@@ -97,12 +97,12 @@ def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, gd) -> List[Formul
     return formulas
 
 
-def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
+def check_formula_db_freq(formula: Formula, pos_mode: bool, gd) -> float:
     """
-    check whether this formula exists in the database
+    check the frequency of this formula in the database
     :param formula: formula to check
     :param gd: global dependencies dictionary
-    :return: True if this formula exists in the database
+    :return: log db frequency, 2 if > 2
     """
     form_arr = formula.array
     radical_bool = formula.dbe % 2 == 0
@@ -135,7 +135,9 @@ def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
         results_dbfreq = gd['halogen_db_logfreq'][db_start_idx:db_end_idx]
     forms = _func_a(results_mass, results_formula, results_dbfreq, target_mass, mass_tol, None)
 
-    return len(forms) > 0
+    if len(forms) == 0:
+        return 0
+    return forms[0].db_freq if forms[0].db_freq > 3 else 3
 
 
 def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
@@ -248,7 +250,7 @@ def query_fragnl_mass(mass: float, fragment: bool, pos_mode: bool, na_contain: b
 
 def check_common_frag(formula: Formula, gd) -> bool:
     """
-    check whether this formula is a common fragment in Buddy.common_frag_db (C=0)
+    check whether this formula is a common fragment in common_frag_db (C=0)
     :param formula: formula to check
     :param gd: global dependencies dictionary
     :return: True if this formula is a common fragment
@@ -265,7 +267,7 @@ def check_common_frag(formula: Formula, gd) -> bool:
 
 def check_common_nl(formula: Formula, gd) -> bool:
     """
-    check whether this formula is a common neutral loss in Buddy.common_nl_db
+    check whether this formula is a common neutral loss in common_nl_db
     :param formula: formula to check
     :param gd: global dependencies dictionary
     :return: True if this formula is a common neutral loss

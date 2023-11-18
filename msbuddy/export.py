@@ -16,6 +16,7 @@ Description: export results to files
 import pathlib
 
 import pandas as pd
+from tqdm import tqdm
 
 
 def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details: bool,
@@ -53,6 +54,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
 
     # write out detailed results
     if write_details:
+        tqdm.write("Writing batch results...")
         for mf in batch_data:
             # make a directory for each mf
             # replace '/' with '_' in the identifier, remove special characters

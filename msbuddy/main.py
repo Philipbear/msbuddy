@@ -68,8 +68,7 @@ class MsbuddyConfig:
                  ms2_denoise: bool = True,
                  rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01,
                  max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20,
-                 max_frag_reserved: int = 50,
-                 use_all_frag: bool = False):
+                 max_frag_reserved: int = 50):
         """
         :param ms_instr: mass spectrometry instrument, one of "orbitrap, "fticr", "qtof". Highly recommended to use this for mass tolerance settings.
         :param ppm: whether ppm is used for m/z tolerance
@@ -99,7 +98,6 @@ class MsbuddyConfig:
         :param max_noise_frag_ratio: maximum noise fragment ratio, used for MS2 denoise
         :param max_noise_rsd: maximum noise RSD, used for MS2 denoise
         :param max_frag_reserved: max fragment number reserved, used for MS2 data
-        :param use_all_frag: whether to use all fragments for annotation; by default, only top N fragments are used, top N is a function of precursor mass
         """
         if ms_instr is None:
             self.ppm = ppm
@@ -200,8 +198,6 @@ class MsbuddyConfig:
             logging.warning(f"Maximum fragment reserved is set to {self.max_frag_reserved}.")
         else:
             self.max_frag_reserved = max_frag_reserved
-
-        self.use_all_frag = use_all_frag
 
 
 class Msbuddy:
@@ -378,9 +374,9 @@ class Msbuddy:
         # loop over batches
         for n in range(n_batch):
             start_idx, end_idx = self._annotate_formula_main_batch(n, n_batch)
-            tqdm.write("Writing batch results...")
-            result_summary_df = write_batch_results_cmd(self.data, output_path, write_details,
-                                                        start_idx, end_idx)
+            # write out results
+            result_summary_df = write_batch_results_cmd(self.data, output_path, write_details, start_idx, end_idx)
+            # append to result summary
             result_summary_df_all = pd.concat([result_summary_df_all, result_summary_df], ignore_index=True, axis=0)
             # clear computed data to save memory, convert to None of the same size
             self.data[start_idx:end_idx] = [None] * (end_idx - start_idx)
@@ -570,7 +566,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
     mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
                        ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
                        ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
-                       ps.max_frag_reserved, ps.use_all_frag)
+                       ps.max_frag_reserved)
     # generate candidate formula space
     gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
                           ps.max_isotope_cnt, global_dict)

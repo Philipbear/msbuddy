@@ -384,6 +384,7 @@ class Adduct:
         self.net_formula = Formula(array=net_array, charge=0)
         self.loss_formula = Formula(array=loss_array, charge=0)
 
+
 def check_adduct(adduct_str: str) -> Tuple[bool, bool]:
     """
     given an adduct string, check whether it is valid, and determine its ion mode
@@ -529,12 +530,12 @@ class ProcessedMS2:
                  denoise: bool,
                  rel_int_denoise: bool, rel_int_denoise_cutoff: float,
                  max_noise_frag_ratio: float, max_noise_rsd: float,
-                 max_frag_reserved: int, use_all_frag: bool = False):
+                 max_frag_reserved: int):
         if raw_spec:
             self.mz_tol = mz_tol
             self.ppm = ppm
             self._preprocess(mz, raw_spec, denoise, rel_int_denoise, rel_int_denoise_cutoff,
-                             max_noise_frag_ratio, max_noise_rsd, max_frag_reserved, use_all_frag)
+                             max_noise_frag_ratio, max_noise_rsd, max_frag_reserved)
         else:
             self.idx_array = np.array([], dtype=int)
             self.mz_array = np.array([], dtype=np.float32)
@@ -551,8 +552,7 @@ class ProcessedMS2:
 
     def _preprocess(self, mz: float, raw_spec: Spectrum,
                     denoise: bool, rel_int_denoise: bool, rel_int_denoise_cutoff: float,
-                    max_noise_frag_ratio: float, max_noise_rsd: float, max_frag_reserved: int,
-                    use_all_frag: bool):
+                    max_noise_frag_ratio: float, max_noise_rsd: float, max_frag_reserved: int):
         """
         preprocess MS2 spectrum, denoise (optional), de-precursor
         :param mz: precursor mz
@@ -569,19 +569,17 @@ class ProcessedMS2:
         # de-precursor
         self._deprecursor(mz, raw_spec)
 
-        # denoise, only perform when >= 10 peaks left
-        if denoise and len(self.mz_array) >= 10:
+        # denoise
+        if denoise:
             self._denoise(rel_int_denoise, rel_int_denoise_cutoff, max_noise_frag_ratio, max_noise_rsd)
 
         # top n frag
-        if not use_all_frag:
-            top_n_frag = _calc_top_n_frag(mz, max_frag_reserved)
-            if top_n_frag < len(self.mz_array):
-                idx = np.argsort(self.int_array)
-                reserved_idx = self.int_array >= self.int_array[idx[-top_n_frag]]
-                self.idx_array = self.idx_array[reserved_idx]
-                self.mz_array = self.mz_array[reserved_idx]
-                self.int_array = self.int_array[reserved_idx]
+        if len(self.mz_array) > max_frag_reserved:
+            idx = np.argsort(self.int_array)
+            reserved_idx = self.int_array >= self.int_array[idx[-max_frag_reserved]]
+            self.idx_array = self.idx_array[reserved_idx]
+            self.mz_array = self.mz_array[reserved_idx]
+            self.int_array = self.int_array[reserved_idx]
 
     def _denoise(self, rel_int_denoise: bool, rel_int_denoise_cutoff: float,
                  max_noise_frag_ratio: float, max_noise_rsd: float):
@@ -596,33 +594,34 @@ class ProcessedMS2:
 
         # sort by intensity, increasing
         idx = np.argsort(self.int_array)
-        # sorted_mz = self.mz_array[idx]
         sorted_int = self.int_array[idx]
+
+        final_int_threshold = 0.0
 
         if rel_int_denoise:
             final_int_threshold = rel_int_denoise_cutoff * sorted_int[-1]
         else:
-            # at least 3 peaks are used to estimate RSD, step 0.02, round to 0.02 to determine m_start
-            m_start = round(3.0 / len(self.mz_array) * 50.0)
-            m_end = math.floor(max_noise_frag_ratio / 0.02) + 1
-            if m_end <= m_start:
-                return
+            if len(self.mz_array) > 10:
+                # at least 3 peaks are used to estimate RSD, step 0.02, round to 0.02 to determine m_start
+                m_start = round(3.0 / len(self.mz_array) * 50.0)
+                m_end = math.floor(max_noise_frag_ratio / 0.02) + 1
+                if m_end <= m_start:
+                    return
 
-            final_int_threshold = 0.0
-            max_int_threshold = sorted_int[round(max_noise_frag_ratio * len(self.mz_array)) - 1]
-            for m in range(m_start, m_end):
-                if round(m * 0.02 * len(self.mz_array)) < 3:
-                    continue
-                sub_sorted_int = sorted_int[0:round(m * 0.02 * len(self.mz_array))]
-                noise_mean = np.mean(sub_sorted_int)
-                noise_sd = np.std(sub_sorted_int, ddof=1)
-                noise_rsd = noise_sd / noise_mean
-                if noise_rsd <= max_noise_rsd:
-                    tmp_int_threshold = noise_mean + noise_sd * 3.0
-                    if tmp_int_threshold > max_int_threshold:
-                        break
-                    else:
-                        final_int_threshold = tmp_int_threshold
+                max_int_threshold = sorted_int[round(max_noise_frag_ratio * len(self.mz_array)) - 1]
+                for m in range(m_start, m_end):
+                    if round(m * 0.02 * len(self.mz_array)) < 3:
+                        continue
+                    sub_sorted_int = sorted_int[0:round(m * 0.02 * len(self.mz_array))]
+                    noise_mean = np.mean(sub_sorted_int)
+                    noise_sd = np.std(sub_sorted_int, ddof=1)
+                    noise_rsd = noise_sd / noise_mean
+                    if noise_rsd <= max_noise_rsd:
+                        tmp_int_threshold = noise_mean + noise_sd * 3.0
+                        if tmp_int_threshold > max_int_threshold:
+                            break
+                        else:
+                            final_int_threshold = tmp_int_threshold
 
         # refill self.idx_array, self.mz_array, self.int_array
         reserved_idx = self.int_array >= final_int_threshold
@@ -658,31 +657,15 @@ class ProcessedMS2:
             self.int_array = self.int_array / np.max(self.int_array)
 
 
-def _calc_top_n_frag(pre_mz: float, max_frag_reserved: int) -> int:
-    """
-    calculate top n frag No., a linear function of precursor m/z (for class ProcessedMS2)
-    :param pre_mz: precursor m/z
-    :param max_frag_reserved: max fragment count reserved
-    :return: top n frag No. (int)
-    """
-    if pre_mz < 1000:
-        top_n = int(50 - 0.04 * pre_mz)
-    else:
-        top_n = int(30 - 0.02 * pre_mz)
-    return min(top_n, max_frag_reserved)
-
-
 class MS2Explanation:
     """
     MS2Explanation class, used for storing MS2 explanation.
     """
 
     def __init__(self, idx_array: np.array,
-                 explanation_array: List[Union[Formula, None]],
-                 db_existence_array: Union[np.array, None] = None):
+                 explanation_array: List[Union[Formula, None]]):
         self.idx_array = idx_array  # indices of peaks in MS2 spectrum
         self.explanation_array = explanation_array  # List[Formula], isotope peaks are included
-        self.db_existence_array = db_existence_array  # List[bool], whether the explained formula is in the formula db
 
     def __str__(self):
         out_str = ""
@@ -706,7 +689,6 @@ class CandidateFormula:
     def __init__(self, formula: Formula,
                  ms1_isotope_similarity: Union[float, None] = None,
                  ms2_raw_explanation: Union[MS2Explanation, None] = None,
-                 db_freq: Union[float, None] = None,
                  optimal_formula: bool = False,
                  ms2_refined_explanation: Union[MS2Explanation, None] = None):
         self.formula = formula  # neutral formula
@@ -716,7 +698,6 @@ class CandidateFormula:
         self.estimated_fdr = None  # estimated FDR
         self.ms1_isotope_similarity = ms1_isotope_similarity
         self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during precursor formula annotation
-        self.db_freq = db_freq  # log frequency of the formula in the formula database, otherwise None
         # self.optimal_formula = optimal_formula
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
 
@@ -780,7 +761,7 @@ class MetaFeature:
                         ms2_denoise: bool,
                         rel_int_denoise: bool, rel_int_denoise_cutoff: float,
                         max_noise_frag_ratio: float, max_noise_rsd: float,
-                        max_frag_reserved: int, use_all_frag: bool):
+                        max_frag_reserved: int):
         """
         Data preprocessing.
         :param ppm: whether to use ppm as m/z tolerance
@@ -794,7 +775,6 @@ class MetaFeature:
         :param max_noise_frag_ratio: maximum noise fragment ratio, used for MS2 denoise
         :param max_noise_rsd: maximum noise RSD, used for MS2 denoise
         :param max_frag_reserved: max fragment number reserved, used for MS2 data
-        :param use_all_frag: whether to use all fragments for annotation
         :return: fill in ms1_processed and ms2_processed for each metaFeature
         """
         if self.ms1_raw:
@@ -806,7 +786,7 @@ class MetaFeature:
                                               ms2_tol, ppm, ms2_denoise,
                                               rel_int_denoise, rel_int_denoise_cutoff,
                                               max_noise_frag_ratio,
-                                              max_noise_rsd, max_frag_reserved, use_all_frag)
+                                              max_noise_rsd, max_frag_reserved)
 
     def summarize_result(self) -> dict:
         """
@@ -820,12 +800,7 @@ class MetaFeature:
         if self.candidate_formula_list:
             result['formula_rank_1'] = form_arr_to_str(self.candidate_formula_list[0].formula.array)
             result['estimated_fdr'] = self.candidate_formula_list[0].estimated_fdr
-            if len(self.candidate_formula_list) > 1:
-                result['formula_rank_2'] = form_arr_to_str(self.candidate_formula_list[1].formula.array)
-            if len(self.candidate_formula_list) > 2:
-                result['formula_rank_3'] = form_arr_to_str(self.candidate_formula_list[2].formula.array)
-            if len(self.candidate_formula_list) > 3:
-                result['formula_rank_4'] = form_arr_to_str(self.candidate_formula_list[3].formula.array)
-            if len(self.candidate_formula_list) > 4:
-                result['formula_rank_5'] = form_arr_to_str(self.candidate_formula_list[4].formula.array)
+            for k in range(4):
+                if len(self.candidate_formula_list) > k+1:
+                    result['formula_rank_' + str(k+2)] = form_arr_to_str(self.candidate_formula_list[k+1].formula.array)
         return result
