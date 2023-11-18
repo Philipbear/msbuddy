@@ -27,7 +27,7 @@ from msbuddy.base import MetaFeature, Spectrum
 
 logging.basicConfig(level=logging.INFO)
 
-current_version = 'v0.3.0'
+current_version = 'v0.2.4'
 
 
 def check_download_joblibload(url: str, path):
