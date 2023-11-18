@@ -43,11 +43,13 @@ class Formula:
                  array: np.array,
                  charge: int,
                  mass: Union[float, None] = None,
-                 isotope: int = 0):
+                 isotope: int = 0,
+                 db_freq: Union[float, None] = None):
         self.array = np.int16(array)
         self.charge = charge
         self.dbe = _calc_formula_dbe(array)
         self.isotope = isotope
+        self.db_freq = db_freq  # db_freq is the log frequency of the formula in the database
 
         # fill in mass directly from formula database, otherwise calculate
         if mass is None:

@@ -426,7 +426,8 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     forms = []
     dbfreqs = []
     for k, f in enumerate(formulas):
-        if _element_check(f.array, lower_limit, upper_limit) and _senior_rules(f.array) and _o_p_check(f.array) and _dbe_check(f.array) and _adduct_loss_check(f.array, meta_feature.adduct.loss_formula):
+        if _element_check(f.array, lower_limit, upper_limit) and _senior_rules(f.array) and _o_p_check(
+                f.array) and _dbe_check(f.array) and _adduct_loss_check(f.array, meta_feature.adduct.loss_formula):
             forms.append(f)
             dbfreqs.append(db_freqs[k])
 
@@ -472,15 +473,21 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
         nl_mz = mf.mz - frag_mz
 
         # query mass in formula database
-        frag_form_list, nl_form_list = _query_frag_nl_pair(frag_mz, nl_mz, mf.adduct.pos_mode, na_bool, k_bool,
-                                                           ms2_tol, ppm, db_mode, gd)
-        if frag_form_list is None or nl_form_list is None:
+        frag_form_ls, frag_dbfreq_ls, nl_form_ls, nl_dbfreq_ls = _query_frag_nl_pair(frag_mz, nl_mz, mf.adduct.pos_mode,
+                                                                                     na_bool, k_bool,
+                                                                                     ms2_tol, ppm, db_mode, gd)
+        if not frag_form_ls or not nl_form_ls:
             continue
 
         # formula stitching
         # iterate fragment formula list and neutral loss formula list
-        for frag in frag_form_list:
-            for nl in nl_form_list:
+        for m in range(len(frag_form_ls)):
+            frag = frag_form_ls[m]
+            f_dbfreq = frag_dbfreq_ls[m]
+            for n in range(len(nl_form_ls)):
+                nl = nl_form_ls[n]
+                nl_dbfreq = nl_dbfreq_ls[n]
+
                 # DBE check, sum of DBE should be a non-integer
                 if (frag.dbe + nl.dbe) % 1 == 0 or (frag.dbe + nl.dbe) < 0:
                     continue
@@ -523,7 +530,7 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
 
 def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: bool, k_bool: bool,
                         ms2_tol: float, ppm: bool,
-                        db_mode: int, gd) -> Tuple[Union[List[Formula], None], Union[List[Formula], None]]:
+                        db_mode: int, gd) -> Tuple[List[Formula], List, List[Formula], List]:
     """
     query fragment and neutral loss formulas from database
     :param frag_mz: fragment m/z
@@ -535,27 +542,27 @@ def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: b
     :param ppm: whether to use ppm as the unit of tolerance
     :param db_mode: database mode
     :param gd: global dictionary
-    :return: fragment formula list, neutral loss formula list
+    :return: fragment formula list, frag db freq list, neutral loss formula list, nl db freq list
     """
     if nl_mz < frag_mz:
         # search neutral loss first, for faster search
-        nl_form_list = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
-                                         ms2_tol, ppm, db_mode, gd)
-        if nl_form_list:
-            frag_form_list = query_fragnl_mass(frag_mz, True, pos_mode,
-                                               na_bool, k_bool, ms2_tol, ppm, db_mode, gd)
+        nl_forms, nl_dbfreqs = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
+                                                 ms2_tol, ppm, db_mode, gd)
+        if nl_forms:
+            frag_forms, frag_dbfreqs = query_fragnl_mass(frag_mz, True, pos_mode,
+                                                         na_bool, k_bool, ms2_tol, ppm, db_mode, gd)
         else:
-            return None, None
+            return [], [], [], []
     else:
-        frag_form_list = query_fragnl_mass(frag_mz, True, pos_mode, na_bool, k_bool,
-                                           ms2_tol, ppm, db_mode, gd)
-        if frag_form_list:
-            nl_form_list = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
-                                             ms2_tol, ppm, db_mode, gd)
+        frag_forms, frag_dbfreqs = query_fragnl_mass(frag_mz, True, pos_mode, na_bool, k_bool,
+                                                     ms2_tol, ppm, db_mode, gd)
+        if frag_forms:
+            nl_forms, nl_dbfreqs = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
+                                                     ms2_tol, ppm, db_mode, gd)
         else:
-            return None, None
+            return [], [], [], []
 
-    return frag_form_list, nl_form_list
+    return frag_forms, frag_dbfreqs, nl_forms, nl_dbfreqs
 
 
 def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], existing_cand_str_list: List[str],
@@ -568,7 +575,7 @@ def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], exi
     :param pre_form_arr: precursor formula array
     :param frag_arr: fragment formula array
     :param nl_arr: neutral loss formula array
-    :return: updated candidate space list
+    :return: updated candidate space list, updated existing candidate formula string list
     """
     # check whether the precursor formula is already in the candidate space list
     this_pre_str = form_arr_to_str(pre_form_arr)
