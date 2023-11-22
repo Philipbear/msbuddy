@@ -8,7 +8,6 @@ msbuddy changelog
 - Update deep learning features & models for molecular formula annotation.
 - Update API function 'mass_to_formula', mass errors are output as well. Formula results are sorted by mass errors.
 - Add new API function 'mz_to_formula', for charged ions. Ion type (adduct form) is required.
-- **Note**: this version outputs different results from previous versions.
 
 0.2.1 (2023-10-18)
 - Bug fixes for load_mgf.
@@ -20,7 +19,7 @@ msbuddy changelog
 0.2.3 (2023-11-05)
 - Update export: pd.Dataframe 'append' deprecated.
 
-0.2.4 (2023-11-09)
+0.2.4 (2023-11-09, stable version)
 - Bug fixes for export results in cmd line version.
 - Add version control for downloaded data (loaded DBs).
 
