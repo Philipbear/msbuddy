@@ -22,4 +22,7 @@ msbuddy changelog
 
 0.2.4 (2023-11-09)
 - Bug fixes for export results in cmd line version.
-- Add version control for downloaded data.
+- Add version control for downloaded data (loaded DBs).
+
+0.2.5 (2023-11-22)
+- Update MsbuddyConfig class and PreprocessedMS2 class.

@@ -14,7 +14,6 @@ Description: base classes for msbuddy
 """
 
 import logging
-import math
 from typing import Union, Tuple, List
 
 import numpy as np
@@ -319,7 +318,7 @@ class Adduct:
                         add = add + self.string[add_index[0]:loss_index[0]]
                 add_index.remove(add_index[0])
         if len(add_index) == 0 and len(loss_index) == 0:
-            self._invalid()
+            self._invalid(self.string)
             return
         elif len(add_index) == 0:
             right_index = self.string.index(']')
@@ -332,7 +331,7 @@ class Adduct:
         for index, element in enumerate(loss):
             if element == "-":
                 if loss[len(loss) - 1] == '-' or loss[index + 1] == '-':
-                    self._invalid()
+                    self._invalid(self.string)
                     return
                 elif loss[index + 1].isnumeric():
                     repeat_element = ''
@@ -355,7 +354,7 @@ class Adduct:
         for index2, element2 in enumerate(add):
             if element2 == '+':
                 if add[len(add) - 1] == '+' or add[index2 + 1] == '+':
-                    self._invalid()
+                    self._invalid(self.string)
                     return
                 elif add[index2 + 1].isnumeric():
                     repeat_element2 = ''
@@ -381,6 +380,7 @@ class Adduct:
 
         self.net_formula = Formula(array=net_array, charge=0)
         self.loss_formula = Formula(array=loss_array, charge=0)
+
 
 def check_adduct(adduct_str: str) -> Tuple[bool, bool]:
     """
@@ -524,15 +524,12 @@ class ProcessedMS2:
 
     def __init__(self, mz: float, raw_spec: Spectrum,
                  mz_tol: float, ppm: bool,
-                 denoise: bool,
-                 rel_int_denoise: bool, rel_int_denoise_cutoff: float,
-                 max_noise_frag_ratio: float, max_noise_rsd: float,
-                 max_frag_reserved: int, use_all_frag: bool = False):
+                 rel_int_denoise_cutoff: float,
+                 max_frag_reserved: int):
         if raw_spec:
             self.mz_tol = mz_tol
             self.ppm = ppm
-            self._preprocess(mz, raw_spec, denoise, rel_int_denoise, rel_int_denoise_cutoff,
-                             max_noise_frag_ratio, max_noise_rsd, max_frag_reserved, use_all_frag)
+            self._preprocess(mz, raw_spec, rel_int_denoise_cutoff, max_frag_reserved)
         else:
             self.idx_array = np.array([], dtype=int)
             self.mz_array = np.array([], dtype=np.float32)
@@ -548,17 +545,11 @@ class ProcessedMS2:
         return len(self.mz_array)
 
     def _preprocess(self, mz: float, raw_spec: Spectrum,
-                    denoise: bool, rel_int_denoise: bool, rel_int_denoise_cutoff: float,
-                    max_noise_frag_ratio: float, max_noise_rsd: float, max_frag_reserved: int,
-                    use_all_frag: bool):
+                    rel_int_denoise_cutoff: float, max_frag_reserved: int):
         """
         preprocess MS2 spectrum, denoise (optional), de-precursor
         :param mz: precursor mz
         :param raw_spec: raw ms2 spectrum
-        :param denoise: whether to denoise
-        :param max_noise_frag_ratio: max noise fragment ratio
-        :param max_noise_rsd: max noise RSD
-        :param rel_int_denoise: whether to use relative intensity to denoise
         :param rel_int_denoise_cutoff: relative intensity cutoff
         :param max_frag_reserved: max fragment count reserved
         :return: fill self.idx_array, self.mz_array, self.int_array
@@ -567,60 +558,30 @@ class ProcessedMS2:
         # de-precursor
         self._deprecursor(mz, raw_spec)
 
-        # denoise, only perform when >= 10 peaks left
-        if denoise and len(self.mz_array) >= 10:
-            self._denoise(rel_int_denoise, rel_int_denoise_cutoff, max_noise_frag_ratio, max_noise_rsd)
+        # denoise
+        self._denoise(rel_int_denoise_cutoff)
 
-        # top n frag
-        if not use_all_frag:
-            top_n_frag = _calc_top_n_frag(mz, max_frag_reserved)
-            if top_n_frag < len(self.mz_array):
-                idx = np.argsort(self.int_array)
-                reserved_idx = self.int_array >= self.int_array[idx[-top_n_frag]]
-                self.idx_array = self.idx_array[reserved_idx]
-                self.mz_array = self.mz_array[reserved_idx]
-                self.int_array = self.int_array[reserved_idx]
+        # top n fragment
+        top_n_frag = _calc_top_n_frag(mz, max_frag_reserved)
+        if len(self.mz_array) > top_n_frag:
+            idx = np.argsort(self.int_array)
+            reserved_idx = self.int_array >= self.int_array[idx[-top_n_frag]]
+            self.idx_array = self.idx_array[reserved_idx]
+            self.mz_array = self.mz_array[reserved_idx]
+            self.int_array = self.int_array[reserved_idx]
 
-    def _denoise(self, rel_int_denoise: bool, rel_int_denoise_cutoff: float,
-                 max_noise_frag_ratio: float, max_noise_rsd: float):
+    def _denoise(self, rel_int_denoise_cutoff: float):
         """
         denoise MS2 spectrum
-        :param rel_int_denoise: whether to use relative intensity to denoise
         :param rel_int_denoise_cutoff: relative intensity cutoff
-        :param max_noise_frag_ratio: max noise fragment ratio
-        :param max_noise_rsd: max noise RSD
         :return: fill self.idx_array, self.mz_array, self.int_array
         """
 
         # sort by intensity, increasing
         idx = np.argsort(self.int_array)
-        # sorted_mz = self.mz_array[idx]
         sorted_int = self.int_array[idx]
 
-        if rel_int_denoise:
-            final_int_threshold = rel_int_denoise_cutoff * sorted_int[-1]
-        else:
-            # at least 3 peaks are used to estimate RSD, step 0.02, round to 0.02 to determine m_start
-            m_start = round(3.0 / len(self.mz_array) * 50.0)
-            m_end = math.floor(max_noise_frag_ratio / 0.02) + 1
-            if m_end <= m_start:
-                return
-
-            final_int_threshold = 0.0
-            max_int_threshold = sorted_int[round(max_noise_frag_ratio * len(self.mz_array)) - 1]
-            for m in range(m_start, m_end):
-                if round(m * 0.02 * len(self.mz_array)) < 3:
-                    continue
-                sub_sorted_int = sorted_int[0:round(m * 0.02 * len(self.mz_array))]
-                noise_mean = np.mean(sub_sorted_int)
-                noise_sd = np.std(sub_sorted_int, ddof=1)
-                noise_rsd = noise_sd / noise_mean
-                if noise_rsd <= max_noise_rsd:
-                    tmp_int_threshold = noise_mean + noise_sd * 3.0
-                    if tmp_int_threshold > max_int_threshold:
-                        break
-                    else:
-                        final_int_threshold = tmp_int_threshold
+        final_int_threshold = rel_int_denoise_cutoff * sorted_int[-1]
 
         # refill self.idx_array, self.mz_array, self.int_array
         reserved_idx = self.int_array >= final_int_threshold
@@ -676,11 +637,9 @@ class MS2Explanation:
     """
 
     def __init__(self, idx_array: np.array,
-                 explanation_array: List[Union[Formula, None]],
-                 db_existence_array: Union[np.array, None] = None):
+                 explanation_array: List[Union[Formula, None]]):
         self.idx_array = idx_array  # indices of peaks in MS2 spectrum
         self.explanation_array = explanation_array  # List[Formula], isotope peaks are included
-        self.db_existence_array = db_existence_array  # List[bool], whether the explained formula is in the formula db
 
     def __str__(self):
         out_str = ""
@@ -775,10 +734,8 @@ class MetaFeature:
 
     def data_preprocess(self, ppm: bool, ms1_tol: float, ms2_tol: float,
                         isotope_bin_mztol: float, max_isotope_cnt: int,
-                        ms2_denoise: bool,
-                        rel_int_denoise: bool, rel_int_denoise_cutoff: float,
-                        max_noise_frag_ratio: float, max_noise_rsd: float,
-                        max_frag_reserved: int, use_all_frag: bool):
+                        rel_int_denoise_cutoff: float,
+                        max_frag_reserved: int):
         """
         Data preprocessing.
         :param ppm: whether to use ppm as m/z tolerance
@@ -786,13 +743,8 @@ class MetaFeature:
         :param ms2_tol: m/z tolerance for MS2, used for MS2 data
         :param isotope_bin_mztol: m/z tolerance for isotope bin, used for MS1 isotope pattern
         :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern
-        :param ms2_denoise: whether to denoise MS2 spectrum
-        :param rel_int_denoise: whether to use relative intensity for MS2 denoise
         :param rel_int_denoise_cutoff: relative intensity cutoff for MS2 denoise
-        :param max_noise_frag_ratio: maximum noise fragment ratio, used for MS2 denoise
-        :param max_noise_rsd: maximum noise RSD, used for MS2 denoise
         :param max_frag_reserved: max fragment number reserved, used for MS2 data
-        :param use_all_frag: whether to use all fragments for annotation
         :return: fill in ms1_processed and ms2_processed for each metaFeature
         """
         if self.ms1_raw:
@@ -801,10 +753,7 @@ class MetaFeature:
                                               ms1_tol, ppm, isotope_bin_mztol, max_isotope_cnt)
         if self.ms2_raw:
             self.ms2_processed = ProcessedMS2(self.mz, self.ms2_raw,
-                                              ms2_tol, ppm, ms2_denoise,
-                                              rel_int_denoise, rel_int_denoise_cutoff,
-                                              max_noise_frag_ratio,
-                                              max_noise_rsd, max_frag_reserved, use_all_frag)
+                                              ms2_tol, ppm, rel_int_denoise_cutoff, max_frag_reserved)
 
     def summarize_result(self) -> dict:
         """

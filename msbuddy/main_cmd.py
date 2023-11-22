@@ -22,7 +22,7 @@ from msbuddy.main import Msbuddy, MsbuddyConfig
 
 
 def main():
-    parser = argparse.ArgumentParser(description="msbuddy command line interface.")
+    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.2.5)")
     parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('-usi', type=str, help='A single USI string.')
     parser.add_argument('-csv', type=str,
@@ -69,20 +69,10 @@ def main():
                         help='m/z tolerance for isotope binning, used for MS1 isotope pattern, in Dalton. Default: 0.02.')
     parser.add_argument('-max_isotope_cnt', type=int, default=4,
                         help='Maximum isotope count, used for MS1 isotope pattern. Default: 4.')
-    parser.add_argument('-disable_ms2_denoise', action='store_false',
-                        help='Store false. Whether to disable denoising MS2 spectrum. Default: MS2 denoise is enabled.')
-    parser.add_argument('-disable_rel_int_denoise', action='store_false',
-                        help='Store false. Whether to disable relative intensity for MS2 denoise. Default: relative intensity denoise is enabled.')
     parser.add_argument('-rel_int_denoise_cutoff', type=float, default=0.01,
                         help='Relative intensity cutoff, used for MS2 denoise. Default: 0.01.')
-    parser.add_argument('-max_noise_frag_ratio', type=float, default=0.90,
-                        help='Maximum noise fragment ratio, used for MS2 denoise. Default: 0.90.')
-    parser.add_argument('-max_noise_rsd', type=float, default=0.20,
-                        help='Maximum noise RSD, used for MS2 denoise. Default: 0.20.')
     parser.add_argument('-max_frag_reserved', type=int, default=50,
                         help='Max fragment number reserved, used for MS2 data.')
-    parser.add_argument('-use_all_frag', action='store_true',
-                        help='Store true. Whether to use all fragments for annotation; by default, only top N fragments are used. top N is a function of precursor mass. Default: Not to use all fragments.')
 
     args = parser.parse_args()
 
@@ -99,11 +89,7 @@ def main():
         f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
         i_range=(args.i_min, args.i_max),
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
-        ms2_denoise=~args.disable_ms2_denoise,
-        rel_int_denoise=~args.disable_rel_int_denoise,
-        rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_noise_frag_ratio=args.max_noise_frag_ratio,
-        max_noise_rsd=args.max_noise_rsd, max_frag_reserved=args.max_frag_reserved,
-        use_all_frag=args.use_all_frag
+        rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_frag_reserved=args.max_frag_reserved
     )
 
     if args.output:

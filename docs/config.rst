@@ -26,8 +26,7 @@ We would recommend considering parallel processing for large datasets (e.g. >100
         c_range=(0, 100), # range of carbon numbers to consider
         h_range=(0, 150), # range of hydrogen numbers to consider
         ... # other parameters
-        ms2_denoise=True, # denoise MS2 spectra
-        ...)
+        )
 
     # create a Msbuddy object with the specified configuration
     msb_engine = Msbuddy(msb_config)
@@ -44,7 +43,7 @@ The following mass tolerances will be used for each MS instrument:
 ``fticr``: ms1 tolerance = 2 ppm, ms2 tolerance = 5 ppm
 
 
-If you do need to use a different mass tolerance, you can set the ``ppm``, ``ms1_tol`` and ``ms2_tol`` parameters in the :class:`msbuddy.MsbuddyConfig` to the desired values, but the annotation performance may be affected.
+If you do need to use a different mass tolerance, you can set the ``ppm``, ``ms1_tol`` and ``ms2_tol`` parameters in the :class:`msbuddy.MsbuddyConfig` to the desired values.
 
 .. code-block:: python
 

@@ -1,12 +1,10 @@
 # test msbuddy
-# msbuddy ver 0.2.0
+# ver 0.2.5
 
 def test_main():
     from msbuddy import Msbuddy, MsbuddyConfig
     # instantiate a MsbuddyConfig object
-    msb_config = MsbuddyConfig(# highly recommended to specify
-                               ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
-                               # whether to consider halogen atoms FClBrI
+    msb_config = MsbuddyConfig(ms_instr='orbitrap',
                                halogen=False)
 
     # instantiate a Msbuddy object
@@ -82,33 +80,10 @@ def test_subformula():
                                        ms2_tol=0.02, ppm=False, dbe_cutoff=-1.0)
     print(len(subformla_list))
 
-#
-# # test parallel computing
-# if __name__ == '__main__':
-      # from msbuddy import Msbuddy, MsbuddyConfig
-#     # instantiate a MsbuddyConfig object
-#     msb_config = MsbuddyConfig(ms_instr='orbitrap', # supported: "qtof", "orbitrap" and "fticr"
-#                                                     # highly recommended to specify
-#                                halogen=False, # whether to consider halogen atoms FClBrI
-#                                parallel=True, n_cpu=4)
-#
-#     # instantiate a Msbuddy object
-#     msb_engine = Msbuddy(msb_config)
-#
-#     # load data, here we use a mgf file as an example
-#     msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
-#                          'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
-#
-#     # annotate molecular formula
-#     msb_engine.annotate_formula()
-#
-#     # retrieve the annotation result summary
-#     result = msb_engine.get_summary()
-
 
 if __name__ == '__main__':
     test_main()
-    # test_formula()
-    # test_mass_formula()
-    # test_pred_formula_feasibility()
-    # test_subformula()
+    test_formula()
+    test_mass_formula()
+    test_pred_formula_feasibility()
+    test_subformula()

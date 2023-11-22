@@ -8,8 +8,12 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
    from msbuddy import Msbuddy, MsbuddyConfig
 
    # create a MsbuddyConfig object
-   msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "qtof", "orbitrap" and "fticr"
+   msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "qtof", "orbitrap", "fticr" or None
+                                                   # custom MS1 and MS2 tolerance will be used if None
                                                    # highly recommended to fill in the instrument type
+                              ppm=True,  # use ppm for mass tolerance
+                              ms1_tol=5,  # MS1 tolerance in ppm or Da
+                              ms2_tol=10,  # MS2 tolerance in ppm or Da
                               halogen=True,
                               timeout_secs=200)
 

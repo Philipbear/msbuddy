@@ -27,7 +27,7 @@ from msbuddy.base import MetaFeature, Spectrum
 
 logging.basicConfig(level=logging.INFO)
 
-current_version = 'v0.2.4'
+current_db_version = 'v0.2.4'
 
 
 def check_download_joblibload(url: str, path):
@@ -58,21 +58,21 @@ def init_db() -> dict:
     global_dict = dict()
 
     # load common_loss_db, common_frag_db
-    db_name = 'common_db_' + current_version + '.joblib'
+    db_name = 'common_db_' + current_db_version + '.joblib'
     global_dict['common_loss_db'], global_dict['common_frag_db'] = (
         check_download_joblibload(
             'https://drive.google.com/uc?id=1mxUeHNYC_XEbDzKAeax2m5Qc-CpqPPzL',
             data_path / db_name))
 
     # load ml_a
-    db_name = 'ml_a_' + current_version + '.joblib'
+    db_name = 'ml_a_' + current_db_version + '.joblib'
     global_dict['model_a'], global_dict['model_a_mean_arr'], global_dict['model_a_std_arr'] = (
         check_download_joblibload(
             'https://drive.google.com/uc?id=19-htf-iifTUpAMOSB9DhFs0XkqqW1Gxm',
             data_path / db_name))
 
     # load ml_b
-    db_name = 'ml_b_' + current_version + '.joblib'
+    db_name = 'ml_b_' + current_db_version + '.joblib'
     global_dict['model_b_ms1_ms2'], global_dict['model_b_noms1_ms2'], global_dict['model_b_ms1_noms2'], global_dict[
         'model_b_noms1_noms2'], global_dict['model_b_mean_arr'], global_dict['model_b_std_arr'] = (
         check_download_joblibload(
@@ -80,7 +80,7 @@ def init_db() -> dict:
             data_path / db_name))
 
     # formula_db
-    db_name = 'formula_db_' + current_version + '.joblib'
+    db_name = 'formula_db_' + current_db_version + '.joblib'
     basic_db, halogen_db = (
         check_download_joblibload(
             'https://drive.google.com/uc?id=17UjBzBe5LBzT_c8lEE-6PVBJO6xP3WSv',

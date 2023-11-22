@@ -22,7 +22,7 @@ from msbuddy.main import Msbuddy, MsbuddyConfig
 
 
 def main():
-    parser = argparse.ArgumentParser(description="msbuddy on Nextflow.")
+    parser = argparse.ArgumentParser(description="msbuddy on Nextflow. version 0.2.5")
     # parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     # parser.add_argument('-usi', type=str, help='A single USI string.')
     # parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column (no header row).')
@@ -66,21 +66,10 @@ def main():
                         help='m/z tolerance for isotope binning, used for MS1 isotope pattern, in Dalton. Default: 0.02.')
     parser.add_argument('-max_isotope_cnt', type=int, default=4,
                         help='Maximum isotope count, used for MS1 isotope pattern. Default: 4.')
-    parser.add_argument('-ms2_denoise', type=int, default=1,
-                        help='Whether to denoise MS2 spectrum. Default: MS2 denoise is enabled.')
-    parser.add_argument('-rel_int_denoise',  type=int, default=1,
-                        help='Whether to use relative intensity for MS2 denoise. Default: True.')
     parser.add_argument('-rel_int_denoise_cutoff', type=float, default=0.01,
                         help='Relative intensity cutoff, used for MS2 denoise. Default: 0.01.')
-    parser.add_argument('-max_noise_frag_ratio', type=float, default=0.90,
-                        help='Maximum noise fragment ratio, used for MS2 denoise. Default: 0.90.')
-    parser.add_argument('-max_noise_rsd', type=float, default=0.20,
-                        help='Maximum noise RSD, used for MS2 denoise. Default: 0.20.')
     parser.add_argument('-max_frag_reserved', type=int, default=50,
                         help='Max fragment number reserved, used for MS2 data.')
-    parser.add_argument('-use_all_frag',  type=int, default=0,
-                        help='Whether to use all fragments for annotation; by default, only top N fragments are used, '
-                             'top N is a function of precursor mass. Default: False.')
     parser.add_argument('-parallel', '-p', type=int, default=0,
                         help='Whether to use parallel computing. Default: parallel computing is disabled.')
     parser.add_argument('-n_cpu', type=int, default=1, help='Number of CPUs to use. Default: 1.')
@@ -89,7 +78,7 @@ def main():
 
     ms_instr = None if args.ms_instr == 'others' else args.ms_instr
 
-    n_cpu = args.n_cpu if args.n_cpu <= 10 else 10
+    n_cpu = args.n_cpu if args.n_cpu <= 8 else 8
 
     # run msbuddy
     # create a MsbuddyConfig object
@@ -106,11 +95,7 @@ def main():
         f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
         i_range=(args.i_min, args.i_max),
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
-        ms2_denoise=True if args.ms2_denoise == 1 else False,
-        rel_int_denoise=True if args.rel_int_denoise == 1 else False,
-        rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_noise_frag_ratio=args.max_noise_frag_ratio,
-        max_noise_rsd=args.max_noise_rsd, max_frag_reserved=args.max_frag_reserved,
-        use_all_frag=True if args.use_all_frag == 1 else False
+        rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_frag_reserved=args.max_frag_reserved
     )
 
     import os

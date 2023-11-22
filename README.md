@@ -28,7 +28,7 @@ The minimum requirement for an msbuddy query is a single _m/z_ value and its ion
 pip install msbuddy
 ```
 
-To install a specific version, see PyPI [release history](https://pypi.org/project/msbuddy/#history).
+See PyPI [release history](https://pypi.org/project/msbuddy/#history).
 
 ## Python usage 
 
@@ -41,9 +41,11 @@ All the configurations are specified in the [`MsbuddyConfig`](https://msbuddy.re
 from msbuddy import Msbuddy, MsbuddyConfig
 
 # instantiate a MsbuddyConfig object
-msb_config = MsbuddyConfig(# highly recommended to specify
-                           ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
-                           # whether to consider halogen atoms FClBrI
+msb_config = MsbuddyConfig(ms_instr='orbitrap', # supported: "qtof", "orbitrap", "fticr" or None
+                                                # custom MS1 and MS2 tolerance will be used if None
+                           ppm=True,  # use ppm for mass tolerance
+                           ms1_tol=5,  # MS1 tolerance in ppm or Da
+                           ms2_tol=10,  # MS2 tolerance in ppm or Da
                            halogen=False)
 
 # instantiate a Msbuddy object
@@ -58,7 +60,8 @@ msb_engine.annotate_formula()
 # retrieve the annotation result summary
 result = msb_engine.get_summary()
 ```
-See [demo mgf file](https://github.com/Philipbear/msbuddy/tree/main/demo). One of the following fields is recommended to be included, which will be used as the query identifier: `TITLE`, `SPECTRUMID`, or `SPECTRUM_ID`.
+See [demo mgf file](https://github.com/Philipbear/msbuddy/tree/main/demo).
+One of the following fields is recommended to be included, which will be used as the query identifier: `TITLE`, `SPECTRUMID`, or `SPECTRUM_ID`.
 
 
 MS/MS spectra can be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2) if they are publicly available:

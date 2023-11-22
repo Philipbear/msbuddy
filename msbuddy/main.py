@@ -65,13 +65,10 @@ class MsbuddyConfig:
                  br_range: Tuple[int, int] = (0, 10),
                  i_range: Tuple[int, int] = (0, 10),
                  isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4,
-                 ms2_denoise: bool = True,
-                 rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01,
-                 max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20,
-                 max_frag_reserved: int = 50,
-                 use_all_frag: bool = False):
+                 rel_int_denoise_cutoff: float = 0.01,
+                 max_frag_reserved: int = 50):
         """
-        :param ms_instr: mass spectrometry instrument, one of "orbitrap, "fticr", "qtof". Highly recommended to use this for mass tolerance settings.
+        :param ms_instr: mass spectrometry instrument, one of "orbitrap, "fticr", "qtof".
         :param ppm: whether ppm is used for m/z tolerance
         :param ms1_tol: MS1 m/z tolerance
         :param ms2_tol: MS2 m/z tolerance
@@ -93,13 +90,8 @@ class MsbuddyConfig:
         :param i_range: I range
         :param isotope_bin_mztol: m/z tolerance for isotope bin, used for MS1 isotope pattern
         :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern
-        :param ms2_denoise: whether to denoise MS2 spectrum
-        :param rel_int_denoise: whether to use relative intensity for MS2 denoise
         :param rel_int_denoise_cutoff: relative intensity cutoff, used for MS2 denoise
-        :param max_noise_frag_ratio: maximum noise fragment ratio, used for MS2 denoise
-        :param max_noise_rsd: maximum noise RSD, used for MS2 denoise
         :param max_frag_reserved: max fragment number reserved, used for MS2 data
-        :param use_all_frag: whether to use all fragments for annotation; by default, only top N fragments are used, top N is a function of precursor mass
         """
         if ms_instr is None:
             self.ppm = ppm
@@ -117,7 +109,7 @@ class MsbuddyConfig:
                 self.ms1_tol = 10
                 self.ms2_tol = 20
         else:
-            raise ValueError("Invalid mass spectrometry instrument. Please choose from 'orbitrap', 'fticr' and 'qtof'.")
+            raise ValueError("Invalid MS instrument. Please choose from 'orbitrap', 'fticr', 'qtof' and None.")
 
         self.db_mode = 0 if not halogen else 1
         self.parallel = parallel
@@ -174,34 +166,17 @@ class MsbuddyConfig:
         else:
             self.max_isotope_cnt = max_isotope_cnt
 
-        self.ms2_denoise = ms2_denoise
-        self.rel_int_denoise = rel_int_denoise
-
-        if rel_int_denoise_cutoff <= 0 or rel_int_denoise_cutoff >= 1:
-            self.rel_int_denoise_cutoff = 0.01
+        if rel_int_denoise_cutoff < 0 or rel_int_denoise_cutoff >= 1:
+            self.rel_int_denoise_cutoff = 0.0
             logging.warning(f"Relative intensity denoise cutoff is set to {self.rel_int_denoise_cutoff}.")
         else:
             self.rel_int_denoise_cutoff = rel_int_denoise_cutoff
-
-        if max_noise_frag_ratio <= 0 or max_noise_frag_ratio >= 1:
-            self.max_noise_frag_ratio = 0.90
-            logging.warning(f"Maximum noise fragment ratio is set to {self.max_noise_frag_ratio}.")
-        else:
-            self.max_noise_frag_ratio = max_noise_frag_ratio
-
-        if max_noise_rsd <= 0 or max_noise_rsd >= 1:
-            self.max_noise_rsd = 0.20
-            logging.warning(f"Maximum noise RSD is set to {self.max_noise_rsd}.")
-        else:
-            self.max_noise_rsd = max_noise_rsd
 
         if max_frag_reserved <= 0:
             self.max_frag_reserved = 50
             logging.warning(f"Maximum fragment reserved is set to {self.max_frag_reserved}.")
         else:
             self.max_frag_reserved = max_frag_reserved
-
-        self.use_all_frag = use_all_frag
 
 
 class Msbuddy:
@@ -219,9 +194,8 @@ class Msbuddy:
 
     def __init__(self, config: Union[MsbuddyConfig, None] = None):
 
-        tqdm.write("msbuddy: molecular formula annotation in MS-based small molecule analysis. "
-                   "Developed and maintained by Shipei Xing.")
-        tqdm.write("DB initializing...")
+        tqdm.write("msbuddy: molecular formula annotation for MS-based small molecule analysis.")
+        tqdm.write("Developed and maintained by Shipei Xing.")
 
         if config is None:
             self.config = MsbuddyConfig()  # default configuration
@@ -569,14 +543,12 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
     """
     # data preprocessing
     mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                       ps.isotope_bin_mztol, ps.max_isotope_cnt, ps.ms2_denoise, ps.rel_int_denoise,
-                       ps.rel_int_denoise_cutoff, ps.max_noise_frag_ratio, ps.max_noise_rsd,
-                       ps.max_frag_reserved, ps.use_all_frag)
+                       ps.isotope_bin_mztol, ps.max_isotope_cnt,
+                       ps.rel_int_denoise_cutoff, ps.max_frag_reserved)
     # generate candidate formula space
     gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
                           ps.max_isotope_cnt, global_dict)
     return mf
-
 
 if __name__ == '__main__':
 
@@ -587,7 +559,7 @@ if __name__ == '__main__':
     msb_config = MsbuddyConfig(# highly recommended to specify
                                ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
                                # whether to consider halogen atoms FClBrI
-                               halogen=False)
+                               halogen=True)
 
     # instantiate a Msbuddy object
     msb_engine = Msbuddy(msb_config)

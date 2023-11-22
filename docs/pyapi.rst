@@ -237,7 +237,7 @@ Example Usage:
    engine.clear_data()
 
 
-.. class:: msbuddy.MsbuddyConfig (ms_instr: str = 'orbitrap', ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 500, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, ms2_denoise: bool = True, rel_int_denoise: bool = True, rel_int_denoise_cutoff: float = 0.01, max_noise_frag_ratio: float = 0.90, max_noise_rsd: float = 0.20, max_frag_reserved: int = 50, use_all_frag: bool = False)
+.. class:: msbuddy.MsbuddyConfig (ms_instr: str = None, ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 500, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, rel_int_denoise_cutoff: float = 0.01, max_frag_reserved: int = 50)
 
    It is a class to store all the configurations for **msbuddy**.
 
@@ -262,13 +262,8 @@ Example Usage:
    :param i_range: Tuple[int, int]. The range of iodine atoms. Default is (0, 10).
    :param isotope_bin_mztol: float. The mass tolerance for MS1 isotope binning, in Da. Default is 0.02 Da.
    :param max_isotope_cnt: int. The maximum number of isotopes to consider. Default is 4.
-   :param ms2_denoise: bool. If True, the MS/MS spectra are denoised (see details in `our paper <https://doi.org/10.1038/s41592-023-01850-x>`_). Default is True.
-   :param rel_int_denoise: bool. If True, the MS/MS spectra are denoised based on relative intensity. Default is True.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising. Default is 0.01 (1%).
-   :param max_noise_frag_ratio: float. The maximum ratio of noise fragments to total fragments. Default is 0.90 (90%).
-   :param max_noise_rsd: float. The maximum relative standard deviation of noise fragments. Default is 0.20 (20%).
    :param max_frag_reserved: int. The maximum number of fragments to reserve. Default is 50.
-   :param use_all_frag: bool. If True, all fragments are used. If False, only the top fragments are used. Default is False.
 
 Example Usage:
 
@@ -412,7 +407,7 @@ Example usage:
 
 
 
-.. class:: msbuddy.base.ProcessedMS2 (mz: float, raw_spec: Spectrum, mz_tol: float, ppm: bool, denoise: bool, rel_int_denoise: bool, rel_int_denoise_cutoff: float, max_noise_frag_ratio: float, max_noise_rsd: float, max_frag_reserved: int, use_all_frag: bool = False)
+.. class:: msbuddy.base.ProcessedMS2 (mz: float, raw_spec: Spectrum, mz_tol: float, ppm: bool, denoise: bool, rel_int_denoise_cutoff: float, max_frag_reserved: int)
 
     A class to represent a processed MS/MS spectrum, for MS/MS preprocessing (deprecursor, denoise, reserve top N fragments).
 
@@ -420,13 +415,8 @@ Example usage:
    :param raw_spec: :class:`msbuddy.base.Spectrum` object. Raw MS1 spectrum.
    :param mz_tol: float. The mass tolerance for MS1 spectra.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
-   :param denoise: bool. If True, the MS/MS spectrum is denoised (see details in `our paper <https://doi.org/10.1038/s41592-023-01850-x>`_).
-   :param rel_int_denoise: bool. If True, the MS/MS spectrum is denoised based on relative intensity.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising.
-   :param max_noise_frag_ratio: float. The maximum ratio of noise fragments to total fragments.
-   :param max_noise_rsd: float. The maximum relative standard deviation of noise fragments.
    :param max_frag_reserved: int. The maximum number of fragments to reserve.
-   :param use_all_frag: bool. If True, all fragments are used. If False, only the top fragments are used.
 
    .. attribute:: mz_tol
 

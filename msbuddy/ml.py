@@ -399,7 +399,6 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
         # check db existence of all explained fragments
         pos_mode = meta_feature.adduct.pos_mode
         db_existed = np.array([check_formula_existence(f, pos_mode, gd) for f in frag_form_arr])
-        # ms2_explanation.db_existence_array = db_existed
 
         # explained and db existed fragment ion count percentage
         exp_db_frag_cnt_pct = np.sum(db_existed) / len(valid_idx_arr)

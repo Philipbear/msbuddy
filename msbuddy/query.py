@@ -500,7 +500,6 @@ def convert_neutral(form_arr: np.array, pos_mode: bool) -> np.array:
     return form_arr
 
 
-
 @njit
 def common_frag_from_array(form_arr: np.array, frag_db: np.array) -> bool:
     """
