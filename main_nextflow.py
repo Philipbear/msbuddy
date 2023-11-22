@@ -76,7 +76,7 @@ def main():
 
     args = parser.parse_args()
 
-    ms_instr = None if args.ms_instr == 'others' else args.ms_instr
+    ms_instr = None if args.ms_instr == 'None' else args.ms_instr
 
     n_cpu = args.n_cpu if args.n_cpu <= 8 else 8
 
