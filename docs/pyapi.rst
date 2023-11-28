@@ -241,7 +241,7 @@ Example Usage:
 
    It is a class to store all the configurations for **msbuddy**.
 
-   :param ms_instr: str. The mass spectrometry instrument type, used for automated mass tolerance setting. Supported instruments are "orbitrap", "fticr" and "qtof". Default is None.
+   :param ms_instr: str. The mass spectrometry instrument type, used for automated mass tolerance setting. Supported instruments are "orbitrap", "fticr" and "qtof". Default is None. If None, parameters ``ppm``, ``ms1_tol`` and ``ms2_tol`` will be used.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da. Default is True.
    :param ms1_tol: float. The mass tolerance for MS1 spectra. Default is 5 ppm.
    :param ms2_tol: float. The mass tolerance for MS/MS spectra. Default is 10 ppm.
