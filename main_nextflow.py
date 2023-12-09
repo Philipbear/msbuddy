@@ -22,7 +22,7 @@ from msbuddy.main import Msbuddy, MsbuddyConfig
 
 
 def main():
-    parser = argparse.ArgumentParser(description="msbuddy on Nextflow. version 0.2.5")
+    parser = argparse.ArgumentParser(description="msbuddy on Nextflow.")
     # parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     # parser.add_argument('-usi', type=str, help='A single USI string.')
     # parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column (no header row).')
