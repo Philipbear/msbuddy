@@ -175,11 +175,23 @@ class Adduct:
 
     # return true for valid characters in the string (except the common abbr.)
     def _check_valid_character(self) -> bool:
-        valid_character = ["-", "+", "C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S",
-                           "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+        valid_elements = {"-", "+", "C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"}
+
         m_index = self.string.index('M')
         right_index = self.string.index(']')
-        return all([valid in valid_character for valid in self.string[m_index + 1: right_index]])
+        segment = self.string[m_index + 1: right_index]
+
+        i = 0
+        while i < len(segment):
+            # Check for two-character elements
+            if i < len(segment) - 1 and segment[i:i + 2] in valid_elements:
+                i += 2
+            # Check for one-character elements and digits
+            elif segment[i] in valid_elements or segment[i].isdigit():
+                i += 1
+            else:
+                return False
+        return True
 
     # return default value for invalid adduct
     def _invalid(self, string, report_invalid: bool = False):
@@ -274,6 +286,7 @@ class Adduct:
         self.string = self.string.replace("ac", "CH3COO")
         self.string = self.string.replace("AC", "CH3COO")
         self.string = self.string.replace("TFA", "CF3COOH")
+        self.string = self.string.replace("MeOH", "CH4O")
 
     def _calc_loss_and_net_formula(self):
         i = 1
