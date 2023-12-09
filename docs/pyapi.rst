@@ -342,12 +342,13 @@ Example usage:
 
 
 
-.. class:: msbuddy.base.Adduct (string: Union[str, None], pos_mode: bool)
+.. class:: msbuddy.base.Adduct (string: Union[str, None], pos_mode: bool, report_invalid: bool)
 
     A class to represent an adduct type. If a invalid string is given, the default adduct type will be used.
 
    :param optional string: str. The adduct type. Default is [M+H]+ for positive mode and [M-H]- for negative mode.
    :param pos_mode: bool. True for positive mode and False for negative mode.
+   :param report_invalid: bool. If True, an error will be raised if the input adduct type cannot be parsed. If False, the default adduct type will be used. Default is False.
 
 
    .. attribute:: string

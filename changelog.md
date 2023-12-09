@@ -25,3 +25,6 @@ msbuddy changelog
 
 0.2.5 (2023-11-22)
 - Update MsbuddyConfig class and PreprocessedMS2 class.
+
+0.2.6 (2023-12-09)
+- Update base class "Adduct".

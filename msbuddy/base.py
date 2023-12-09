@@ -133,7 +133,8 @@ class Adduct:
 
     def __init__(self,
                  string: Union[str, None],
-                 pos_mode: bool):
+                 pos_mode: bool,
+                 report_invalid: bool = False):
         """
         :param string: adduct string, e.g. [M+H]+
         :param pos_mode: True for positive mode, False for negative mode
@@ -145,25 +146,27 @@ class Adduct:
 
         self.pos_mode = pos_mode
 
-        if self._check_valid_style():
+        if self._check_common():
+            pass
+        elif self._check_valid_style():
             self._exchange()
-            if self._check_common():
-                pass
+            if self._check_valid_character():
+                self._calc_m()
+                self._calc_charge()
+                self._calc_loss_and_net_formula()
             else:
-                if self._check_valid_character():
-                    self._calc_m()
-                    self._calc_charge()
-                    self._calc_loss_and_net_formula()
-                else:
-                    self._invalid(string)
+                self._invalid(string, report_invalid)
         else:
-            self._invalid(string)
+            self._invalid(string, report_invalid)
 
     def __str__(self):
-        return f"{self.string} has charge {self.charge}, and m is {self.m}"
+        return f"{self.string}; charge: {self.charge}; m: {self.m}"
 
-    # return true for valid input style (have M, [], -/+ at last, and at least one add/loss item)
     def _check_valid_style(self) -> bool:
+        """
+        check whether the adduct string is valid
+        :return: True for valid, False for invalid
+        """
         if self.string.count(']') == 1 and self.string.count('[') == 1 and 'M' in self.string:
             if ("+" in self.string[len(self.string) - 1] and self.pos_mode) \
                     or ("-" in self.string[len(self.string) - 1] and not self.pos_mode):
@@ -179,20 +182,23 @@ class Adduct:
         return all([valid in valid_character for valid in self.string[m_index + 1: right_index]])
 
     # return default value for invalid adduct
-    def _invalid(self, string):
-        if self.pos_mode:
-            logging.warning("Invalid adduct: " + string + ", set to [M+H]+")
-            self.string = "[M+H]+"
-            self.charge = +1
-            self.loss_formula = None
-            self.net_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
+    def _invalid(self, string, report_invalid: bool = False):
+        if report_invalid:
+            raise ValueError("Adduct cannot be parsed: " + string)
         else:
-            logging.warning("Invalid adduct: " + string + ", set to [M-H]-")
-            self.string = "[M-H]-"
-            self.charge = -1
-            self.loss_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
-            self.net_formula = Formula(array=[0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
-        self.m = 1
+            if self.pos_mode:
+                logging.warning("Adduct cannot be parsed: " + string + ", set to [M+H]+")
+                self.string = "[M+H]+"
+                self.charge = +1
+                self.loss_formula = None
+                self.net_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
+            else:
+                logging.warning("Adduct cannot be parsed: " + string + ", set to [M-H]-")
+                self.string = "[M-H]-"
+                self.charge = -1
+                self.loss_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
+                self.net_formula = Formula(array=[0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
+            self.m = 1
 
     def _check_common(self) -> bool:
         if self.pos_mode and self.string in ['[M+H]+', '[M+NH4]+', '[M+Na]+', '[M+K]+', '[M+H-H2O]+', '[M-H2O+H]+']:
@@ -234,31 +240,23 @@ class Adduct:
 
     def _calc_charge(self):
         if self.pos_mode:
-            if self.string[len(self.string) - 2] == "]":
+            _substr = self.string.split(']')[1].replace('+', '')
+            if _substr == '':
                 self.charge = +1
             else:
-                try:
-                    self.charge = int(self.string[len(self.string) - 2])
-                except ValueError:
-                    self.charge = +1
+                self.charge = int(_substr)
         else:
-            if self.string[len(self.string) - 2] == "]":
+            _substr = self.string.split(']')[1].replace('-', '')
+            if _substr == '':
                 self.charge = -1
             else:
-                try:
-                    self.charge = -int(self.string[len(self.string) - 2])
-                except ValueError:
-                    self.charge = -1
+                self.charge = -int(_substr)
 
     def _calc_m(self):
-        count = 0
-        for element in self.string:
-            if element != "M":
-                count = count + 1
-            else:
-                break
-        if self.string[count - 1].isnumeric():
-            self.m = self.string[count - 1]
+        idx = self.string.index('M')
+        _substr = self.string[idx - 1]
+        if _substr.isnumeric():
+            self.m = int(_substr)
         else:
             self.m = 1
 
@@ -294,7 +292,7 @@ class Adduct:
                 loss_index.append(i)
             else:
                 pass
-            i = i + 1
+            i += 1
 
         # get the losing and adding elements
         while len(add_index) != 0 and len(loss_index) != 0:
@@ -306,7 +304,6 @@ class Adduct:
                         loss = loss + self.string[loss_index[0]:add_index[0]]
                     else:
                         loss = loss + self.string[loss_index[0]:loss_index[1]]
-
                 loss_index.remove(loss_index[0])
             else:
                 if len(add_index) == 1:
