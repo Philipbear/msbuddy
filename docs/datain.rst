@@ -87,7 +87,7 @@ We first show an example of importing an MS/MS spectrum only.
    engine.add_data([metafeature])
 
 
-Note that for :class:`msbuddy.base.MetaFeature` class, the ``identifier``, ``mz`` and ``charge`` attributes are required, while attributes ``rt``, ``ms1`` and ``ms2`` are optional. If they are not provided, ``None`` will be assigned.
+Note that for :class:`msbuddy.base.MetaFeature` class, the ``identifier``, ``mz`` and ``charge`` attributes are required; attributes ``rt``, ``ms1`` and ``ms2`` are optional. If they are not provided, ``None`` will be assigned.
 
 A more complicated example with both MS1 isotope pattern and MS/MS is shown below.
 
