@@ -21,7 +21,7 @@ import pandas as pd
 from msbuddy.main import Msbuddy, MsbuddyConfig
 
 
-def arg_parser():
+def main():
     parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.2.8)")
     parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('-usi', type=str, help='A single USI string.')
@@ -75,10 +75,7 @@ def arg_parser():
                         help='Max fragment number reserved, used for MS2 data.')
 
     args = parser.parse_args()
-    return args
 
-
-def msbuddy_main(args):
     # run msbuddy
     # create a MsbuddyConfig object
     msb_config = MsbuddyConfig(
@@ -127,19 +124,4 @@ def msbuddy_main(args):
 
 
 if __name__ == '__main__':
-    args = arg_parser()
-    msbuddy_main(args)
-
-    # # test
-    # args = argparse.Namespace(mgf='/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf',
-    #                           output='/Users/shipei/Documents/projects/msbuddy/demo/msbuddy_output',
-    #                           ms_instr='orbitrap', use_Da=False, ms1_tol=5, ms2_tol=10, halogen=True,
-    #                           parallel=False, n_cpu=-1,
-    #                           timeout_secs=300, batch_size=1000, top_n_candidate=500,
-    #                           c_min=0, c_max=80, h_min=0, h_max=150, n_min=0, n_max=20, o_min=0, o_max=30, p_min=0,
-    #                           p_max=10, s_min=0, s_max=15, f_min=0, f_max=20, cl_min=0, cl_max=15,
-    #                           br_min=0, br_max=10, i_min=0, i_max=10,
-    #                           isotope_bin_mztol=0.02, max_isotope_cnt=4,
-    #                           rel_int_denoise_cutoff=0.01, max_frag_reserved=50,
-    #                           details=True)
-    # msbuddy_main(args)
+    main()
