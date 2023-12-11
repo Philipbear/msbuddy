@@ -28,3 +28,6 @@ msbuddy changelog
 
 0.2.6 / 0.2.7 (2023-12-09)
 - Update base class "Adduct".
+
+0.2.8 (2023-12-10)
+- Bug fix for load_mgf (now can load metabolite features with MS1 and MS2 spectra using the same identifier).

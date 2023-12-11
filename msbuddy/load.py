@@ -151,12 +151,20 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     continue
                 # if the same identifier does not exist, create a new MetaFeature
                 else:
-                    mf = MetaFeature(mz=precursor_mz,
-                                     charge=charge,
-                                     rt=rt,
-                                     adduct=adduct_str,
-                                     ms2=Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None,
-                                     identifier=identifier)
+                    if ms2_spec:
+                        mf = MetaFeature(mz=precursor_mz,
+                                         charge=charge,
+                                         rt=rt,
+                                         adduct=adduct_str,
+                                         ms2=Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None,
+                                         identifier=identifier)
+                    else:
+                        mf = MetaFeature(mz=precursor_mz,
+                                         charge=charge,
+                                         rt=rt,
+                                         adduct=adduct_str,
+                                         ms1=Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None,
+                                         identifier=identifier)
                     meta_feature_list.append(mf)
                     cnt += 1
                 continue

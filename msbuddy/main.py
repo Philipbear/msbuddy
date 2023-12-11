@@ -550,37 +550,38 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
                           ps.max_isotope_cnt, global_dict)
     return mf
 
-if __name__ == '__main__':
 
-    import time
-    start = time.time()
-
-    # instantiate a MsbuddyConfig object
-    msb_config = MsbuddyConfig(# highly recommended to specify
-                               ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
-                               # whether to consider halogen atoms FClBrI
-                               halogen=True)
-
-    # instantiate a Msbuddy object
-    msb_engine = Msbuddy(msb_config)
-
-    # you can load multiple USIs at once
-    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
-
-    # cmd version
-    # msb_engine.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/msbuddy/demo/msbuddy_output'), True)
-
-    # annotate molecular formula
-    msb_engine.annotate_formula()
-
-    # retrieve the annotation result summary
-    result = msb_engine.get_summary()
-
-    end = time.time()
-    print(end - start)
-
-    # print(result)
-    form_top1 = [r['formula_rank_1'] for r in result]
-    form_est_fdr = [r['estimated_fdr'] for r in result]
-    print(form_top1)
-    print(form_est_fdr)
+# if __name__ == '__main__':
+#
+#     import time
+#     start = time.time()
+#
+#     # instantiate a MsbuddyConfig object
+#     msb_config = MsbuddyConfig(# highly recommended to specify
+#                                ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+#                                # whether to consider halogen atoms FClBrI
+#                                halogen=True)
+#
+#     # instantiate a Msbuddy object
+#     msb_engine = Msbuddy(msb_config)
+#
+#     # you can load multiple USIs at once
+#     msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
+#
+#     # cmd version
+#     msb_engine.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/msbuddy/demo/msbuddy_output'), True)
+#
+#     # annotate molecular formula
+#     msb_engine.annotate_formula()
+#
+#     # retrieve the annotation result summary
+#     result = msb_engine.get_summary()
+#
+#     end = time.time()
+#     print(end - start)
+#
+#     # print(result)
+#     form_top1 = [r['formula_rank_1'] for r in result]
+#     form_est_fdr = [r['estimated_fdr'] for r in result]
+#     print(form_top1)
+#     print(form_est_fdr)
