@@ -31,7 +31,7 @@ from msbuddy.utils import read_formula
 warnings.filterwarnings('ignore')
 
 
-def _gen_ml_a_feature_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
+def _gen_arr_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
     """
     generate three arrays for ML model A
     :param buddy_data: List of MetaFeature objects
@@ -128,6 +128,24 @@ def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     return out
 
 
+def _fill_ml_a_arr_in_batch_data(batch_data, feature_arr) -> None:
+    """
+    fill ML features in batch data
+    :param batch_data: List of MetaFeature objects
+    :param feature_arr: 2D numpy array of ML features
+    :return: None
+    """
+    cnt = 0
+    for mf in batch_data:
+        if not mf.candidate_formula_list:
+            continue
+        # fill in ML features for each candidate formula
+        for cf in mf.candidate_formula_list:
+            cf.ml_a_array = feature_arr[cnt, :]
+            cnt += 1
+    return
+
+
 def _z_norm_ml_a_feature(feature_arr: np.array, gd) -> np.array:
     """
     z-normalize ML features for model A
@@ -170,7 +188,7 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     batch_data = buddy_data[batch_start_idx:batch_end_idx]
 
     # generate three arrays from buddy data
-    cand_form_arr, dbe_arr, mass_arr = _gen_ml_a_feature_from_buddy_data(batch_data)
+    cand_form_arr, dbe_arr, mass_arr = _gen_arr_from_buddy_data(batch_data)
 
     # if no candidate formula, return
     if cand_form_arr.size == 0:
@@ -178,6 +196,10 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
 
     # generate ML feature array
     feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
+    # fill in batch_data
+    _fill_ml_a_arr_in_batch_data(batch_data, feature_arr)
+
+    # z-normalize ML features
     feature_arr = _z_norm_ml_a_feature(feature_arr, gd)
     # predict formula feasibility
     prob_arr = _predict_ml_a(feature_arr, gd)
