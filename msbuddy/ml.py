@@ -77,9 +77,9 @@ def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
                      3 * all_cf_arr[:, 7] + 2 * all_cf_arr[:, 9] + all_cf_arr[:, 1] + hal_arr
     senior_1_2_arr = all_cf_arr[:, 7] + all_cf_arr[:, 10] + all_cf_arr[:, 1] + hal_arr
 
-    # halogen to hydrogen ratio, fill 0 if hydrogen = 0
+    # halogen to H ratio, fill 0 if H = 0
     hal_h_arr = np.zeros(len(hal_arr))
-    # if hydrogen > 0
+    # if H > 0
     h_bool_arr = all_cf_arr[:, 1] > 0
     hal_h_arr[h_bool_arr] = hal_arr[h_bool_arr] / all_cf_arr[h_bool_arr, 1]
 
@@ -89,14 +89,12 @@ def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     p_bool_arr = all_cf_arr[:, 10] > 0
     o_p_arr[p_bool_arr] = all_cf_arr[p_bool_arr, 9] / all_cf_arr[p_bool_arr, 10] / 3
 
-    # # DBE binary, 1 if DBE > 0, 0 if DBE = 0
-    # dbe_binary_arr = np.clip(dbe_arr, 0, 1)
-
     # generate output array
     out = np.empty((len(all_cf_arr), 31))
     # populate output array
     for i in range(len(all_cf_arr)):
         ta = ta_arr[i]
+        # if C > 0
         if all_cf_arr[i, 0] > 0:
             out[i, :] = [all_cf_arr[i, 0], all_cf_arr[i, 1], all_cf_arr[i, 7],
                          all_cf_arr[i, 9], all_cf_arr[i, 10], all_cf_arr[i, 11],
@@ -157,14 +155,13 @@ def _predict_ml_a(feature_arr: np.array, gd) -> np.array:
 
 
 def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: int,
-                             top_n_candidate: int, db_mode: int, gd) -> None:
+                             db_mode: int, gd) -> None:
     """
     predict formula feasibility using ML model a, retain top candidate formulas
     this function is performed in batch
     :param buddy_data: buddy data
     :param batch_start_idx: batch start index
     :param batch_end_idx: batch end index
-    :param top_n_candidate: number of top candidate formulas to retain
     :param db_mode: whether halogen is considered
     :param gd: global dependencies
     :return: None
@@ -194,11 +191,11 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
         for candidate_formula in meta_feature.candidate_formula_list:
             candidate_formula.ml_a_prob = prob_arr[cnt]
             # if candidate formula is in the database, set ml_a_prob
-            if candidate_formula.db_existed and prob_arr[cnt] < 0.5:
-                candidate_formula.ml_a_prob = 0.5
+            if candidate_formula.db_existed:
+                candidate_formula.ml_a_prob = 1
             cnt += 1
 
-        top_n = _calc_top_n_candidate(meta_feature.mz, top_n_candidate, db_mode)
+        top_n = _calc_top_n_candidate(meta_feature.mz, db_mode)
         # sort candidate formula list by formula feasibility, descending
         # retain top candidate formulas
         meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
@@ -212,18 +209,17 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     return
 
 
-def _calc_top_n_candidate(mz: float, max_n: int, db_mode: int) -> int:
+def _calc_top_n_candidate(mz: float, db_mode: int) -> int:
     """
     calculate the number of top candidate formulas to retain
     :param mz: precursor m/z
-    :param max_n: max number of top candidate formulas to retain
     :param db_mode: whether halogen is considered
     :return: number of top candidate formulas to retain
     """
     if db_mode == 0:
-        return min(max_n, int(mz * mz / 4000) + 50)
+        return int(mz * mz / 4000) + 50
     else:
-        return min(max_n, int(mz * mz / 2000) + 50)
+        return int(mz * mz / 2000) + 50
 
 
 def pred_form_feasibility_single(formula: Union[str, np.array], gd) -> Union[float, None]:

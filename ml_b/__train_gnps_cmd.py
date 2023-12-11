@@ -139,7 +139,7 @@ def pred_formula_feasibility_batch(data, top_n, db_mode, shared_data_dict, batch
     for n in tqdm(range(n_batch)):
         start_idx = n * batch_size
         end_idx = min((n + 1) * batch_size, len(data))
-        pred_formula_feasibility(data, start_idx, end_idx, top_n, db_mode, shared_data_dict)
+        pred_formula_feasibility(data, start_idx, end_idx, db_mode, shared_data_dict)
 
     return data
 

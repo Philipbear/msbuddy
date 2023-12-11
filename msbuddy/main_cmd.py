@@ -22,7 +22,7 @@ from msbuddy.main import Msbuddy, MsbuddyConfig
 
 
 def main():
-    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.2.9)")
+    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.3.0)")
     parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('-usi', type=str, help='A single USI string.')
     parser.add_argument('-csv', type=str,
@@ -44,7 +44,6 @@ def main():
     parser.add_argument('-timeout_secs', '-t', type=int, default=300, help='Timeout in seconds. Default: 300.')
     parser.add_argument('-batch_size', '-bs', type=int, default=1000,
                         help='Batch size. Default: 1000. A larger batch size needs more memory, but is faster.')
-    parser.add_argument('-top_n_candidate', type=int, default=500, help='Max top N candidates to keep. Default: 500.')
     parser.add_argument('-c_min', type=int, default=0, help='Minimum number of C atoms. Default: 0.')
     parser.add_argument('-c_max', type=int, default=80, help='Maximum number of C atoms. Default: 80.')
     parser.add_argument('-h_min', type=int, default=0, help='Minimum number of H atoms. Default: 0.')
@@ -83,7 +82,7 @@ def main():
         ppm=~args.use_Da,
         ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
         parallel=args.parallel, n_cpu=args.n_cpu,
-        timeout_secs=args.timeout_secs, batch_size=args.batch_size, top_n_candidate=args.top_n_candidate,
+        timeout_secs=args.timeout_secs, batch_size=args.batch_size,
         c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
         o_range=(args.o_min, args.o_max), p_range=(args.p_min, args.p_max), s_range=(args.s_min, args.s_max),
         f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),

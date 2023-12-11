@@ -32,7 +32,7 @@ from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_fe
 from msbuddy.query import query_neutral_mass, query_precursor_mass
 from msbuddy.utils import form_arr_to_str, FormulaResult
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 
 # global variable containing shared data
 global shared_data_dict
@@ -53,7 +53,6 @@ class MsbuddyConfig:
                  n_cpu: int = -1,
                  timeout_secs: float = 300,
                  batch_size: int = 1000,
-                 top_n_candidate: int = 500,
                  c_range: Tuple[int, int] = (0, 80),
                  h_range: Tuple[int, int] = (0, 150),
                  n_range: Tuple[int, int] = (0, 20),
@@ -77,7 +76,6 @@ class MsbuddyConfig:
         :param n_cpu: number of CPU cores used for parallel processing; if -1, all available cores will be used
         :param timeout_secs: timeout in seconds
         :param batch_size: batch size for formula annotation; a larger batch size takes more memory
-        :param top_n_candidate: top N formula candidates reserved prior to subformula assignment
         :param c_range: C range
         :param h_range: H range
         :param n_range: N range
@@ -125,19 +123,13 @@ class MsbuddyConfig:
             self.timeout_secs = 300
         self.timeout_secs = timeout_secs
         if self.parallel:
-            self.timeout_secs += 20  # add 20 seconds for db initialization
+            self.timeout_secs += 30  # add 30 seconds for db initialization
 
         if batch_size <= 1:
             self.batch_size = 1000
             logging.warning(f"Batch size is set to {self.batch_size}.")
         else:
             self.batch_size = int(batch_size)
-
-        if top_n_candidate <= 1:
-            self.top_n_candidate = 500
-            logging.warning(f"Top N candidate is set to {self.top_n_candidate}.")
-        else:
-            self.top_n_candidate = int(top_n_candidate)
 
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
                                    0, n_range[0], 0, o_range[0], p_range[0], s_range[0]], dtype=np.int16)
@@ -407,8 +399,7 @@ class Msbuddy:
 
         # ml_a feature generation + prediction, retain top candidates
         tqdm.write("Formula feasibility assessment...")
-        pred_formula_feasibility(self.data, start_idx, end_idx, self.config.top_n_candidate,
-                                 self.config.db_mode, shared_data_dict)
+        pred_formula_feasibility(self.data, start_idx, end_idx, self.config.db_mode, shared_data_dict)
 
         # assign subformula annotation
         self._assign_subformula_annotation(start_idx, end_idx)
@@ -551,37 +542,36 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
     return mf
 
 
-# if __name__ == '__main__':
-#
-#     import time
-#     start = time.time()
-#
-#     # instantiate a MsbuddyConfig object
-#     msb_config = MsbuddyConfig(# highly recommended to specify
-#                                ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
-#                                # whether to consider halogen atoms FClBrI
-#                                halogen=True)
-#
-#     # instantiate a Msbuddy object
-#     msb_engine = Msbuddy(msb_config)
-#
-#     # you can load multiple USIs at once
-#     msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
-#
-#     # cmd version
-#     msb_engine.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/msbuddy/demo/msbuddy_output'), True)
-#
-#     # annotate molecular formula
-#     msb_engine.annotate_formula()
-#
-#     # retrieve the annotation result summary
-#     result = msb_engine.get_summary()
-#
-#     end = time.time()
-#     print(end - start)
-#
-#     # print(result)
-#     form_top1 = [r['formula_rank_1'] for r in result]
-#     form_est_fdr = [r['estimated_fdr'] for r in result]
-#     print(form_top1)
-#     print(form_est_fdr)
+if __name__ == '__main__':
+
+    import time
+    start = time.time()
+
+    # instantiate a MsbuddyConfig object
+    msb_config = MsbuddyConfig(# highly recommended to specify
+                               ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+                               # whether to consider halogen atoms FClBrI
+                               halogen=True)
+
+    # instantiate a Msbuddy object
+    msb_engine = Msbuddy(msb_config)
+
+    # you can load multiple USIs at once
+    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi/chagas_neg.mgf')
+
+    # cmd version
+    msb_engine.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi/msbuddy_output_1'), True)
+
+    # # annotate molecular formula
+    # msb_engine.annotate_formula()
+    # # retrieve the annotation result summary
+    # result = msb_engine.get_summary()
+
+    end = time.time()
+    print(end - start)
+    #
+    # # print(result)
+    # form_top1 = [r['formula_rank_1'] for r in result]
+    # form_est_fdr = [r['estimated_fdr'] for r in result]
+    # print(form_top1)
+    # print(form_est_fdr)
