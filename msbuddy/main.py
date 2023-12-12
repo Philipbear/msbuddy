@@ -398,14 +398,12 @@ class Msbuddy:
         self._preprocess_and_generate_candidate_formula(start_idx, end_idx)
 
         # ml_a feature generation + prediction, retain top candidates
-        tqdm.write("Formula feasibility assessment...")
         pred_formula_feasibility(self.data, start_idx, end_idx, self.config.db_mode, shared_data_dict)
 
         # assign subformula annotation
         self._assign_subformula_annotation(start_idx, end_idx)
 
         # ml_b feature generation + prediction
-        tqdm.write("Formula probability prediction...")
         pred_formula_prob(self.data, start_idx, end_idx, self.config, shared_data_dict)
 
         # FDR calculation

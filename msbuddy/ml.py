@@ -184,6 +184,8 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     :param gd: global dependencies
     :return: None
     """
+
+    tqdm.write("Formula feasibility prediction: Generating ML features...")
     # batch data
     batch_data = buddy_data[batch_start_idx:batch_end_idx]
 
@@ -201,6 +203,8 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
 
     # z-normalize ML features
     feature_arr = _z_norm_ml_a_feature(feature_arr, gd)
+
+    tqdm.write("ML prediction in progress...")
     # predict formula feasibility
     prob_arr = _predict_ml_a(feature_arr, gd)
 
@@ -217,10 +221,10 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
                 candidate_formula.ml_a_prob = 1
             cnt += 1
 
-        top_n = _calc_top_n_candidate(meta_feature.mz, db_mode)
         # sort candidate formula list by formula feasibility, descending
-        # retain top candidate formulas
         meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
+        # retain top candidate formulas
+        top_n = _calc_top_n_candidate(meta_feature.mz, db_mode)
         if len(meta_feature.candidate_formula_list) > top_n:
             meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:top_n]
 
@@ -348,9 +352,9 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     pos_mode = 1 if this_adduct.charge > 0 else 0
 
     # generate output array
-    out = np.concatenate((np.array([pos_mode]), form_feature_arr,  # 1 + 4
-                          np.array([ms1_iso_sim, cand_form.ml_a_prob, mz_error_log_p, pre_dbe, pre_h2c]),
-                          ms2_feature_arr))
+    out = np.concatenate((np.array([pos_mode]), form_feature_arr, cand_form.ml_a_array,  # 1 + 2 + 31
+                          np.array([ms1_iso_sim, mz_error_log_p, pre_dbe, pre_h2c]),  # 4
+                          ms2_feature_arr))  # 14
 
     return out
 
@@ -366,21 +370,21 @@ def _calc_formula_feature(f: np.array) -> np.array:
     ele_sum_1 = f[2] + f[3] + f[4] + f[5] + f[6] + f[8]
     # sum of elements other than C, H, O, N
     ele_sum_2 = ele_sum_1 + f[10] + f[11]
-    # # sum of elements other than C, H, O
-    # ele_sum_3 = ele_sum_2 + f[7]
 
     # cho = 1 if ele_sum_3 == 0 else 0
     chon = 1 if ele_sum_2 == 0 else 0
     chonps = 1 if ele_sum_1 == 0 else 0
 
-    # ele_exist_arr: np array of elements existence (0 or 1)
-    arr = np.clip(f, 0, 1)
-    # hetero_atom_category
-    hetero_atom_category = arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7] + arr[8] + arr[10] + arr[11]
-    # hal_atom_category
-    hal_atom_category = arr[2] + arr[3] + arr[4] + arr[5]
+    # # ele_exist_arr: np array of elements existence (0 or 1)
+    # arr = np.clip(f, 0, 1)
+    # # hetero_atom_category
+    # hetero_atom_category = arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7] + arr[8] + arr[10] + arr[11]
+    # # hal_atom_category
+    # hal_atom_category = arr[2] + arr[3] + arr[4] + arr[5]
 
-    return np.array([chon, chonps, hetero_atom_category, hal_atom_category])
+    # return np.array([chon, chonps, hetero_atom_category, hal_atom_category])
+
+    return np.array([chon, chonps])
 
 
 def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: float,
@@ -601,6 +605,7 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
     ms1_tol = config.ms1_tol
     ms2_tol = config.ms2_tol
 
+    tqdm.write("Candidate formula ranking: Generating ML features...")
     # batch data
     batch_data = buddy_data[batch_start_idx:batch_end_idx]
 
@@ -623,11 +628,12 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
             else:
                 group_dict[3].append(i)
 
+    tqdm.write("ML prediction in progress...")
     # predict formula probability
     for i in range(4):
         if not group_dict[i]:
             continue
-        # predict formula probability, raw output from MLP classifier
+        # predict formula probability
         prob_arr = _predict_ml_b([batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
         # add prediction results to candidate formula objects in the list
         cnt = 0

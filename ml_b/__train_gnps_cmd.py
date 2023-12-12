@@ -134,7 +134,7 @@ def load_gnps_data(path):
     joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
 
 
-def pred_formula_feasibility_batch(data, top_n, db_mode, shared_data_dict, batch_size):
+def pred_formula_feasibility_batch(data, db_mode, shared_data_dict, batch_size):
     n_batch = int(np.ceil(len(data) / batch_size))
     for n in tqdm(range(n_batch)):
         start_idx = n * batch_size
@@ -156,7 +156,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(qtof_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
-        new_data = pred_formula_feasibility_batch(buddy.data, 800, 1, shared_data_dict, 1000)
+        new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
         joblib.dump(new_data, 'gnps_qtof_mf_ls_cand_2.joblib')
     elif instru == 'orbi':
         orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
@@ -167,7 +167,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(orbi_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
-        new_data = pred_formula_feasibility_batch(buddy.data, 800, 1, shared_data_dict, 1000)
+        new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
         joblib.dump(new_data, 'gnps_orbi_mf_ls_cand_2.joblib')
     else:  # FT-ICR
         ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
@@ -178,7 +178,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(ft_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
-        new_data = pred_formula_feasibility_batch(buddy.data, 800, 1, shared_data_dict, 1000)
+        new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
         joblib.dump(new_data, 'gnps_ft_mf_ls_cand_2.joblib')
 
     return shared_data_dict
