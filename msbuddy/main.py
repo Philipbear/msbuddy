@@ -199,8 +199,8 @@ class Msbuddy:
 
         self.data = None  # List[MetabolicFeature]
 
-    def update_config(self, new_config: MsbuddyConfig):
-        self.config = new_config
+    def update_config(self, **kwargs):
+        self.config = MsbuddyConfig(**kwargs)
         global shared_data_dict  # Declare it as a global variable
         shared_data_dict = init_db()  # database initialization
 
@@ -531,8 +531,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
     :return: MetaFeature object
     """
     # data preprocessing
-    mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                       ps.isotope_bin_mztol, ps.max_isotope_cnt,
+    mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.isotope_bin_mztol, ps.max_isotope_cnt,
                        ps.rel_int_denoise_cutoff, ps.max_frag_reserved)
     # generate candidate formula space
     gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,

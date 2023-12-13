@@ -5,7 +5,7 @@ import sys
 import joblib
 import numpy as np
 from brainpy import isotopic_variants
-from imblearn.over_sampling import SMOTE
+# from imblearn.over_sampling import SMOTE
 from scipy.stats import norm
 from sklearn import metrics
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -161,9 +161,8 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
     elif instru == 'orbi':
         orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
         # update parameters
-        buddy.update_config(MsbuddyConfig(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=n_cpu,
-                                          halogen=True, batch_size=999999,
-                                          timeout_secs=timeout_secs))
+        buddy.update_config(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=n_cpu,
+                            halogen=True, batch_size=999999, timeout_secs=timeout_secs)
         buddy.add_data(orbi_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
@@ -172,9 +171,8 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
     else:  # FT-ICR
         ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
         # update parameters
-        buddy.update_config(MsbuddyConfig(ms1_tol=2, ms2_tol=5, parallel=True, n_cpu=n_cpu,
-                                          halogen=True, batch_size=999999,
-                                          timeout_secs=timeout_secs))
+        buddy.update_config(ms1_tol=2, ms2_tol=5, parallel=True, n_cpu=n_cpu,
+                            halogen=True, batch_size=999999, timeout_secs=timeout_secs)
         buddy.add_data(ft_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')

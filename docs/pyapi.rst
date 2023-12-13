@@ -171,11 +171,11 @@ Classes
 
       bool. True if the database is loaded.
 
-   .. method:: update_config (config: MsbuddyConfig)
+   .. method:: update_config (config: **kwargs)
 
       Update the configuration for the :class:`msbuddy.Msbuddy` object.
 
-      :param param_set: :class:`msbuddy.MsbuddyConfig` object. The parameter set to be updated.
+      :param config: **kwargs, attributes in :class:`msbuddy.MsbuddyConfig` class.
       :returns: None. The ``config`` attribute of the :class:`msbuddy.Msbuddy` object will be updated.
 
    .. method:: load_usi (usi_list: Union[str, List[str]], adduct_list: Union[None, str, List[str]] = None)
@@ -235,6 +235,9 @@ Example Usage:
 
    # clear data
    engine.clear_data()
+
+   # update configuration
+   engine.update_config(ms_instr="fticr", halogen=True, timeout_secs=100)
 
 
 .. class:: msbuddy.MsbuddyConfig (ms_instr: str = None, ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 1000, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, rel_int_denoise_cutoff: float = 0.01, max_frag_reserved: int = 50)

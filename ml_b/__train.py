@@ -1,4 +1,8 @@
+import argparse
+import numpy as np
 from numba import njit
+import joblib
+from scipy.stats import norm
 from msbuddy.base import read_formula, MetaFeature, Spectrum, Formula, CandidateFormula
 from msbuddy.main import Msbuddy, MsbuddyConfig, _gen_subformula
 from msbuddy.load import init_db
@@ -10,7 +14,7 @@ import lightgbm as lgb
 from sklearn.model_selection import train_test_split, GroupKFold
 from sklearn.metrics import ndcg_score
 
-from __train_gnps_cmd import *
+from __train_gnps_cmd import load_gnps_data, calc_gnps_data, send_hotmail_email
 
 
 @njit
@@ -199,20 +203,6 @@ def combine_and_clean_X_y():
     joblib.dump(group_arr, 'gnps_group_arr.joblib')
 
 
-# def smote():
-#     """
-#     SMOTE
-#     """
-#     X_arr = joblib.load('gnps_X_arr.joblib')
-#     y_arr = joblib.load('gnps_y_arr.joblib')
-#
-#     smote = SMOTE(random_state=0)
-#     X_arr, y_arr = smote.fit_resample(X_arr, y_arr)
-#
-#     joblib.dump(X_arr, 'gnps_X_arr_SMOTE.joblib')
-#     joblib.dump(y_arr, 'gnps_y_arr_SMOTE.joblib')
-
-
 def train_model(ms1_iso, ms2_spec, pswd):
     """
     train ML model B
@@ -265,17 +255,13 @@ def train_model(ms1_iso, ms2_spec, pswd):
         [test_preds[i:i + test_group_size] for i in range(0, len(test_preds), test_group_size)],
         k=1
     )
-    print(f'Final NDCG@1 score on test data: {test_ndcg_score}')
+    out_str = f'Final NDCG@1 score on test data: {test_ndcg_score}'
 
     # Save the model
     model_filename = 'ranking_model.joblib'
     joblib.dump(gbm, model_filename)
 
-    # send email
-    send_hotmail_email("job finished", 'job finished', "s1xing@health.ucsd.edu",
-                       smtp_password=pswd)
-
-    return
+    return out_str
 
 
 def parse_args():
@@ -287,7 +273,7 @@ def parse_args():
     parser.add_argument('-calc', action='store_true', help='calculate gnps data')
     parser.add_argument('-gen', action='store_true', help='generate training data')
     parser.add_argument('-ms', type=str, help='instrument type')
-    parser.add_argument('-cpu', type=int, default=16, help='number of CPU cores to use')
+    parser.add_argument('-cpu', type=int, default=10, help='number of CPU cores to use')
     parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
     parser.add_argument('-ms1', action='store_true', help='ms1 iso similarity included')
     parser.add_argument('-ms2', action='store_true', help='MS/MS spec included')
@@ -302,28 +288,34 @@ if __name__ == '__main__':
 
     start_time = time.time()
     __package__ = "msbuddy"
+
     # parse arguments
-    args = parse_args()
+    # args = parse_args()
 
     # test here
-    # args = argparse.Namespace(calc=True, cpu=1, ms1=False, ms2=True)
+    args = argparse.Namespace(calc=True, ms='qtof', cpu=1, to=600,
+                              ms1=False, ms2=True)
 
     # load training data
-    load_gnps_data('gnps_ms2db_preprocessed_20231005.joblib')
+    # load_gnps_data('gnps_ms2db_preprocessed_20231005.joblib')
+
+    email_body = ''
 
     if args.calc:
-        calc_gnps_data(args.cpu, args.to, args.ms)
+        calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
         assign_subform_gen_training_data(instru=args.ms)
 
     elif args.gen:
         combine_and_clean_X_y()
-        # z_norm_smote()  # z-normalization and SMOTE
+        # z_norm()  # z-normalization
 
     else:  # train model
-        train_model(args.ms1, args.ms2, args.p)
+        email_body = train_model(args.ms1, args.ms2, args.p)
 
     time_elapsed = time.time() - start_time
     time_elapsed = time_elapsed / 3600
 
-    send_hotmail_email("Server job finished", "Job finished in " + str(time_elapsed) + " hrs",
+    email_body += '\n\nTime elapsed: ' + str(time_elapsed) + ' hrs'
+
+    send_hotmail_email("Job finished", email_body,
                        "s1xing@health.ucsd.edu", smtp_password=args.p)
