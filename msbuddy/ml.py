@@ -338,7 +338,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     # precursor charged formula
     pre_charged_arr = this_form.array * this_adduct.m + this_adduct.net_formula.array
     pre_dbe = this_form.dbe * this_adduct.m - this_adduct.m + this_adduct.net_formula.dbe
-    pre_h2c = pre_charged_arr[1] / pre_charged_arr[0] if pre_charged_arr[0] > 0 else 2  # no carbon, assign 2
+    pre_h2c = pre_charged_arr[1] / pre_charged_arr[0] if pre_charged_arr[0] > 0 else 0  # no carbon, assign 0
     # chon, chonps, hetero_atom_category, hal_atom_category
     form_feature_arr = _calc_formula_feature(this_form.array)
 
@@ -352,8 +352,8 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     pos_mode = 1 if this_adduct.charge > 0 else 0
 
     # generate output array
-    out = np.concatenate((np.array([pos_mode]), form_feature_arr, cand_form.ml_a_array,  # 1 + 2 + 31
-                          np.array([ms1_iso_sim, mz_error_log_p, pre_dbe, pre_h2c]),  # 4
+    out = np.concatenate((np.array([ms1_iso_sim, mz_error_log_p]),  # 2
+                          np.array([pos_mode]), form_feature_arr, cand_form.ml_a_array[8:],  # 1 + 2 + 31 - 8
                           ms2_feature_arr))  # 14
 
     return out
@@ -568,8 +568,8 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     if X_arr.size == 0:
         return np.array([])
 
-    # z-normalize
-    X_arr[:, 5:] = (X_arr[:, 5:] - gd['model_b_mean_arr']) / gd['model_b_std_arr']
+    # # z-normalize
+    # X_arr[:, 5:] = (X_arr[:, 5:] - gd['model_b_mean_arr']) / gd['model_b_std_arr']
 
     # load model
     if group_no == 0:
@@ -579,10 +579,10 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         X_arr = X_arr[:, :-14]  # remove MS2-related features
     elif group_no == 2:
         model = gd['model_b_noms1_ms2']
-        X_arr = np.delete(X_arr, 5, axis=1)  # remove MS1 isotope similarity
+        X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
     else:
         model = gd['model_b_noms1_noms2']
-        X_arr = np.delete(X_arr, 5, axis=1)  # remove MS1 isotope similarity
+        X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
         X_arr = X_arr[:, :-14]  # remove MS2-related features
 
     # predict formula probability
