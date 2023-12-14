@@ -163,4 +163,6 @@ cython_debug/
 /manuscript/
 /results/
 
+/gnps_lib/
+
 .pypirc

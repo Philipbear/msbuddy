@@ -1,5 +1,8 @@
 import argparse
+import json
+from brainpy import isotopic_variants
 import numpy as np
+from tqdm import tqdm
 from numba import njit
 import joblib
 from scipy.stats import norm
@@ -14,7 +17,119 @@ import lightgbm as lgb
 from sklearn.model_selection import train_test_split, GroupKFold
 from sklearn.metrics import ndcg_score
 
-from __train_gnps_cmd import load_gnps_data, calc_gnps_data, send_hotmail_email
+from __train_gnps_cmd import send_hotmail_email, sim_ms1_iso_pattern
+
+
+def load_gnps_data(path):
+    """
+    load GNPS library
+    :param path: path to GNPS library
+    """
+    db = joblib.load(path)
+
+    # test
+    print('db size: ' + str(len(db)))
+
+    qtof_mf_ls = []  # metaFeature
+    orbi_mf_ls = []
+    ft_mf_ls = []
+    qtof_gt_ls = []  # ground truth formula
+    orbi_gt_ls = []
+    ft_gt_ls = []
+    for i in range(len(db)):
+        # parse formula info
+        formula = db['formula'][i]
+        gt_form_arr = read_formula(formula)
+
+        # skip if formula is not valid
+        if gt_form_arr is None:
+            continue
+
+        # calculate theoretical mass
+        theo_mass = Formula(gt_form_arr, 0).mass
+        theo_mz = theo_mass + 1.007276 if db['ionmode'][i] == 'positive' else theo_mass - 1.007276
+
+        # simulate ms1 isotope pattern
+        ms1_gt_arr, ms1_sim_arr = sim_ms1_iso_pattern(gt_form_arr)
+        # create a numpy array of ms1 mz, with length equal to the length of ms1_sim_arr, step size = 1.003355
+        ms1_mz_arr = np.array([theo_mz + x * 1.003355 for x in range(len(ms1_sim_arr))])
+
+        # parse ms2 info
+        ms2_mz = np.array(json.loads(db['ms2mz'][i]))
+        ms2_int = np.array(json.loads(db['ms2int'][i]))
+
+        mf = MetaFeature(identifier=i,
+                         mz=theo_mz,
+                         charge=1 if db['ionmode'][i] == 'positive' else -1,
+                         ms1=Spectrum(ms1_mz_arr, ms1_sim_arr),
+                         ms2=Spectrum(ms2_mz, ms2_int))
+
+        # mz tolerance, depends on the instrument
+        if db['instrument'][i] == 'qtof':
+            qtof_gt_ls.append(gt_form_arr)  # add to ground truth formula list
+            qtof_mf_ls.append(mf)
+        elif db['instrument'][i] == 'orbitrap':
+            orbi_gt_ls.append(gt_form_arr)  # add to ground truth formula list
+            orbi_mf_ls.append(mf)
+        else:  # FT-ICR
+            ft_gt_ls.append(gt_form_arr)  # add to ground truth formula list
+            ft_mf_ls.append(mf)
+
+    # save to joblib file one by one
+    joblib.dump(qtof_mf_ls, 'gnps_qtof_mf_ls.joblib')
+    joblib.dump(orbi_mf_ls, 'gnps_orbi_mf_ls.joblib')
+    joblib.dump(ft_mf_ls, 'gnps_ft_mf_ls.joblib')
+    joblib.dump(qtof_gt_ls, 'gnps_qtof_gt_ls.joblib')
+    joblib.dump(orbi_gt_ls, 'gnps_orbi_gt_ls.joblib')
+    joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
+
+
+def pred_formula_feasibility_batch(data, db_mode, shared_data_dict, batch_size):
+    n_batch = int(np.ceil(len(data) / batch_size))
+    for n in tqdm(range(n_batch)):
+        start_idx = n * batch_size
+        end_idx = min((n + 1) * batch_size, len(data))
+        pred_formula_feasibility(data, start_idx, end_idx, db_mode, shared_data_dict)
+
+    return data
+
+
+def calc_gnps_data(n_cpu, timeout_secs, instru):
+    # main
+    param_set = MsbuddyConfig(ms1_tol=10, ms2_tol=20, parallel=True, n_cpu=n_cpu, batch_size=999999,
+                              halogen=True, timeout_secs=timeout_secs)
+    buddy = Msbuddy(param_set)
+    shared_data_dict = init_db()  # database initialization
+
+    if instru == 'qtof':
+        qtof_mf_ls = joblib.load('gnps_qtof_mf_ls.joblib')
+        buddy.add_data(qtof_mf_ls)
+        buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
+        joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
+        new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
+        joblib.dump(new_data, 'gnps_qtof_mf_ls_cand_2.joblib')
+    elif instru == 'orbi':
+        orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
+        # update parameters
+        buddy.update_config(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=n_cpu,
+                            halogen=True, batch_size=999999, timeout_secs=timeout_secs)
+        buddy.add_data(orbi_mf_ls)
+        buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
+        joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
+        new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
+        joblib.dump(new_data, 'gnps_orbi_mf_ls_cand_2.joblib')
+    else:  # FT-ICR
+        ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
+        # update parameters
+        buddy.update_config(ms1_tol=2, ms2_tol=5, parallel=True, n_cpu=n_cpu,
+                            halogen=True, batch_size=999999, timeout_secs=timeout_secs)
+        buddy.add_data(ft_mf_ls)
+        buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
+        joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
+        new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
+        joblib.dump(new_data, 'gnps_ft_mf_ls_cand_2.joblib')
+
+    return shared_data_dict
 
 
 @njit
@@ -22,13 +137,13 @@ def _calc_ml_a_array(form_arr, mass, dbe):
     # calculate ML features
     hal = np.sum(form_arr[2:6])  # sum of halogen atoms
     ta = np.sum(form_arr)  # total number of atoms
-    f_exist = np.clip(form_arr[4], 0, 1)  # whether F exists
-    cl_exist = np.clip(form_arr[3], 0, 1)  # whether Cl exists
-    br_exist = np.clip(form_arr[2], 0, 1)  # whether Br exists
-    i_exist = np.clip(form_arr[5], 0, 1)  # whether I exists
+    f_exist = 1 if 0 <= form_arr[4] <= 1 else 0
+    cl_exist = 1 if 0 <= form_arr[3] <= 1 else 0
+    br_exist = 1 if 0 <= form_arr[2] <= 1 else 0
+    i_exist = 1 if 0 <= form_arr[5] <= 1 else 0
     hal_ele_type_arr = f_exist + cl_exist + br_exist + i_exist  # number of halogen elements
-    hal_two = np.clip(hal_ele_type_arr - 1, 0, 1)  # whether more than one halogen element exists
-    hal_three = np.clip(hal_ele_type_arr - 2, 0, 1)  # whether more than two halogen elements exist
+    hal_two = 1 if hal_ele_type_arr >= 2 else 0  # whether more than one halogen element exists
+    hal_three = 1 if hal_ele_type_arr >= 3 else 0  # whether more than two halogen elements exist
     senior_1_1 = 6 * form_arr[11] + 5 * form_arr[10] + 4 * form_arr[0] + \
                  3 * form_arr[7] + 2 * form_arr[9] + form_arr[1] + hal
     senior_1_2 = form_arr[7] + form_arr[10] + form_arr[1] + hal
@@ -273,8 +388,8 @@ def parse_args():
     parser.add_argument('-calc', action='store_true', help='calculate gnps data')
     parser.add_argument('-gen', action='store_true', help='generate training data')
     parser.add_argument('-ms', type=str, help='instrument type')
-    parser.add_argument('-cpu', type=int, default=10, help='number of CPU cores to use')
-    parser.add_argument('-to', type=int, default=600, help='timeout in seconds')
+    parser.add_argument('-cpu', type=int, default=4, help='number of CPU cores to use')
+    parser.add_argument('-to', type=int, default=1200, help='timeout in seconds')
     parser.add_argument('-ms1', action='store_true', help='ms1 iso similarity included')
     parser.add_argument('-ms2', action='store_true', help='MS/MS spec included')
     parser.add_argument('-p', type=str, help='password for email')
@@ -303,7 +418,7 @@ if __name__ == '__main__':
 
     if args.calc:
         calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
-        assign_subform_gen_training_data(instru=args.ms)
+        # assign_subform_gen_training_data(instru=args.ms)
 
     elif args.gen:
         combine_and_clean_X_y()
