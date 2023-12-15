@@ -185,7 +185,6 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     :return: None
     """
 
-    tqdm.write("Formula feasibility prediction: Generating ML features...")
     # batch data
     batch_data = buddy_data[batch_start_idx:batch_end_idx]
 
@@ -204,7 +203,6 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     # z-normalize ML features
     feature_arr = _z_norm_ml_a_feature(feature_arr, gd)
 
-    tqdm.write("ML prediction in progress...")
     # predict formula feasibility
     prob_arr = _predict_ml_a(feature_arr, gd)
 
@@ -605,7 +603,6 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
     ms1_tol = config.ms1_tol
     ms2_tol = config.ms2_tol
 
-    tqdm.write("Candidate formula ranking: Generating ML features...")
     # batch data
     batch_data = buddy_data[batch_start_idx:batch_end_idx]
 
@@ -628,7 +625,6 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
             else:
                 group_dict[3].append(i)
 
-    tqdm.write("ML prediction in progress...")
     # predict formula probability
     for i in range(4):
         if not group_dict[i]:

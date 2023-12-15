@@ -413,11 +413,11 @@ if __name__ == '__main__':
     args = parse_args()
 
     # test here
-    # args = argparse.Namespace(calc=True, ms='qtof', cpu=1, to=600,
+    # args = argparse.Namespace(calc=True, ms='ft', cpu=1, to=6000,
     #                           ms1=False, ms2=True)
 
     # load training data
-    load_gnps_data('ms2db_selected_with_ms2.tsv')
+    # load_gnps_data('ms2db_selected_with_ms2.tsv')
 
     email_body = ''
 
