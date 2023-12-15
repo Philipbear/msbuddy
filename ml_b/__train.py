@@ -3,15 +3,16 @@ import json
 from brainpy import isotopic_variants
 import numpy as np
 from tqdm import tqdm
+import pandas as pd
 from numba import njit
 import joblib
 from scipy.stats import norm
-from msbuddy.base import read_formula, MetaFeature, Spectrum, Formula, CandidateFormula
+from msbuddy.base import MetaFeature, Spectrum, Formula, CandidateFormula, Adduct
 from msbuddy.main import Msbuddy, MsbuddyConfig, _gen_subformula
 from msbuddy.load import init_db
 from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
 from msbuddy.cand import _calc_ms1_iso_sim
-from msbuddy.utils import form_arr_to_str
+from msbuddy.utils import form_arr_to_str, read_formula
 
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split, GroupKFold
@@ -25,7 +26,7 @@ def load_gnps_data(path):
     load GNPS library
     :param path: path to GNPS library
     """
-    db = joblib.load(path)
+    db = pd.read_csv(path, sep='\t', index_col=0)
 
     # test
     print('db size: ' + str(len(db)))
@@ -38,37 +39,41 @@ def load_gnps_data(path):
     ft_gt_ls = []
     for i in range(len(db)):
         # parse formula info
-        formula = db['formula'][i]
+        formula = db['FORMULA'][i]
         gt_form_arr = read_formula(formula)
 
         # skip if formula is not valid
-        if gt_form_arr is None:
+        if gt_form_arr is None or np.sum(gt_form_arr) == 0:
             continue
 
         # calculate theoretical mass
         theo_mass = Formula(gt_form_arr, 0).mass
-        theo_mz = theo_mass + 1.007276 if db['ionmode'][i] == 'positive' else theo_mass - 1.007276
+        # print(db['ADDUCT'][i])
+        adduct = Adduct(db['ADDUCT'][i], True if db['IONMODE'][i] == 'positive' else False, True)
+        theo_mz = theo_mass + adduct.net_formula.mass / adduct.charge
+        theo_mz = theo_mz - 0.00054858 * adduct.charge
 
         # simulate ms1 isotope pattern
+        # print(db.index[i])
         ms1_gt_arr, ms1_sim_arr = sim_ms1_iso_pattern(gt_form_arr)
         # create a numpy array of ms1 mz, with length equal to the length of ms1_sim_arr, step size = 1.003355
         ms1_mz_arr = np.array([theo_mz + x * 1.003355 for x in range(len(ms1_sim_arr))])
 
         # parse ms2 info
-        ms2_mz = np.array(json.loads(db['ms2mz'][i]))
-        ms2_int = np.array(json.loads(db['ms2int'][i]))
+        ms2_mz = np.array(db['ms2mz'][i].split(',')).astype(np.float64)
+        ms2_int = np.array(db['ms2int'][i].split(',')).astype(np.float64)
 
-        mf = MetaFeature(identifier=i,
+        mf = MetaFeature(identifier=db.index[i],
                          mz=theo_mz,
-                         charge=1 if db['ionmode'][i] == 'positive' else -1,
+                         charge=1 if db['IONMODE'][i] == 'positive' else -1,
                          ms1=Spectrum(ms1_mz_arr, ms1_sim_arr),
                          ms2=Spectrum(ms2_mz, ms2_int))
 
         # mz tolerance, depends on the instrument
-        if db['instrument'][i] == 'qtof':
+        if db['INSTRUMENT_TYPE'][i] == 'qtof':
             qtof_gt_ls.append(gt_form_arr)  # add to ground truth formula list
             qtof_mf_ls.append(mf)
-        elif db['instrument'][i] == 'orbitrap':
+        elif db['INSTRUMENT_TYPE'][i] == 'orbitrap':
             orbi_gt_ls.append(gt_form_arr)  # add to ground truth formula list
             orbi_mf_ls.append(mf)
         else:  # FT-ICR
@@ -405,14 +410,14 @@ if __name__ == '__main__':
     __package__ = "msbuddy"
 
     # parse arguments
-    # args = parse_args()
+    args = parse_args()
 
     # test here
-    args = argparse.Namespace(calc=True, ms='qtof', cpu=1, to=600,
-                              ms1=False, ms2=True)
+    # args = argparse.Namespace(calc=True, ms='qtof', cpu=1, to=600,
+    #                           ms1=False, ms2=True)
 
     # load training data
-    # load_gnps_data('gnps_ms2db_preprocessed_20231005.joblib')
+    load_gnps_data('ms2db_selected_with_ms2.tsv')
 
     email_body = ''
 

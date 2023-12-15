@@ -535,11 +535,11 @@ class ProcessedMS2:
     def __init__(self, mz: float, raw_spec: Spectrum,
                  mz_tol: float, ppm: bool,
                  rel_int_denoise_cutoff: float,
-                 max_frag_reserved: int):
+                 top_n_per_50_da: int):
         if raw_spec:
             self.mz_tol = mz_tol
             self.ppm = ppm
-            self._preprocess(mz, raw_spec, rel_int_denoise_cutoff, max_frag_reserved)
+            self._preprocess(mz, raw_spec, rel_int_denoise_cutoff, top_n_per_50_da)
         else:
             self.idx_array = np.array([], dtype=int)
             self.mz_array = np.array([], dtype=np.float32)
@@ -555,13 +555,13 @@ class ProcessedMS2:
         return len(self.mz_array)
 
     def _preprocess(self, mz: float, raw_spec: Spectrum,
-                    rel_int_denoise_cutoff: float, max_frag_reserved: int):
+                    rel_int_denoise_cutoff: float, top_n_per_50_da: int):
         """
         preprocess MS2 spectrum, denoise (optional), de-precursor
         :param mz: precursor mz
         :param raw_spec: raw ms2 spectrum
         :param rel_int_denoise_cutoff: relative intensity cutoff
-        :param max_frag_reserved: max fragment count reserved
+        :param top_n_per_50_da: max fragment count reserved for every 50 Da
         :return: fill self.idx_array, self.mz_array, self.int_array
         """
 
@@ -571,14 +571,8 @@ class ProcessedMS2:
         # denoise
         self._denoise(rel_int_denoise_cutoff)
 
-        # top n fragment
-        top_n_frag = _calc_top_n_frag(mz, max_frag_reserved)
-        if len(self.mz_array) > top_n_frag:
-            idx = np.argsort(self.int_array)
-            reserved_idx = self.int_array >= self.int_array[idx[-top_n_frag]]
-            self.idx_array = self.idx_array[reserved_idx]
-            self.mz_array = self.mz_array[reserved_idx]
-            self.int_array = self.int_array[reserved_idx]
+        # keep top_n_per_50_da peaks in each 50 Da
+        self._keep_top_n_per_50_da(top_n_per_50_da)
 
     def _denoise(self, rel_int_denoise_cutoff: float):
         """
@@ -615,6 +609,20 @@ class ProcessedMS2:
         self.mz_array = raw_spec.mz_array[idx]
         self.int_array = raw_spec.int_array[idx]
 
+    def _keep_top_n_per_50_da(self, top_n_per_50_da: int):
+        """
+        keep top_n_per_50_da peaks in each 50 Da
+        :param top_n_per_50_da: max fragment count reserved for every 50 Da
+        :return: fill self.idx_array, self.mz_array, self.int_array
+        """
+        if top_n_per_50_da <= 1:
+            return
+
+        bool_arr = ms2_denoise(mz_arr=self.mz_array, int_arr=self.int_array, top_n=top_n_per_50_da)
+        self.idx_array = self.idx_array[bool_arr]
+        self.mz_array = self.mz_array[bool_arr]
+        self.int_array = self.int_array[bool_arr]
+
     def normalize_intensity(self, method: str = 'sum'):
         """
         normalize intensity
@@ -627,18 +635,21 @@ class ProcessedMS2:
             self.int_array = self.int_array / np.max(self.int_array)
 
 
-def _calc_top_n_frag(pre_mz: float, max_frag_reserved: int) -> int:
+@njit
+def ms2_denoise(mz_arr, int_arr, top_n=6, per_mass_range=50):
     """
-    calculate top n frag No., a linear function of precursor m/z (for class ProcessedMS2)
-    :param pre_mz: precursor m/z
-    :param max_frag_reserved: max fragment count reserved
-    :return: top n frag No. (int)
+    keep top_n peaks in each per_mass_range
     """
-    if pre_mz < 1000:
-        top_n = int(50 - 0.04 * pre_mz)
-    else:
-        top_n = int(30 - 0.02 * pre_mz)
-    return min(top_n, max_frag_reserved)
+    group_arr = mz_arr // per_mass_range
+    bool_arr = np.array([True] * len(int_arr))
+
+    for group in np.unique(group_arr):
+        group_idx = np.where(group_arr == group)[0]
+        if len(group_idx) > top_n:
+            int_threshold = np.sort(int_arr[group_idx])[-top_n]
+            bool_arr[group_idx] = int_arr[group_idx] >= int_threshold
+
+    return bool_arr
 
 
 class MS2Explanation:
@@ -746,7 +757,7 @@ class MetaFeature:
     def data_preprocess(self, ppm: bool, ms1_tol: float, ms2_tol: float,
                         isotope_bin_mztol: float, max_isotope_cnt: int,
                         rel_int_denoise_cutoff: float,
-                        max_frag_reserved: int):
+                        top_n_per_50_da: int):
         """
         Data preprocessing.
         :param ppm: whether to use ppm as m/z tolerance
@@ -755,7 +766,7 @@ class MetaFeature:
         :param isotope_bin_mztol: m/z tolerance for isotope bin, used for MS1 isotope pattern
         :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern
         :param rel_int_denoise_cutoff: relative intensity cutoff for MS2 denoise
-        :param max_frag_reserved: max fragment number reserved, used for MS2 data
+        :param top_n_per_50_da: max fragment count reserved for every 50 Da
         :return: fill in ms1_processed and ms2_processed for each metaFeature
         """
         if self.ms1_raw:
@@ -764,7 +775,7 @@ class MetaFeature:
                                               ms1_tol, ppm, isotope_bin_mztol, max_isotope_cnt)
         if self.ms2_raw:
             self.ms2_processed = ProcessedMS2(self.mz, self.ms2_raw,
-                                              ms2_tol, ppm, rel_int_denoise_cutoff, max_frag_reserved)
+                                              ms2_tol, ppm, rel_int_denoise_cutoff, top_n_per_50_da)
 
     def summarize_result(self) -> dict:
         """

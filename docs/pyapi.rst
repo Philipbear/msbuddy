@@ -240,7 +240,7 @@ Example Usage:
    engine.update_config(ms_instr="fticr", halogen=True, timeout_secs=100)
 
 
-.. class:: msbuddy.MsbuddyConfig (ms_instr: str = None, ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 1000, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, rel_int_denoise_cutoff: float = 0.01, max_frag_reserved: int = 50)
+.. class:: msbuddy.MsbuddyConfig (ms_instr: str = None, ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 1000, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, rel_int_denoise_cutoff: float = 0.01, top_n_per_50_da: int = 6)
 
    It is a class to store all the configurations for **msbuddy**.
 
@@ -266,7 +266,7 @@ Example Usage:
    :param isotope_bin_mztol: float. The mass tolerance for MS1 isotope binning, in Da. Default is 0.02 Da.
    :param max_isotope_cnt: int. The maximum number of isotopes to consider. Default is 4.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising. Default is 0.01 (1%).
-   :param max_frag_reserved: int. The maximum number of fragments to reserve. Default is 50.
+   :param top_n_per_50_da: int. The maximum number of fragments to reserve in every 50 Da. Default is 6.
 
 Example Usage:
 
@@ -411,7 +411,7 @@ Example usage:
 
 
 
-.. class:: msbuddy.base.ProcessedMS2 (mz: float, raw_spec: Spectrum, mz_tol: float, ppm: bool, denoise: bool, rel_int_denoise_cutoff: float, max_frag_reserved: int)
+.. class:: msbuddy.base.ProcessedMS2 (mz: float, raw_spec: Spectrum, mz_tol: float, ppm: bool, denoise: bool, rel_int_denoise_cutoff: float, top_n_per_50_da: int)
 
     A class to represent a processed MS/MS spectrum, for MS/MS preprocessing (deprecursor, denoise, reserve top N fragments).
 
@@ -420,7 +420,7 @@ Example usage:
    :param mz_tol: float. The mass tolerance for MS1 spectra.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising.
-   :param max_frag_reserved: int. The maximum number of fragments to reserve.
+   :param top_n_per_50_da: int. The maximum number of fragments to reserve in every 50 Da.
 
    .. attribute:: mz_tol
 

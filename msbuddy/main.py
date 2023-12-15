@@ -65,7 +65,7 @@ class MsbuddyConfig:
                  i_range: Tuple[int, int] = (0, 10),
                  isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4,
                  rel_int_denoise_cutoff: float = 0.01,
-                 max_frag_reserved: int = 50):
+                 top_n_per_50_da: int = 6):
         """
         :param ms_instr: mass spectrometry instrument, one of "orbitrap, "fticr", "qtof".
         :param ppm: whether ppm is used for m/z tolerance
@@ -89,7 +89,7 @@ class MsbuddyConfig:
         :param isotope_bin_mztol: m/z tolerance for isotope bin, used for MS1 isotope pattern
         :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern
         :param rel_int_denoise_cutoff: relative intensity cutoff, used for MS2 denoise
-        :param max_frag_reserved: max fragment number reserved, used for MS2 data
+        :param top_n_per_50_da: top n peaks to keep in each 50 Da, used for MS2 denoise
         """
         if ms_instr is None:
             self.ppm = ppm
@@ -164,11 +164,7 @@ class MsbuddyConfig:
         else:
             self.rel_int_denoise_cutoff = rel_int_denoise_cutoff
 
-        if max_frag_reserved <= 0:
-            self.max_frag_reserved = 50
-            logging.warning(f"Maximum fragment reserved is set to {self.max_frag_reserved}.")
-        else:
-            self.max_frag_reserved = max_frag_reserved
+        self.top_n_per_50_da = top_n_per_50_da
 
 
 class Msbuddy:
@@ -532,7 +528,7 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
     """
     # data preprocessing
     mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.isotope_bin_mztol, ps.max_isotope_cnt,
-                       ps.rel_int_denoise_cutoff, ps.max_frag_reserved)
+                       ps.rel_int_denoise_cutoff, ps.top_n_per_50_da)
     # generate candidate formula space
     gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
                           ps.max_isotope_cnt, global_dict)
