@@ -73,8 +73,8 @@ def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     hal_ele_type_arr = f_exist_arr + cl_exist_arr + br_exist_arr + i_exist_arr  # number of halogen elements
     hal_two = np.clip(hal_ele_type_arr - 1, 0, 1)  # whether more than one halogen element exists
     hal_three = np.clip(hal_ele_type_arr - 2, 0, 1)  # whether more than two halogen elements exist
-    senior_1_1_arr = 6 * all_cf_arr[:, 11] + 5 * all_cf_arr[:, 10] + 4 * all_cf_arr[:, 0] + \
-                     3 * all_cf_arr[:, 7] + 2 * all_cf_arr[:, 9] + all_cf_arr[:, 1] + hal_arr
+    senior_1_1_arr = (6 * all_cf_arr[:, 11] + 5 * all_cf_arr[:, 10] + 4 * all_cf_arr[:, 0] + 3 * all_cf_arr[:, 7] +
+                      2 * all_cf_arr[:, 9] + all_cf_arr[:, 1] + hal_arr)
     senior_1_2_arr = all_cf_arr[:, 7] + all_cf_arr[:, 10] + all_cf_arr[:, 1] + hal_arr
 
     # halogen to H ratio, fill 0 if H = 0
@@ -201,10 +201,11 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     _fill_ml_a_arr_in_batch_data(batch_data, feature_arr)
 
     # z-normalize ML features
-    feature_arr = _z_norm_ml_a_feature(feature_arr, gd)
+    feature_arr_norm = _z_norm_ml_a_feature(feature_arr, gd)
+    del feature_arr
 
     # predict formula feasibility
-    prob_arr = _predict_ml_a(feature_arr, gd)
+    prob_arr = _predict_ml_a(feature_arr_norm, gd)
 
     # add prediction results to candidate formula objects in the list
     cnt = 0
@@ -228,7 +229,6 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
 
     # update buddy data
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
-    del batch_data
 
     return
 
@@ -289,27 +289,33 @@ def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: floa
     :param gd: global dependencies
     :return: numpy array of ML features
     """
-    # generate feature array
-    total_feature_arr = np.array([])
+    # generate feature array and group size array
+    total_X_arr = np.array([])
+    # group_size_arr = np.array([])
 
     for mf in meta_feature_list:
         if not mf.candidate_formula_list:
             continue
+
+        # add group size to group_size_arr
+        # group_size_arr = np.append(group_size_arr, len(mf.candidate_formula_list))
+
         # generate ML features for each candidate formula
         for cf in mf.candidate_formula_list:
             # get ML features
             ml_feature_arr = gen_ml_b_feature_single(mf, cf, ppm, ms1_tol, ms2_tol, gd)
+
             # add to feature array
-            if total_feature_arr.size == 0:
-                total_feature_arr = ml_feature_arr
+            if total_X_arr.size == 0:
+                total_X_arr = ml_feature_arr
             else:
-                total_feature_arr = np.vstack((total_feature_arr, ml_feature_arr))
+                total_X_arr = np.vstack((total_X_arr, ml_feature_arr))
 
     # ensure 2d array
-    if len(total_feature_arr.shape) == 1:
-        total_feature_arr = np.expand_dims(total_feature_arr, axis=0)
+    if len(total_X_arr.shape) == 1:
+        total_X_arr = np.expand_dims(total_X_arr, axis=0)
 
-    return total_feature_arr
+    return total_X_arr
 
 
 def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
@@ -583,9 +589,13 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
         X_arr = X_arr[:, :-14]  # remove MS2-related features
 
+    # # predict formula probability
+    # prob_arr = model.predict_proba(X_arr)
+    # return prob_arr[:, 1]
+
     # predict formula probability
-    prob_arr = model.predict_proba(X_arr)
-    return prob_arr[:, 1]
+    score_arr = model.predict(X_arr)
+    return score_arr
 
 
 def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
@@ -640,7 +650,6 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
 
     # update buddy data
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
-    del batch_data
 
     return
 

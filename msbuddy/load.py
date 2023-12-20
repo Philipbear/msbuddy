@@ -90,6 +90,9 @@ def init_db() -> dict:
             'https://drive.google.com/uc?id=17fuTj7oZdFu6TRQDUaFvWNrm1UFt1JZG',
             data_path / db_name))
 
+    global_dict['model_b_ms1_ms2'] = j_load('data/ml_b_ms1_ms2.joblib')
+    global_dict['model_b_noms1_ms2'] = j_load('data/ml_b_ms2.joblib')
+
     return global_dict
 
 

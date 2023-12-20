@@ -21,6 +21,7 @@ from sklearn.metrics import ndcg_score
 from __train_gnps_cmd import send_hotmail_email, sim_ms1_iso_pattern
 
 
+
 def load_gnps_data(path):
     """
     load GNPS library
@@ -142,26 +143,29 @@ def _calc_ml_a_array(form_arr, mass, dbe):
     # calculate ML features
     hal = np.sum(form_arr[2:6])  # sum of halogen atoms
     ta = np.sum(form_arr)  # total number of atoms
-    f_exist = 1 if 0 <= form_arr[4] <= 1 else 0
-    cl_exist = 1 if 0 <= form_arr[3] <= 1 else 0
-    br_exist = 1 if 0 <= form_arr[2] <= 1 else 0
-    i_exist = 1 if 0 <= form_arr[5] <= 1 else 0
+    f_exist = 1 if form_arr[4] >= 1 else 0
+    cl_exist = 1 if form_arr[3] >= 1 else 0
+    br_exist = 1 if form_arr[2] >= 1 else 0
+    i_exist = 1 if form_arr[5] >= 1 else 0
     hal_ele_type_arr = f_exist + cl_exist + br_exist + i_exist  # number of halogen elements
     hal_two = 1 if hal_ele_type_arr >= 2 else 0  # whether more than one halogen element exists
     hal_three = 1 if hal_ele_type_arr >= 3 else 0  # whether more than two halogen elements exist
-    senior_1_1 = 6 * form_arr[11] + 5 * form_arr[10] + 4 * form_arr[0] + \
-                 3 * form_arr[7] + 2 * form_arr[9] + form_arr[1] + hal
+    senior_1_1 = (6 * form_arr[11] + 5 * form_arr[10] + 4 * form_arr[0] + 3 * form_arr[7] + 2 * form_arr[9] +
+                  form_arr[1] + hal)
     senior_1_2 = form_arr[7] + form_arr[10] + form_arr[1] + hal
 
     # halogen to H ratio
     hal_h = 0 if form_arr[1] == 0 else hal / form_arr[1]
 
     # O/P ratio, fill 1 if phosphorus = 0
-    o_p = 1 if form_arr[10] == 0 else form_arr[9] / form_arr[10]
+    o_p = 1 if form_arr[10] == 0 else form_arr[9] / form_arr[10] / 3
 
     # if C > 0
     if form_arr[0] > 0:
-        out = np.array([form_arr[0] / ta, form_arr[1] / ta,
+        out = np.array([form_arr[0], form_arr[1],
+                        form_arr[7], form_arr[9], form_arr[10],
+                        form_arr[11], hal, ta,
+                        form_arr[0] / ta, form_arr[1] / ta,
                         form_arr[7] / ta,
                         form_arr[9] / ta, form_arr[10] / ta,
                         form_arr[11] / ta,
@@ -175,7 +179,10 @@ def _calc_ml_a_array(form_arr, mass, dbe):
                         hal / form_arr[0],
                         hal_h, o_p, hal_two, hal_three])
     else:
-        out = np.array([form_arr[0] / ta, form_arr[1] / ta,
+        out = np.array([form_arr[0], form_arr[1],
+                        form_arr[7], form_arr[9], form_arr[10],
+                        form_arr[11], hal, ta,
+                        form_arr[0] / ta, form_arr[1] / ta,
                         form_arr[7] / ta,
                         form_arr[9] / ta, form_arr[10] / ta,
                         form_arr[11] / ta,
@@ -252,6 +259,8 @@ def assign_subform_gen_training_data(instru):
 
         # generate ML features for each candidate formula
         for n, cf in enumerate(mf.candidate_formula_list):
+            # print('n: ' + str(n) + ' out of ' + str(len(mf.candidate_formula_list)))
+            # print('cf: ' + str(cf.formula.array))
             # calc ms1 iso similarity
             cf.ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, 4)
             this_true = True if n == 0 else False
@@ -286,13 +295,13 @@ def assign_subform_gen_training_data(instru):
     joblib.dump(group_arr, 'gnps_group_arr_' + instru + '.joblib')
 
 
-def combine_and_clean_X_y():
+def combine_and_clean_x_y():
     # load training data
-    X_arr_qtof = joblib.load('gnps_X_arr_qtof.joblib')
+    X_arr_qtof = joblib.load('gnps_X_arr_qtof_cor.joblib')
     y_arr_qtof = joblib.load('gnps_y_arr_qtof.joblib')
-    X_arr_orbi = joblib.load('gnps_X_arr_orbi.joblib')
+    X_arr_orbi = joblib.load('gnps_X_arr_orbi_cor.joblib')
     y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
-    X_arr_ft = joblib.load('gnps_X_arr_ft.joblib')
+    X_arr_ft = joblib.load('gnps_X_arr_ft_cor.joblib')
     y_arr_ft = joblib.load('gnps_y_arr_ft.joblib')
     group_arr_qtof = joblib.load('gnps_group_arr_qtof.joblib')
     group_arr_orbi = joblib.load('gnps_group_arr_orbi.joblib')
@@ -301,21 +310,25 @@ def combine_and_clean_X_y():
     X_arr = np.vstack((X_arr_qtof, X_arr_orbi, X_arr_ft))
     y_arr = np.append(y_arr_qtof, np.append(y_arr_orbi, y_arr_ft))
     group_arr = np.append(group_arr_qtof, np.append(group_arr_orbi, group_arr_ft))
+
     print('X_arr shape: ' + str(X_arr.shape))
     print('y_arr shape: ' + str(y_arr.shape))
     print('group_arr shape: ' + str(group_arr.shape))
 
-    # remove rows with nan
-    X_arr = np.where(X_arr == None, np.nan, X_arr)
-    X_arr = X_arr.astype(np.float64)
-    nan_rows = np.any(np.isnan(X_arr), axis=1)
-    # Remove those rows from X_arr and y_arr
-    X_arr = X_arr[~nan_rows]
-    y_arr = y_arr[~nan_rows]
-    group_arr = group_arr[~nan_rows]
-    print('X_arr shape: ' + str(X_arr.shape))
-    print('y_arr shape: ' + str(y_arr.shape))
-    print('group_arr shape: ' + str(group_arr.shape))
+    # # remove rows with nan
+    # X_arr = np.where(X_arr == None, np.nan, X_arr)
+    # X_arr = X_arr.astype(np.float64)
+    # nan_rows = np.any(np.isnan(X_arr), axis=1)
+    # # Remove those rows from X_arr and y_arr
+    # X_arr = X_arr[~nan_rows]
+    # y_arr = y_arr[~nan_rows]
+    # group_arr = group_arr[~nan_rows]
+    # print('X_arr shape: ' + str(X_arr.shape))
+    # print('y_arr shape: ' + str(y_arr.shape))
+    # print('group_arr shape: ' + str(group_arr.shape))
+
+    # for every element in X arr, round to 8 decimal places
+    X_arr = np.round(X_arr, 8)
 
     # save to joblib file
     joblib.dump(X_arr, 'gnps_X_arr.joblib')
@@ -323,7 +336,34 @@ def combine_and_clean_X_y():
     joblib.dump(group_arr, 'gnps_group_arr.joblib')
 
 
-def train_model(ms1_iso, ms2_spec, pswd):
+def tune_hyperparams(X_arr, y_arr, group_arr):
+    # Parameters for training
+    param_grid = {
+        'objective': ['lambdarank'],  # 'rank_xendcg', 'lambdarank'
+        'metric': ['ndcg'],
+        'ndcg_at': [[1]],
+        'learning_rate': [0.01],
+        'num_leaves': [500],  # [500, 750, 1000, 1250],
+        'max_depth': [-1],
+        'min_data_in_leaf': [20],  # [10, 20, 30],
+        'max_bin': [200],
+        'bagging_fraction': [0.9],  # [0.9, 1], optimized
+        'bagging_freq': [1],
+        'feature_fraction': [1],
+        'lambda_l1': [0],
+        'lambda_l2': [0],
+        'seed': [24],
+        'verbose': [0]
+    }
+
+    print("Grid search for hyperparameter tuning...")
+    best_params, best_score = grid_search_cv(X_arr, y_arr, group_arr, param_grid)
+    print(f"Best Parameters: {best_params}, Best Score: {best_score}")
+
+    return best_params
+
+
+def train_model(ms1_iso, ms2_spec):
     """
     train ML model B
     :return: trained model
@@ -333,7 +373,10 @@ def train_model(ms1_iso, ms2_spec, pswd):
     y_arr = joblib.load('gnps_y_arr.joblib')
     group_arr = joblib.load('gnps_group_arr.joblib')
 
-    print("Training model ...")
+    # group arr as int
+    group_arr = group_arr.astype(np.int32)
+    assert np.sum(group_arr) == len(X_arr) == len(y_arr)
+
     if not ms1_iso:
         # discard the ms1 iso feature in X_arr
         X_arr = X_arr[:, 1:]
@@ -341,48 +384,336 @@ def train_model(ms1_iso, ms2_spec, pswd):
         # discard the last 14 features in X_arr
         X_arr = X_arr[:, :-14]
 
-    print('splitting...')
-    # split training and testing data
-    X_train, X_test, y_train, y_test, groups_train, groups_test = train_test_split(
-        X_arr, y_arr, group_arr, test_size=0.2, random_state=42)
+    # hyperparameter tuning
+    # best_params = tune_hyperparams(X_arr, y_arr, group_arr)
+    best_params = {'objective': 'lambdarank', 'metric': 'ndcg', 'ndcg_at': [1],
+                   'learning_rate': 0.01, 'num_leaves': 1500, 'max_depth': -1, 'min_data_in_leaf': 20,
+                   'max_bin': 200, 'bagging_fraction': 0.9, 'bagging_freq': 1, 'feature_fraction': 1,
+                   'lambda_l1': 0, 'lambda_l2': 0, 'seed': 24, 'verbose': 0}
+
+    # Split training and testing data
+    (X_train, X_val, X_test, y_train, y_val, y_test,
+     groups_train, groups_val, groups_test) = _train_val_test_split(X_arr, y_arr, group_arr,
+                                                                    val_size=0.1, test_size=0.1, random_state=24)
 
     # Create LightGBM datasets
     train_data = lgb.Dataset(data=X_train, label=y_train, group=groups_train)
-    test_data = lgb.Dataset(data=X_test, label=y_test, group=groups_test)
+    val_data = lgb.Dataset(data=X_val, label=y_val, group=groups_val)
+    # test_data = lgb.Dataset(data=X_test, label=y_test, group=groups_test)
 
-    # Parameters for training
-    params = {
-        'objective': 'rank_xendcg',
-        'metric': 'ndcg',
-        'ndcg_at': [1],
-        'learning_rate': 0.05,
-        'num_leaves': 31,
-        'num_iterations': 100,
-        'num_boost_round': 100,
-        'early_stopping_rounds': 10,
-        'verbose': 1
-    }
-    # Train the model
     print("Training model...")
-    gbm = lgb.train(params, train_data, valid_sets=[test_data])
+    # Train the model
+    gbm = lgb.train(best_params, train_data, valid_sets=[val_data], num_boost_round=1000,
+                    callbacks=[lgb.early_stopping(stopping_rounds=30)])
 
     # Predict on test data
     print("Evaluating model...")
+    # Predict on test data
     test_preds = gbm.predict(X_test)
-    test_group_size = groups_test[0]
-    test_ndcg_score = ndcg_score(
-        [y_test[i:i + test_group_size] for i in range(0, len(y_test), test_group_size)],
-        [test_preds[i:i + test_group_size] for i in range(0, len(test_preds), test_group_size)],
-        k=1
-    )
-    out_str = f'Final NDCG@1 score on test data: {test_ndcg_score}'
+
+    top_1_accuracies = []  # Including all group sizes
+
+    start_idx = 0
+    for group_size in groups_test:
+        end_idx = start_idx + group_size
+        true_labels = y_test[start_idx:end_idx]
+        predicted_scores = test_preds[start_idx:end_idx]
+        # Find the index of the highest predicted score
+        top_prediction_idx = np.argmax(predicted_scores)
+        # Check if the top prediction is correct
+        is_correct = true_labels[top_prediction_idx] == 1
+        top_1_accuracies.append(is_correct)
+        start_idx = end_idx
+
+    # Calculate top-1 accuracy
+    top_1_accuracy = np.mean(top_1_accuracies)
+    print(f"Top-1 Accuracy (including single-item groups): {top_1_accuracy}")
+
+    # Calculate NDCG score for each group with more than one item and average
+    ndcg_scores = []
+    start_idx = 0
+    for group_size in groups_test:
+        end_idx = start_idx + group_size
+        # Only calculate NDCG for groups with more than one item
+        if group_size > 1:
+            true_labels = y_test[start_idx:end_idx]
+            predicted_scores = test_preds[start_idx:end_idx]
+            if np.any(true_labels):  # Check if there are any positive labels
+                ndcg_scores.append(ndcg_score([true_labels], [predicted_scores], k=1))
+        start_idx = end_idx
+
+    # Calculate average NDCG score
+    avg_ndcg_score = np.mean(ndcg_scores)
+    out_str = f'Average NDCG@1 score on test data: {avg_ndcg_score}'
+    print(out_str)
+
+    # heuristic baseline model
+    # mass error if MS2 only
+    feature_idx = 1 if ms1_iso else 0
+    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, feature_idx, ascending=True)
+    print(f'Average NDCG@1 score with heuristic baseline: {avg_ndcg_score_heuristic}')
+
+    # exp_frag_int_pct if MS2 only
+    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, -12, ascending=False)
+    print(f'Average NDCG@1 score with heuristic baseline: {avg_ndcg_score_heuristic}')
 
     # Save the model
-    model_filename = 'ranking_model.joblib'
-    joblib.dump(gbm, model_filename)
+    model_name = 'ml_b'
+    model_name += '_ms1' if ms1_iso else ''
+    model_name += '_ms2' if ms2_spec else ''
+    model_name += '.joblib'
+    joblib.dump(gbm, model_name)
 
-    return out_str
+    return
 
+
+def _train_val_test_split(X_arr, y_arr, group_arr, val_size=0.1, test_size=0.1, random_state=42):
+    # Calculate the cumulative sum of group sizes
+    cumulative_group_sizes = np.cumsum(group_arr)
+
+    # Indices where each group starts and ends
+    group_indices = np.zeros((len(group_arr), 2), dtype=int)
+    group_indices[1:, 0] = cumulative_group_sizes[:-1]
+    group_indices[:, 1] = cumulative_group_sizes
+
+    # Decide which groups go into training, validation, and testing
+    np.random.seed(random_state)
+    random_values = np.random.rand(len(group_arr))
+    is_val_group = random_values < val_size
+    is_test_group = (random_values >= val_size) & (random_values < val_size + test_size)
+    is_train_group = random_values >= val_size + test_size
+
+    # Corrected slicing using group indices
+    X_train, X_val, X_test = [], [], []
+    y_train, y_val, y_test = [], [], []
+    groups_train, groups_val, groups_test = [], [], []
+
+    for i, is_train in enumerate(is_train_group):
+        if is_train:
+            X_train.extend(X_arr[group_indices[i, 0]:group_indices[i, 1]])
+            y_train.extend(y_arr[group_indices[i, 0]:group_indices[i, 1]])
+            groups_train.append(group_arr[i])
+        elif is_val_group[i]:
+            X_val.extend(X_arr[group_indices[i, 0]:group_indices[i, 1]])
+            y_val.extend(y_arr[group_indices[i, 0]:group_indices[i, 1]])
+            groups_val.append(group_arr[i])
+        elif is_test_group[i]:
+            X_test.extend(X_arr[group_indices[i, 0]:group_indices[i, 1]])
+            y_test.extend(y_arr[group_indices[i, 0]:group_indices[i, 1]])
+            groups_test.append(group_arr[i])
+
+    # Convert lists to arrays
+    X_train = np.array(X_train)
+    X_val = np.array(X_val)
+    X_test = np.array(X_test)
+    y_train = np.array(y_train)
+    y_val = np.array(y_val)
+    y_test = np.array(y_test)
+
+    return X_train, X_val, X_test, y_train, y_val, y_test, groups_train, groups_val, groups_test
+
+
+def _train_test_split(X_arr, y_arr, group_arr, test_size=0.1, random_state=24):
+    # Calculate the cumulative sum of group sizes
+    cumulative_group_sizes = np.cumsum(group_arr)
+
+    # Indices where each group starts and ends
+    group_indices = np.zeros((len(group_arr), 2), dtype=int)
+    group_indices[1:, 0] = cumulative_group_sizes[:-1]
+    group_indices[:, 1] = cumulative_group_sizes
+
+    # Decide which groups go into training, validation, and testing
+    np.random.seed(random_state)
+    random_values = np.random.rand(len(group_arr))
+    is_train_group = random_values >= test_size
+
+    # Corrected slicing using group indices
+    X_train, X_test = [], []
+    y_train, y_test = [], []
+    groups_train, groups_test = [], []
+
+    for i, is_train in enumerate(is_train_group):
+        if is_train:
+            X_train.extend(X_arr[group_indices[i, 0]:group_indices[i, 1]])
+            y_train.extend(y_arr[group_indices[i, 0]:group_indices[i, 1]])
+            groups_train.append(group_arr[i])
+        else:
+            X_test.extend(X_arr[group_indices[i, 0]:group_indices[i, 1]])
+            y_test.extend(y_arr[group_indices[i, 0]:group_indices[i, 1]])
+            groups_test.append(group_arr[i])
+
+    # Convert lists to arrays
+    X_train = np.array(X_train)
+    X_test = np.array(X_test)
+    y_train = np.array(y_train)
+    y_test = np.array(y_test)
+
+    return X_train, X_test, y_train, y_test, groups_train, groups_test
+
+
+def perform_cross_validation(X, y, group_sizes, params, n_splits=5):
+    """
+    Perform cross-validation.
+    """
+    X_1, X_test, y_1, y_test, groups_1, groups_test = _train_test_split(X, y, group_sizes)
+
+    # Transform group_sizes to group assignments
+    groups = np.repeat(np.arange(len(groups_1)), groups_1)
+
+    group_kfold = GroupKFold(n_splits=n_splits)
+    val_ndcg_scores = []
+    test_ndcg_scores = []
+
+    for train_idx, test_idx in group_kfold.split(X_1, y_1, groups):
+        X_train, X_val = X_1[train_idx], X_1[test_idx]
+        y_train, y_val = y_1[train_idx], y_1[test_idx]
+
+        # Extract train and test group information
+        train_groups = np.array([len(np.where(groups == g)[0]) for g in np.unique(groups[train_idx])])
+        val_groups = np.array([len(np.where(groups == g)[0]) for g in np.unique(groups[test_idx])])
+
+        train_data = lgb.Dataset(data=X_train, label=y_train, group=train_groups)
+        val_data = lgb.Dataset(data=X_val, label=y_val, group=val_groups)
+
+        gbm = lgb.train(params, train_data, valid_sets=[val_data], num_boost_round=1000,
+                        callbacks=[lgb.early_stopping(stopping_rounds=30)])
+
+        val_ndcg_scores.append(gbm.best_score['valid_0']['ndcg@1'])
+
+        # predict on test data
+        test_preds = gbm.predict(X_test)
+        start_idx = 0
+        _test_ndcg_scores = []
+        for group_size in groups_test:
+            end_idx = start_idx + group_size
+            # Only calculate NDCG for groups with more than one item
+            if group_size > 1:
+                true_labels = y_test[start_idx:end_idx]
+                predicted_scores = test_preds[start_idx:end_idx]
+                if np.any(true_labels):  # Check if there are any positive labels
+                    this_ndcg_score = ndcg_score([true_labels], [predicted_scores], k=1)
+                    _test_ndcg_scores.append(this_ndcg_score)
+            start_idx = end_idx
+        test_ndcg_scores.append(np.mean(_test_ndcg_scores))
+        print(f"Test NDCG@1 Score (mean): {np.mean(_test_ndcg_scores)}")
+
+    avg_val_ndcg_score = np.mean(val_ndcg_scores)
+    avg_test_ndcg_score = np.mean(test_ndcg_scores)
+    return avg_val_ndcg_score, avg_test_ndcg_score
+
+
+def grid_search_cv(X, y, groups, param_grid, n_splits=5):
+    best_score = 0
+    best_params = None
+
+    # Generate all combinations of hyperparameters
+    from itertools import product
+    keys, values = zip(*param_grid.items())
+    for param_values in product(*values):
+        params = dict(zip(keys, param_values))
+
+        # Perform cross-validation
+        val_score, test_score = perform_cross_validation(X, y, groups, params, n_splits=n_splits)
+
+        if test_score > best_score:
+            best_score = test_score
+            best_params = params
+
+        print(f"Tested params: {params}, test NDCG@1 Score: {test_score}, val NDCG@1 Score: {val_score}")
+
+    return best_params, best_score
+
+
+def heuristic_ranking_baseline(X_test, y_test, groups_test, feature_index, ascending=True):
+    ndcg_scores = []
+    start_idx = 0
+    for group_size in groups_test:
+        end_idx = start_idx + group_size
+        true_labels = y_test[start_idx:end_idx]
+        heuristic_scores = X_test[start_idx:end_idx, feature_index] if ascending else -X_test[start_idx:end_idx, feature_index]
+        if group_size > 1 and np.any(true_labels):
+            ndcg_scores.append(ndcg_score([true_labels], [heuristic_scores], k=1))
+        start_idx = end_idx
+    return np.mean(ndcg_scores) if ndcg_scores else None
+
+
+def get_feature_importance(gbm, ms1, ms2):
+    feature_names = ['ms1_iso_sim', 'mz_error_log_p', 'pos_mode', 'chon', 'chonps',
+                     'c_ta', 'h_ta', 'n_ta', 'o_ta', 'p_ta', 's_ta', 'hal_ta', 'senior_1_1', 'senior_1_2', '2ta_1',
+                     'dbe', 'dbe_mass_1', 'dbe_mass_2', 'h_c', 'n_c', 'o_c', 'p_c', 's_c', 'hal_c', 'hal_h',
+                     'o_p', 'hal_two', 'hal_three', 'exp_frag_cnt_pct', 'exp_db_frag_cnt_pct', 'exp_db_frag_int_pct',
+                     'subform_score', 'subform_common_loss_score',
+                     'radical_cnt_pct', 'frag_dbe_wavg', 'frag_h2c_wavg', 'frag_mz_err_wavg', 'frag_nl_dbe_diff_wavg',
+                     'valid_ms2_peak', 'exp_frag_cnt_pct_sqrt', 'exp_frag_int_pct_sqrt']
+    if not ms1:
+        feature_names = feature_names[1:]
+    if not ms2:
+        feature_names = feature_names[:-14]
+    # Assuming 'gbm' is your trained LightGBM model
+    # and 'feature_names' is the list of names of the features
+
+    # Feature importance by split
+    importance_split = gbm.feature_importance(importance_type='split')
+    feature_importance_split = sorted(zip(feature_names, importance_split), key=lambda x: x[1], reverse=True)
+
+    # Feature importance by gain
+    importance_gain = gbm.feature_importance(importance_type='gain')
+    feature_importance_gain = sorted(zip(feature_names, importance_gain), key=lambda x: x[1], reverse=True)
+
+    # print
+    print('feature importance by split:')
+    for feature_name, score in feature_importance_split:
+        print(f'{feature_name}: {score}')
+    print('\n\nfeature importance by gain:')
+    for feature_name, score in feature_importance_gain:
+        print(f'{feature_name}: {score}')
+
+    return feature_importance_split, feature_importance_gain
+
+
+def correct_x_z_norm():
+    _, mean_arr, std_arr = joblib.load('ml_a_v0.2.4.joblib')
+    mean_arr = mean_arr[8:]
+    std_arr = std_arr[8:]
+    for ms in ['qtof', 'orbi', 'ft']:
+        X_arr = joblib.load('gnps_X_arr_' + ms + '.joblib')
+        y_arr = joblib.load('gnps_y_arr_' + ms + '.joblib')
+        non_correct_bool = y_arr == 0
+        # revert z-normalization
+        X_arr[non_correct_bool, 5:26] = X_arr[non_correct_bool, 5:26] * std_arr + mean_arr
+        joblib.dump(X_arr, 'gnps_X_arr_' + ms + '.joblib')
+
+
+def correct_x_ml_a_for_gt():
+    for instru in ['ft', 'qtof', 'orbi']:
+        print('loading data...')
+        data_name = 'gnps_' + instru + '_mf_ls_cand_2.joblib'
+        data = joblib.load(data_name)
+
+        gt_name = 'gnps_' + instru + '_gt_ls.joblib'
+        gt_ls = joblib.load(gt_name)
+
+        X_arr = joblib.load('gnps_X_arr_' + instru + '.joblib')
+        y_arr = joblib.load('gnps_y_arr_' + instru + '.joblib')
+        correct_idx = np.where(y_arr == 1)[0]
+
+        tmp = 0
+        for k, meta_feature in enumerate(data):
+            if not meta_feature.candidate_formula_list:
+                continue
+            gt_form_arr = gt_ls[k]
+
+            # modify the candidate formula list, such that the ground truth formula is the first one
+            form = Formula(gt_form_arr, 0)
+            new_ml_a_array = _calc_ml_a_array(gt_form_arr, form.mass, form.dbe)
+
+            # fill in the new ml_a_array
+            X_arr[correct_idx[tmp], 5:28] = new_ml_a_array[8:].copy()
+            tmp += 1
+
+        assert tmp == len(correct_idx)
+        X_arr_name = 'gnps_X_arr_' + instru + '_cor.joblib'
+        joblib.dump(X_arr, X_arr_name)
 
 def parse_args():
     """
@@ -405,37 +736,52 @@ def parse_args():
 # test
 if __name__ == '__main__':
     import time
-
     start_time = time.time()
     __package__ = "msbuddy"
 
-    # parse arguments
-    args = parse_args()
+    # ###############
+    # # cmd
+    # # parse arguments
+    # args = parse_args()
+    #
+    # # load training data
+    # # load_gnps_data('ms2db_selected_with_ms2.tsv')
+    #
+    # email_body = ''
+    #
+    # if args.calc:
+    #     # calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
+    #     assign_subform_gen_training_data(instru=args.ms)
+    #
+    # elif args.gen:
+    #     combine_and_clean_x_y(test=False)
+    #     # z_norm()  # z-normalization
+    #
+    # else:  # train model
+    #     email_body = train_model(args.ms1, args.ms2)
+    #
+    # time_elapsed = time.time() - start_time
+    # time_elapsed = time_elapsed / 3600
+    #
+    # email_body += '\n\nTime elapsed: ' + str(time_elapsed) + ' hrs'
+    #
+    # send_hotmail_email("Job finished", email_body,
+    #                    "s1xing@health.ucsd.edu", smtp_password=args.p)
 
-    # test here
-    # args = argparse.Namespace(calc=True, ms='ft', cpu=1, to=6000,
-    #                           ms1=False, ms2=True)
+    ###############
+    # local
+    args = argparse.Namespace(calc=False, gen=True, ms='ft', cpu=1, to=999999,
+                              ms1=True, ms2=True)
 
-    # load training data
-    # load_gnps_data('ms2db_selected_with_ms2.tsv')
+    # correct_x_z_norm()
+    # correct_x_ml_a_for_gt()
 
-    email_body = ''
+    # combine_and_clean_x_y()
+    train_model(args.ms1, args.ms2)
 
-    if args.calc:
-        calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
-        # assign_subform_gen_training_data(instru=args.ms)
+    # get_feature_importance(joblib.load('ml_b_ms1_ms2.joblib'), True, True)
+    # get_feature_importance(joblib.load('ml_b_ms1.joblib'), True, False)
+    # get_feature_importance(joblib.load('ml_b_ms2.joblib'), False, True)
+    # get_feature_importance(joblib.load('ml_b.joblib'), False, False)
 
-    elif args.gen:
-        combine_and_clean_X_y()
-        # z_norm()  # z-normalization
-
-    else:  # train model
-        email_body = train_model(args.ms1, args.ms2, args.p)
-
-    time_elapsed = time.time() - start_time
-    time_elapsed = time_elapsed / 3600
-
-    email_body += '\n\nTime elapsed: ' + str(time_elapsed) + ' hrs'
-
-    send_hotmail_email("Job finished", email_body,
-                       "s1xing@health.ucsd.edu", smtp_password=args.p)
+    print('done')

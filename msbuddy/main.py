@@ -552,21 +552,27 @@ if __name__ == '__main__':
     msb_engine = Msbuddy(msb_config)
 
     # you can load multiple USIs at once
-    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi/chagas_neg.mgf')
+    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
+
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'
+    # msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
     # cmd version
-    msb_engine.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi/msbuddy_output_1'), True)
+    # msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output_2')), True)
 
-    # # annotate molecular formula
-    # msb_engine.annotate_formula()
-    # # retrieve the annotation result summary
-    # result = msb_engine.get_summary()
+    # annotate molecular formula
+    msb_engine.annotate_formula()
+    # retrieve the annotation result summary
+    result = msb_engine.get_summary()
 
     end = time.time()
     print(end - start)
-    #
-    # # print(result)
-    # form_top1 = [r['formula_rank_1'] for r in result]
+
+    print(result)
+    form_top1 = [r['formula_rank_1'] for r in result]
     # form_est_fdr = [r['estimated_fdr'] for r in result]
-    # print(form_top1)
+    print(form_top1)
     # print(form_est_fdr)
