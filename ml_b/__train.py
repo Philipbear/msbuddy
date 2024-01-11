@@ -388,7 +388,6 @@ def train_model(ms1_iso, ms2_spec):
     # best_params = tune_hyperparams(X_arr, y_arr, group_arr)
     best_params = {'objective': 'lambdarank', 'metric': 'ndcg', 'ndcg_at': [1],
                    'learning_rate': 0.01, 'num_leaves': 1500, 'max_depth': -1, 'min_data_in_leaf': 20,
-                   'max_bin': 200, 'bagging_fraction': 0.9, 'bagging_freq': 1, 'feature_fraction': 1,
                    'lambda_l1': 0, 'lambda_l2': 0, 'seed': 24, 'verbose': 0}
 
     # Split training and testing data

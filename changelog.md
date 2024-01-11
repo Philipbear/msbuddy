@@ -33,7 +33,8 @@ msbuddy changelog
 - Bug fix for load_mgf (now can load metabolite features with MS1 and MS2 spectra using the same identifier).
 - Update command line version.
 
-0.3.0 (2023-12-20)
+0.3.0 (2024-01-20)
 - Update deep learning features & models for molecular formula annotation.
 Now we use a learning-to-rank model to rank the formula candidates.
 - Update MS2 preprocessing: reserve top 6 peaks (user-defined) for each 50 Da window.
+- Update database source: now we use the GitHub release to manage the database source.
