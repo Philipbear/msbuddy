@@ -21,7 +21,6 @@ from sklearn.metrics import ndcg_score
 from __train_gnps_cmd import send_hotmail_email, sim_ms1_iso_pattern
 
 
-
 def load_gnps_data(path):
     """
     load GNPS library
@@ -40,7 +39,7 @@ def load_gnps_data(path):
     ft_gt_ls = []
     for i in range(len(db)):
         # parse formula info
-        formula = db['FORMULA'][i]
+        formula = db['formula'][i]
         gt_form_arr = read_formula(formula)
 
         # skip if formula is not valid
@@ -50,7 +49,7 @@ def load_gnps_data(path):
         # calculate theoretical mass
         theo_mass = Formula(gt_form_arr, 0).mass
         # print(db['ADDUCT'][i])
-        adduct = Adduct(db['ADDUCT'][i], True if db['IONMODE'][i] == 'positive' else False, True)
+        adduct = Adduct(db['adduct'][i], True if db['ion_mode'][i] == 'positive' else False, True)
         theo_mz = theo_mass + adduct.net_formula.mass / adduct.charge
         theo_mz = theo_mz - 0.00054858 * adduct.charge
 
@@ -61,20 +60,20 @@ def load_gnps_data(path):
         ms1_mz_arr = np.array([theo_mz + x * 1.003355 for x in range(len(ms1_sim_arr))])
 
         # parse ms2 info
-        ms2_mz = np.array(db['ms2mz'][i].split(',')).astype(np.float64)
-        ms2_int = np.array(db['ms2int'][i].split(',')).astype(np.float64)
+        ms2_mz = np.array(db['ms2mz'][i].split(';')).astype(np.float64)
+        ms2_int = np.array(db['ms2int'][i].split(';')).astype(np.float64)
 
         mf = MetaFeature(identifier=db.index[i],
                          mz=theo_mz,
-                         charge=1 if db['IONMODE'][i] == 'positive' else -1,
+                         charge=1 if db['ion_mode'][i] == 'positive' else -1,
                          ms1=Spectrum(ms1_mz_arr, ms1_sim_arr),
                          ms2=Spectrum(ms2_mz, ms2_int))
 
         # mz tolerance, depends on the instrument
-        if db['INSTRUMENT_TYPE'][i] == 'qtof':
+        if db['instrument_type'][i] == 'qtof':
             qtof_gt_ls.append(gt_form_arr)  # add to ground truth formula list
             qtof_mf_ls.append(mf)
-        elif db['INSTRUMENT_TYPE'][i] == 'orbitrap':
+        elif db['instrument_type'][i] == 'orbitrap':
             orbi_gt_ls.append(gt_form_arr)  # add to ground truth formula list
             orbi_mf_ls.append(mf)
         else:  # FT-ICR
@@ -244,8 +243,8 @@ def assign_subform_gen_training_data(instru):
 
         cand_cnt = 0
         for cf in meta_feature.candidate_formula_list:
-            if cand_cnt > 200:
-                break
+            # if cand_cnt > 200:
+            #     break
             if gt_form_str == form_arr_to_str(cf.formula.array):
                 continue
             cand_form_ls.append(cf)
@@ -744,7 +743,7 @@ if __name__ == '__main__':
     # args = parse_args()
     #
     # # load training data
-    # # load_gnps_data('ms2db_selected_with_ms2.tsv')
+    # # load_gnps_data('merged_ms2db_augmented.tsv')
     #
     # email_body = ''
     #

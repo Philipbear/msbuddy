@@ -291,14 +291,10 @@ def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: floa
     """
     # generate feature array and group size array
     total_X_arr = np.array([])
-    # group_size_arr = np.array([])
 
     for mf in meta_feature_list:
         if not mf.candidate_formula_list:
             continue
-
-        # add group size to group_size_arr
-        # group_size_arr = np.append(group_size_arr, len(mf.candidate_formula_list))
 
         # generate ML features for each candidate formula
         for cf in mf.candidate_formula_list:
@@ -368,7 +364,7 @@ def _calc_formula_feature(f: np.array) -> np.array:
     """
     calculate formula features
     :param f: formula array
-    :return: numpy array of formula features: cho, chon, chonps, hetero_atom_category, hal_atom_category
+    :return: numpy array of formula features: cho, chon, chonps
     """
     # sum of elements other than C, H, O, N, P, S
     ele_sum_1 = f[2] + f[3] + f[4] + f[5] + f[6] + f[8]
@@ -379,14 +375,7 @@ def _calc_formula_feature(f: np.array) -> np.array:
     chon = 1 if ele_sum_2 == 0 else 0
     chonps = 1 if ele_sum_1 == 0 else 0
 
-    # # ele_exist_arr: np array of elements existence (0 or 1)
-    # arr = np.clip(f, 0, 1)
-    # # hetero_atom_category
-    # hetero_atom_category = arr[2] + arr[3] + arr[4] + arr[5] + arr[6] + arr[7] + arr[8] + arr[10] + arr[11]
-    # # hal_atom_category
-    # hal_atom_category = arr[2] + arr[3] + arr[4] + arr[5]
-
-    # return np.array([chon, chonps, hetero_atom_category, hal_atom_category])
+    # return np.array([cho, chon, chonps])
 
     return np.array([chon, chonps])
 
