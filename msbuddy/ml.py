@@ -413,7 +413,7 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
         # explained fragment ion intensity percentage
         exp_frag_int_pct = np.sum(exp_int_arr) / np.sum(valid_int_arr)
 
-        frag_form_list = ms2_explanation.explanation_list  # array of fragment formulas, Formula objects
+        frag_form_list = ms2_explanation.explanation_list  # list of fragment formulas, Formula objects
 
         # check db existence of all explained fragments
         pos_mode = meta_feature.adduct.pos_mode
@@ -422,8 +422,8 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
             frag_db_bool, frag_common_bool = check_formula_existence(f.array, pos_mode, True, gd)
             frag_db_existed = np.append(frag_db_existed, frag_db_bool)
             frag_common = np.append(frag_common, frag_common_bool)
-            nl_db_bool, nl_common_bool = check_formula_existence(cand_form.formula.charged_formula.array - f.array,
-                                                                    pos_mode, False, gd)
+            nl_db_bool, nl_common_bool = check_formula_existence(cand_form.charged_formula.array - f.array,
+                                                                 pos_mode, False, gd)
             nl_db_existed = np.append(nl_db_existed, nl_db_bool)
             nl_common = np.append(nl_common, nl_common_bool)
 

@@ -89,19 +89,23 @@ def load_gnps_data(path):
     joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
 
 
-def fill_ml_a_batch(data, batch_size):
+def fill_ml_a_batch(data, batch_size=1000):
     n_batch = int(np.ceil(len(data) / batch_size))
     for n in tqdm(range(n_batch)):
         start_idx = n * batch_size
         end_idx = min((n + 1) * batch_size, len(data))
 
+        batch_data = data[start_idx:end_idx]
+
         # generate three arrays from buddy data
-        cand_form_arr, dbe_arr, mass_arr = _gen_arr_from_buddy_data(data)
+        cand_form_arr, dbe_arr, mass_arr = _gen_arr_from_buddy_data(batch_data)
 
         # generate ML feature array
         feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
         # fill in batch_data
-        _fill_ml_a_arr_in_batch_data(data, feature_arr)
+        _fill_ml_a_arr_in_batch_data(batch_data, feature_arr)
+
+        data[start_idx:end_idx] = batch_data
 
     return data
 
@@ -118,7 +122,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(qtof_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
-        new_data = fill_ml_a_batch(buddy.data, 1000)
+        new_data = fill_ml_a_batch(buddy.data)
         joblib.dump(new_data, 'gnps_qtof_mf_ls_cand_2.joblib')
     elif instru == 'orbi':
         orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
@@ -128,7 +132,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(orbi_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
-        new_data = fill_ml_a_batch(buddy.data, 1000)
+        new_data = fill_ml_a_batch(buddy.data)
         joblib.dump(new_data, 'gnps_orbi_mf_ls_cand_2.joblib')
     else:  # FT-ICR
         ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
@@ -138,7 +142,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(ft_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
-        new_data = fill_ml_a_batch(buddy.data, 1000)
+        new_data = fill_ml_a_batch(buddy.data)
         joblib.dump(new_data, 'gnps_ft_mf_ls_cand_2.joblib')
 
     return shared_data_dict
@@ -245,7 +249,9 @@ def assign_subform_gen_training_data(instru):
         # ml_a_prob = buddy.predict_formula_feasibility(gt_form_arr)
         # ml_a_prob = 1
         form = Formula(gt_form_arr, 0)
-        this_cf = CandidateFormula(form)
+        this_cf = CandidateFormula(formula=form,
+                                   charged_formula=Formula(gt_form_arr + meta_feature.adduct.net_formula.array,
+                                                           meta_feature.adduct.charge))
         this_cf.ml_a_array = _calc_ml_a_array(gt_form_arr, form.mass, form.dbe)
         cand_form_ls = [this_cf]
 
@@ -745,24 +751,25 @@ def parse_args():
 
 # test
 if __name__ == '__main__':
+
     import time
     start_time = time.time()
     __package__ = "msbuddy"
 
     ###############
     # cmd
-    args = parse_args()
-    # args = argparse.Namespace(calc=True, gen=False, ms='ft', cpu=1, to=999999,
-    #                           ms1=True, ms2=True)
+    # args = parse_args()
+    args = argparse.Namespace(calc=True, gen=False, ms='ft', cpu=1, to=999999,
+                              ms1=True, ms2=True)
 
     # load training data
-    load_gnps_data('merged_ms2db_augmented.tsv')
+    # load_gnps_data('merged_ms2db_augmented.tsv')
 
     email_body = ''
 
     if args.calc:
-        calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
-        # assign_subform_gen_training_data(instru=args.ms)
+        # calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
+        assign_subform_gen_training_data(instru=args.ms)
 
     elif args.gen:
         combine_and_clean_x_y()
