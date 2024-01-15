@@ -93,7 +93,7 @@ def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, gd) -> List[Formul
     return formulas
 
 
-def check_formula_existence(form_arr, pos_mode: bool, frag: bool, gd) -> bool:
+def check_formula_existence(form_arr, pos_mode: bool, frag: bool, gd) -> Tuple[bool, bool]:
     """
     check whether this formula exists in the database
     :param form_arr: 12-dim array
@@ -131,13 +131,14 @@ def check_formula_existence(form_arr, pos_mode: bool, frag: bool, gd) -> bool:
         results_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
     forms = _func_a(results_mass, results_formula, target_mass, mass_tol, None)
 
-    if len(forms) > 0:
-        return True
+    db_existed_bool = len(forms) > 0
+
+    if frag and form_arr[0] == 0:
+        common_bool = common_frag_from_array(form_arr, gd['common_frag_db'])
     else:
-        if frag and form_arr[0] == 0:
-            return common_frag_from_array(form_arr, gd['common_frag_db'])
-        else:
-            return common_nl_from_array(form_arr, gd['common_loss_db'])
+        common_bool = common_nl_from_array(form_arr, gd['common_loss_db'])
+
+    return db_existed_bool, common_bool
 
 
 def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,

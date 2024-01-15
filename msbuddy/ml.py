@@ -355,7 +355,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     # generate output array
     out = np.concatenate((np.array([ms1_iso_sim, mz_error_log_p]),  # 2
                           np.array([pos_mode]), form_feature_arr, cand_form.ml_a_array[8:],  # 1 + 2 + 32 - 8
-                          ms2_feature_arr))  # 14
+                          ms2_feature_arr))  # 24
 
     return out
 
@@ -417,11 +417,19 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
 
         # check db existence of all explained fragments
         pos_mode = meta_feature.adduct.pos_mode
-        frag_db_existed = np.array([check_formula_existence(f.array, pos_mode, True, gd) for f in frag_form_list])
-        nl_db_existed = np.array([check_formula_existence(cand_form.charged_formula.array - f.array,
-                                                          pos_mode, False, gd) for f in frag_form_list])
-        # logical OR of fragment/nl db existed
+        frag_db_existed, frag_common, nl_db_existed, nl_common = np.array([]), np.array([]), np.array([]), np.array([])
+        for f in frag_form_list:
+            frag_db_bool, frag_common_bool = check_formula_existence(f.array, pos_mode, True, gd)
+            frag_db_existed = np.append(frag_db_existed, frag_db_bool)
+            frag_common = np.append(frag_common, frag_common_bool)
+            nl_db_bool, nl_common_bool = check_formula_existence(cand_form.formula.charged_formula.array - f.array,
+                                                                    pos_mode, False, gd)
+            nl_db_existed = np.append(nl_db_existed, nl_db_bool)
+            nl_common = np.append(nl_common, nl_common_bool)
+
+        # logical OR of fragment/nl
         fragnl_db_existed = np.logical_or(frag_db_existed, nl_db_existed)
+        fragnl_common = np.logical_or(frag_common, nl_common)
 
         # explained and db existed fragment/nl ion count percentage
         exp_db_frag_cnt_pct = np.sum(frag_db_existed) / len(valid_idx_arr)
@@ -432,6 +440,16 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
         exp_db_frag_int_pct = np.sum(exp_int_arr[frag_db_existed]) / np.sum(valid_int_arr)
         exp_db_nl_int_pct = np.sum(exp_int_arr[nl_db_existed]) / np.sum(valid_int_arr)
         exp_db_fragnl_int_pct = np.sum(exp_int_arr[fragnl_db_existed]) / np.sum(valid_int_arr)
+
+        # common fragment/nl ion count percentage
+        exp_common_frag_cnt_pct = np.sum(frag_common) / len(valid_idx_arr)
+        exp_common_nl_cnt_pct = np.sum(nl_common) / len(valid_idx_arr)
+        exp_common_fragnl_cnt_pct = np.sum(fragnl_common) / len(valid_idx_arr)
+
+        # common fragment/nl ion intensity percentage
+        exp_common_frag_int_pct = np.sum(exp_int_arr[frag_common]) / np.sum(valid_int_arr)
+        exp_common_nl_int_pct = np.sum(exp_int_arr[nl_common]) / np.sum(valid_int_arr)
+        exp_common_fragnl_int_pct = np.sum(exp_int_arr[fragnl_common]) / np.sum(valid_int_arr)
 
         # subformula count: how many frags are subformula of other frags
         subform_score, subform_common_loss_score = _calc_subformula_score(frag_form_list, gd)
@@ -466,11 +484,13 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
 
         out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, exp_db_frag_cnt_pct, exp_db_nl_cnt_pct,
                             exp_db_fragnl_cnt_pct, exp_db_frag_int_pct, exp_db_nl_int_pct, exp_db_fragnl_int_pct,
+                            exp_common_frag_cnt_pct, exp_common_nl_cnt_pct, exp_common_fragnl_cnt_pct,
+                            exp_common_frag_int_pct, exp_common_nl_int_pct, exp_common_fragnl_int_pct,
                             subform_score, subform_common_loss_score,
                             radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
                             len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
     else:
-        out_arr = np.array([0] * 18)
+        out_arr = np.array([0] * 24)
 
     return out_arr
 
@@ -582,14 +602,14 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         model = gd['model_b_ms1_ms2']
     elif group_no == 1:
         model = gd['model_b_ms1_noms2']
-        X_arr = X_arr[:, :-18]  # remove MS2-related features
+        X_arr = X_arr[:, :-24]  # remove MS2-related features
     elif group_no == 2:
         model = gd['model_b_noms1_ms2']
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
     else:
         model = gd['model_b_noms1_noms2']
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
-        X_arr = X_arr[:, :-18]  # remove MS2-related features
+        X_arr = X_arr[:, :-24]  # remove MS2-related features
 
     # predict formula probability
     score_arr = model.predict(X_arr)

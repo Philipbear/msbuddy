@@ -381,8 +381,8 @@ def train_model(ms1_iso, ms2_spec):
         # discard the ms1 iso feature in X_arr
         X_arr = X_arr[:, 1:]
     if not ms2_spec:
-        # discard the last 18 features in X_arr
-        X_arr = X_arr[:, :-18]
+        # discard the last 24 features in X_arr
+        X_arr = X_arr[:, :-24]
 
     # hyperparameter tuning
     # best_params = tune_hyperparams(X_arr, y_arr, group_arr)
@@ -643,13 +643,15 @@ def get_feature_importance(gbm, ms1, ms2):
                      'h_c', 'n_c', 'o_c', 'p_c', 's_c', 'hal_c', 'hal_h',
                      'o_p', 'hal_two', 'hal_three', 'exp_frag_cnt_pct', 'exp_db_frag_cnt_pct', 'exp_db_nl_cnt_pct',
                      'exp_db_fragnl_cnt_pct', 'exp_db_frag_int_pct', 'exp_db_nl_frag_int_pct', 'exp_db_fragnl_int_pct',
+                     'exp_common_frag_cnt_pct', 'exp_common_nl_cnt_pct', 'exp_common_fragnl_cnt_pct',
+                     'exp_common_frag_int_pct', 'exp_common_nl_int_pct', 'exp_common_fragnl_int_pct',
                      'subform_score', 'subform_common_loss_score',
                      'radical_cnt_pct', 'frag_dbe_wavg', 'frag_h2c_wavg', 'frag_mz_err_wavg', 'frag_nl_dbe_diff_wavg',
                      'valid_ms2_peak', 'exp_frag_cnt_pct_sqrt', 'exp_frag_int_pct_sqrt']
     if not ms1:
         feature_names = feature_names[1:]
     if not ms2:
-        feature_names = feature_names[:-18]
+        feature_names = feature_names[:-24]
     # Assuming 'gbm' is your trained LightGBM model
     # and 'feature_names' is the list of names of the features
 
