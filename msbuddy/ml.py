@@ -94,6 +94,7 @@ def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     # populate output array
     for i in range(len(all_cf_arr)):
         ta = ta_arr[i]
+        chno = all_cf_arr[i, 0] + all_cf_arr[i, 1] + all_cf_arr[i, 7] + all_cf_arr[i, 9]
         # if C > 0
         if all_cf_arr[i, 0] > 0:
             out[i, :] = [all_cf_arr[i, 0], all_cf_arr[i, 1], all_cf_arr[i, 7],
@@ -102,7 +103,7 @@ def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
                          all_cf_arr[i, 0] / ta, all_cf_arr[i, 1] / ta,
                          all_cf_arr[i, 7] / ta,
                          all_cf_arr[i, 9] / ta, all_cf_arr[i, 10] / ta,
-                         all_cf_arr[i, 11] / ta,
+                         all_cf_arr[i, 11] / ta, chno / ta,
                          hal_arr[i] / ta, senior_1_1_arr[i], senior_1_2_arr[i], 2 * ta - 1, dbe_arr[i],
                          np.sqrt(dbe_arr[i] / mass_arr[i]), dbe_arr[i] / np.power(mass_arr[i] / 100, 2 / 3),
                          all_cf_arr[i, 1] / all_cf_arr[i, 0],
@@ -119,7 +120,7 @@ def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
                          all_cf_arr[i, 0] / ta, all_cf_arr[i, 1] / ta,
                          all_cf_arr[i, 7] / ta,
                          all_cf_arr[i, 9] / ta, all_cf_arr[i, 10] / ta,
-                         all_cf_arr[i, 11] / ta,
+                         all_cf_arr[i, 11] / ta, chno / ta,
                          hal_arr[i] / ta, senior_1_1_arr[i], senior_1_2_arr[i], 2 * ta - 1, dbe_arr[i],
                          np.sqrt(dbe_arr[i] / mass_arr[i]), dbe_arr[i] / np.power(mass_arr[i] / 100, 2 / 3),
                          0, 0, 0, 0, 0, 0,
@@ -346,14 +347,14 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
     ms1_iso_sim = cand_form.ms1_isotope_similarity if cand_form.ms1_isotope_similarity else 0
 
     # MS/MS-related features
-    ms2_feature_arr = _gen_ms2_feature(meta_feature, cand_form.ms2_raw_explanation, pre_dbe, pre_h2c, ppm, ms2_tol, gd)
+    ms2_feature_arr = _gen_ms2_feature(meta_feature, cand_form, pre_dbe, pre_h2c, ppm, ms2_tol, gd)
 
     # pos mode bool
     pos_mode = 1 if this_adduct.charge > 0 else 0
 
     # generate output array
     out = np.concatenate((np.array([ms1_iso_sim, mz_error_log_p]),  # 2
-                          np.array([pos_mode]), form_feature_arr, cand_form.ml_a_array[8:],  # 1 + 2 + 31 - 8
+                          np.array([pos_mode]), form_feature_arr, cand_form.ml_a_array[8:],  # 1 + 2 + 32 - 8
                           ms2_feature_arr))  # 14
 
     return out
@@ -380,12 +381,12 @@ def _calc_formula_feature(f: np.array) -> np.array:
     return np.array([chon, chonps])
 
 
-def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: float,
+def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
                      ppm: bool, ms2_tol: float, gd) -> np.array:
     """
     generate MS/MS-related features for a single candidate formula
     :param meta_feature: MetaFeature object
-    :param ms2_explanation: MS2Explanation object
+    :param cand_form: CandidateFormula object
     :param pre_dbe: precursor DBE
     :param pre_h2c: precursor H/C ratio
     :param ppm: whether to use ppm error
@@ -393,6 +394,9 @@ def _gen_ms2_feature(meta_feature, ms2_explanation, pre_dbe: float, pre_h2c: flo
     :param gd: global dependencies
     :return: numpy array of MS/MS-related features
     """
+    # MS2 explanation
+    ms2_explanation = cand_form.ms2_raw_explanation
+
     # valid MS2 explanation
     if meta_feature.ms2_processed and ms2_explanation:
         # explained fragment ion

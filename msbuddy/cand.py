@@ -273,7 +273,7 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
         # query precursor mass, for fill in db_existed
         ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol, ele_lower_limit,
                                                                                 ele_upper_limit, db_mode, gd)
-        if len(mf.ms2_processed) <= 3 or len(ms2_cand_form_ls) == 0:
+        if len(ms2_cand_form_ls) == 0:
             # merge candidate formulas from ms1 and ms2
             cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
                                             ms1_cand_form_str_ls, ms2_cand_form_str_ls)
@@ -419,14 +419,19 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     :return: list of candidate formulas (CandidateFormula), list of candidate formula strings
     """
     # query precursor mz
-    formulas = query_precursor_mass(meta_feature.mz, meta_feature.adduct, ms1_tol, ppm, db_mode, gd)
+    neutral_formulas, charged_formulas = query_precursor_mass(meta_feature.mz, meta_feature.adduct,
+                                                              ms1_tol, ppm, db_mode, gd)
     # filter out formulas that exceed element limits
-    forms = [f for f in formulas if _element_check(f.array, lower_limit, upper_limit)
-             and _senior_rules(f.array) and _o_p_check(f.array) and _dbe_check(f.array) and
-             _adduct_loss_check(f.array, meta_feature.adduct.loss_formula)]
+    neutral_forms, charged_forms = [], []
+    for m, f in enumerate(neutral_formulas):
+        if _element_check(f.array, lower_limit, upper_limit) and _senior_rules(f.array) and _o_p_check(f.array) \
+                and _dbe_check(f.array) and _adduct_loss_check(f.array, meta_feature.adduct.loss_formula):
+            neutral_forms.append(f)
+            charged_forms.append(charged_formulas[m])
 
     # convert neutral formulas into CandidateFormula objects
-    cand_form_list = [CandidateFormula(form, db_existed=True) for form in forms]
+    cand_form_list = [CandidateFormula(formula=form, charged_formula=charged_form,
+                                       db_existed=True) for form, charged_form in zip(neutral_forms, charged_forms)]
     cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in cand_form_list]
 
     return cand_form_list, cand_form_str_list
@@ -510,6 +515,7 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
 
     # generate CandidateFormula object
     candidate_formula_list = [CandidateFormula(formula=Formula(cs.pre_neutral_array, 0, cs.neutral_mass),
+                                               charged_formula=Formula(cs.pre_charged_array, mf.adduct.charge),
                                                ms2_raw_explanation=None) for cs in candidate_list]
     cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in candidate_formula_list]
 

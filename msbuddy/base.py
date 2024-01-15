@@ -682,12 +682,14 @@ class CandidateFormula:
     """
 
     def __init__(self, formula: Formula,
+                 charged_formula: Union[Formula, None] = None,
                  ms1_isotope_similarity: Union[float, None] = None,
                  ms2_raw_explanation: Union[MS2Explanation, None] = None,
                  db_existed: bool = False,
                  optimal_formula: bool = False,
                  ms2_refined_explanation: Union[MS2Explanation, None] = None):
         self.formula = formula  # neutral formula
+        self.charged_formula = charged_formula  # charged formula
         self.ml_a_prob = None  # ml_a score for model A (formula feasibility)
         self.estimated_prob = None  # estimated probability (ml_b score for model B)
         self.normed_estimated_prob = None  # normalized estimated probability considering all candidate formulas

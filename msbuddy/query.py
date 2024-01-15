@@ -97,6 +97,7 @@ def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
     """
     check whether this formula exists in the database
     :param formula: formula to check
+    :param pos_mode: whether this is a frag in positive ion mode
     :param gd: global dependencies dictionary
     :return: True if this formula exists in the database
     """
@@ -151,7 +152,8 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
     target_mass = (mass * abs(adduct.charge) + ion_mode_int * 0.00054858 - adduct.net_formula.mass) / adduct.m
 
     # formulas to return
-    formulas = []
+    neutral_formulas = []
+    charged_formulas = []
 
     # query database, quick filter by in-memory index array
     # quick filter by in-memory index array
@@ -162,7 +164,9 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
     results_basic_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
     results_basic_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
     forms_basic = _func_a(results_basic_mass, results_basic_formula, target_mass, mass_tol, adduct.loss_formula)
-    formulas.extend(forms_basic)
+    neutral_formulas.extend(forms_basic)
+    charged_formulas.extend([Formula(adduct.m * f.array + adduct.net_formula.array,
+                                     charge=adduct.charge) for f in forms_basic])
 
     if db_mode > 0:
         db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
@@ -170,9 +174,11 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
         results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
         forms_halogen = _func_a(results_halogen_mass, results_halogen_formula,
                                 target_mass, mass_tol, adduct.loss_formula)
-        formulas.extend(forms_halogen)
+        neutral_formulas.extend(forms_halogen)
+        charged_formulas.extend([Formula(adduct.m * f.array + adduct.net_formula.array,
+                                         charge=adduct.charge) for f in forms_halogen])
 
-    return formulas
+    return neutral_formulas, charged_formulas
 
 
 def query_fragnl_mass(mass: float, fragment: bool, pos_mode: bool, na_contain: bool, k_contain: bool,

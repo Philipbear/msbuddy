@@ -450,7 +450,7 @@ class Msbuddy:
             raise ValueError("Invalid adduct string.")
         # query
         ion = Adduct(adduct, pos_mode)
-        formulas = query_precursor_mass(mz, ion, mz_tol, ppm, 1, shared_data_dict)
+        formulas, _ = query_precursor_mass(mz, ion, mz_tol, ppm, 1, shared_data_dict)
         ion_int = 1 if pos_mode else -1
         out = [FormulaResult(form_arr_to_str(f.array),
                              (f.mass * ion.m + ion.net_formula.mass - ion_int * 0.00054858) / abs(ion.charge),

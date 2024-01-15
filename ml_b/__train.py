@@ -140,6 +140,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
 @njit
 def _calc_ml_a_array(form_arr, mass, dbe):
     # calculate ML features
+    chno = form_arr[0] + form_arr[1] + form_arr[7] + form_arr[9]
     hal = np.sum(form_arr[2:6])  # sum of halogen atoms
     ta = np.sum(form_arr)  # total number of atoms
     f_exist = 1 if form_arr[4] >= 1 else 0
@@ -167,7 +168,7 @@ def _calc_ml_a_array(form_arr, mass, dbe):
                         form_arr[0] / ta, form_arr[1] / ta,
                         form_arr[7] / ta,
                         form_arr[9] / ta, form_arr[10] / ta,
-                        form_arr[11] / ta,
+                        form_arr[11] / ta, chno / ta,
                         hal / ta, senior_1_1, senior_1_2, 2 * ta - 1, dbe,
                         np.sqrt(dbe / mass), dbe / np.power(mass / 100, 2 / 3),
                         form_arr[1] / form_arr[0],
@@ -184,7 +185,7 @@ def _calc_ml_a_array(form_arr, mass, dbe):
                         form_arr[0] / ta, form_arr[1] / ta,
                         form_arr[7] / ta,
                         form_arr[9] / ta, form_arr[10] / ta,
-                        form_arr[11] / ta,
+                        form_arr[11] / ta, chno / ta,
                         hal / ta, senior_1_1, senior_1_2, 2 * ta - 1, dbe,
                         np.sqrt(dbe / mass), dbe / np.power(mass / 100, 2 / 3),
                         0, 0, 0, 0, 0, 0,
@@ -637,8 +638,9 @@ def heuristic_ranking_baseline(X_test, y_test, groups_test, feature_index, ascen
 
 def get_feature_importance(gbm, ms1, ms2):
     feature_names = ['ms1_iso_sim', 'mz_error_log_p', 'pos_mode', 'chon', 'chonps',
-                     'c_ta', 'h_ta', 'n_ta', 'o_ta', 'p_ta', 's_ta', 'hal_ta', 'senior_1_1', 'senior_1_2', '2ta_1',
-                     'dbe', 'dbe_mass_1', 'dbe_mass_2', 'h_c', 'n_c', 'o_c', 'p_c', 's_c', 'hal_c', 'hal_h',
+                     'c_ta', 'h_ta', 'n_ta', 'o_ta', 'p_ta', 's_ta', 'chno_ta', 'hal_ta', 'senior_1_1',
+                     'senior_1_2', '2ta_1', 'dbe', 'dbe_mass_1', 'dbe_mass_2',
+                     'h_c', 'n_c', 'o_c', 'p_c', 's_c', 'hal_c', 'hal_h',
                      'o_p', 'hal_two', 'hal_three', 'exp_frag_cnt_pct', 'exp_db_frag_cnt_pct', 'exp_db_frag_int_pct',
                      'subform_score', 'subform_common_loss_score',
                      'radical_cnt_pct', 'frag_dbe_wavg', 'frag_h2c_wavg', 'frag_mz_err_wavg', 'frag_nl_dbe_diff_wavg',
