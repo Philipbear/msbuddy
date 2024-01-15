@@ -574,6 +574,15 @@ class ProcessedMS2:
         # keep top_n_per_50_da peaks in each 50 Da
         self._keep_top_n_per_50_da(top_n_per_50_da)
 
+        # top n fragment
+        top_n_frag = _calc_top_n_frag(mz)
+        if len(self.mz_array) > top_n_frag:
+            idx = np.argsort(self.int_array)
+            reserved_idx = self.int_array >= self.int_array[idx[-top_n_frag]]
+            self.idx_array = self.idx_array[reserved_idx]
+            self.mz_array = self.mz_array[reserved_idx]
+            self.int_array = self.int_array[reserved_idx]
+
     def _denoise(self, rel_int_denoise_cutoff: float):
         """
         denoise MS2 spectrum
@@ -650,6 +659,17 @@ def ms2_denoise(mz_arr, int_arr, top_n=6, per_mass_range=50):
             bool_arr[group_idx] = int_arr[group_idx] >= int_threshold
 
     return bool_arr
+
+
+def _calc_top_n_frag(pre_mz: float) -> int:
+    """
+    calculate top n frag No., a linear function of precursor m/z (for class ProcessedMS2)
+    :param pre_mz: precursor m/z
+    :param max_frag_reserved: max fragment count reserved
+    :return: top n frag No. (int)
+    """
+    top_n = int(20 + 0.05 * pre_mz)
+    return top_n
 
 
 class MS2Explanation:

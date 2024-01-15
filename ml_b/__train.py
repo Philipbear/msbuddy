@@ -742,49 +742,49 @@ if __name__ == '__main__':
     start_time = time.time()
     __package__ = "msbuddy"
 
-    # ###############
-    # # cmd
-    # # parse arguments
-    # args = parse_args()
-    #
-    # # load training data
-    # # load_gnps_data('merged_ms2db_augmented.tsv')
-    #
-    # email_body = ''
-    #
-    # if args.calc:
-    #     # calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
-    #     assign_subform_gen_training_data(instru=args.ms)
-    #
-    # elif args.gen:
-    #     combine_and_clean_x_y(test=False)
-    #     # z_norm()  # z-normalization
-    #
-    # else:  # train model
-    #     email_body = train_model(args.ms1, args.ms2)
-    #
-    # time_elapsed = time.time() - start_time
-    # time_elapsed = time_elapsed / 3600
-    #
-    # email_body += '\n\nTime elapsed: ' + str(time_elapsed) + ' hrs'
-    #
-    # send_hotmail_email("Job finished", email_body,
-    #                    "s1xing@health.ucsd.edu", smtp_password=args.p)
-
     ###############
-    # local
-    args = argparse.Namespace(calc=False, gen=True, ms='ft', cpu=1, to=999999,
-                              ms1=True, ms2=True)
+    # cmd
+    # parse arguments
+    args = parse_args()
 
-    # correct_x_z_norm()
-    # correct_x_ml_a_for_gt()
+    # load training data
+    # load_gnps_data('merged_ms2db_augmented.tsv')
 
-    # combine_and_clean_x_y()
-    train_model(args.ms1, args.ms2)
+    email_body = ''
 
-    # get_feature_importance(joblib.load('ml_b_ms1_ms2.joblib'), True, True)
-    # get_feature_importance(joblib.load('ml_b_ms1.joblib'), True, False)
-    # get_feature_importance(joblib.load('ml_b_ms2.joblib'), False, True)
-    # get_feature_importance(joblib.load('ml_b.joblib'), False, False)
+    if args.calc:
+        calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
+        # assign_subform_gen_training_data(instru=args.ms)
+
+    elif args.gen:
+        combine_and_clean_x_y()
+        # z_norm()  # z-normalization
+
+    else:  # train model
+        train_model(args.ms1, args.ms2)
+
+    time_elapsed = time.time() - start_time
+    time_elapsed = time_elapsed / 3600
+
+    email_body += '\n\nTime elapsed: ' + str(time_elapsed) + ' hrs'
+
+    send_hotmail_email("Job finished", email_body,
+                       "s1xing@health.ucsd.edu", smtp_password=args.p)
+
+    # ###############
+    # # local
+    # args = argparse.Namespace(calc=False, gen=True, ms='ft', cpu=1, to=999999,
+    #                           ms1=True, ms2=True)
+    #
+    # # correct_x_z_norm()
+    # # correct_x_ml_a_for_gt()
+    #
+    # # combine_and_clean_x_y()
+    # train_model(args.ms1, args.ms2)
+    #
+    # # get_feature_importance(joblib.load('ml_b_ms1_ms2.joblib'), True, True)
+    # # get_feature_importance(joblib.load('ml_b_ms1.joblib'), True, False)
+    # # get_feature_importance(joblib.load('ml_b_ms2.joblib'), False, True)
+    # # get_feature_importance(joblib.load('ml_b.joblib'), False, False)
 
     print('done')
