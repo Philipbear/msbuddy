@@ -417,13 +417,21 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
 
         # check db existence of all explained fragments
         pos_mode = meta_feature.adduct.pos_mode
-        db_existed = np.array([check_formula_existence(f, pos_mode, gd) for f in frag_form_list])
+        frag_db_existed = np.array([check_formula_existence(f.array, pos_mode, True, gd) for f in frag_form_list])
+        nl_db_existed = np.array([check_formula_existence(cand_form.charged_formula.array - f.array,
+                                                          pos_mode, False, gd) for f in frag_form_list])
+        # logical OR of fragment/nl db existed
+        fragnl_db_existed = np.logical_or(frag_db_existed, nl_db_existed)
 
-        # explained and db existed fragment ion count percentage
-        exp_db_frag_cnt_pct = np.sum(db_existed) / len(valid_idx_arr)
+        # explained and db existed fragment/nl ion count percentage
+        exp_db_frag_cnt_pct = np.sum(frag_db_existed) / len(valid_idx_arr)
+        exp_db_nl_cnt_pct = np.sum(nl_db_existed) / len(valid_idx_arr)
+        exp_db_fragnl_cnt_pct = np.sum(fragnl_db_existed) / len(valid_idx_arr)
 
-        # explained and db existed fragment ion intensity percentage
-        exp_db_frag_int_pct = np.sum(exp_int_arr[db_existed]) / np.sum(valid_int_arr)
+        # explained and db existed fragment/nl ion intensity percentage
+        exp_db_frag_int_pct = np.sum(exp_int_arr[frag_db_existed]) / np.sum(valid_int_arr)
+        exp_db_nl_int_pct = np.sum(exp_int_arr[nl_db_existed]) / np.sum(valid_int_arr)
+        exp_db_fragnl_int_pct = np.sum(exp_int_arr[fragnl_db_existed]) / np.sum(valid_int_arr)
 
         # subformula count: how many frags are subformula of other frags
         subform_score, subform_common_loss_score = _calc_subformula_score(frag_form_list, gd)
@@ -456,12 +464,13 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
         frag_nl_dbe_diff_wavg = np.sum(np.array([frag_form.dbe - (pre_dbe - frag_form.dbe + 1)
                                                  for frag_form in frag_form_list]) * normed_exp_int_arr)
 
-        out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, exp_db_frag_cnt_pct, exp_db_frag_int_pct,
+        out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, exp_db_frag_cnt_pct, exp_db_nl_cnt_pct,
+                            exp_db_fragnl_cnt_pct, exp_db_frag_int_pct, exp_db_nl_int_pct, exp_db_fragnl_int_pct,
                             subform_score, subform_common_loss_score,
                             radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
                             len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
     else:
-        out_arr = np.array([0] * 14)
+        out_arr = np.array([0] * 18)
 
     return out_arr
 
@@ -537,8 +546,8 @@ def _calc_log_p_norm(arr: np.array, sigma: float) -> np.array:
 def _calc_log_p_norm_helper(arr_norm_p) -> np.array:
     """
     calculate log(p) for a single element, where p is the probability of a normal distribution
-    :param arr_norm_p: numpy array
-    :return: numpy array
+    :param arr_norm_p: array of probabilities
+    :return: numpy array of log(p)
     """
     arr_norm_p = 1 - arr_norm_p if arr_norm_p > 0.5 else arr_norm_p
     log_p = np.log(arr_norm_p * 2)
@@ -573,22 +582,21 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         model = gd['model_b_ms1_ms2']
     elif group_no == 1:
         model = gd['model_b_ms1_noms2']
-        X_arr = X_arr[:, :-14]  # remove MS2-related features
+        X_arr = X_arr[:, :-18]  # remove MS2-related features
     elif group_no == 2:
         model = gd['model_b_noms1_ms2']
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
     else:
         model = gd['model_b_noms1_noms2']
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
-        X_arr = X_arr[:, :-14]  # remove MS2-related features
+        X_arr = X_arr[:, :-18]  # remove MS2-related features
 
     # predict formula probability
     score_arr = model.predict(X_arr)
     return score_arr
 
 
-def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int,
-                      config, gd):
+def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int, config, gd):
     """
     predict formula probability using ML model b
     :param buddy_data: buddy data

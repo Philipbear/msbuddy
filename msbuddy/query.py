@@ -19,7 +19,7 @@ from typing import List, Tuple, Union
 import numpy as np
 from numba import njit
 
-from msbuddy.base import Adduct, Formula, calc_formula_mass
+from msbuddy.base import Adduct, Formula, calc_formula_mass, calc_formula_dbe
 
 # constants
 na_h_delta = 22.989769 - 1.007825
@@ -93,24 +93,25 @@ def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, gd) -> List[Formul
     return formulas
 
 
-def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
+def check_formula_existence(form_arr, pos_mode: bool, frag: bool, gd) -> bool:
     """
     check whether this formula exists in the database
-    :param formula: formula to check
+    :param form_arr: 12-dim array
     :param pos_mode: whether this is a frag in positive ion mode
+    :param frag: whether this is a fragment ion or neutral loss
     :param gd: global dependencies dictionary
     :return: True if this formula exists in the database
     """
-    form_arr = formula.array
-    radical_bool = formula.dbe % 2 == 0
     halogen_bool = (form_arr[2] + form_arr[3] + form_arr[4] + form_arr[5]) > 0
 
     # Na, K => H
     form_arr = convert_na_k(form_arr)
 
     # if not a radical fragment, convert to neutral form
-    if not radical_bool:
-        form_arr = convert_neutral(form_arr, pos_mode)
+    if frag:
+        radical_bool = calc_formula_dbe(form_arr) % 2 == 0
+        if not radical_bool:
+            form_arr = convert_neutral(form_arr, pos_mode)
 
     # recalculated target mass
     target_mass = calc_formula_mass(form_arr, 0, 0)
@@ -130,7 +131,13 @@ def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
         results_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
     forms = _func_a(results_mass, results_formula, target_mass, mass_tol, None)
 
-    return len(forms) > 0
+    if len(forms) > 0:
+        return True
+    else:
+        if frag and form_arr[0] == 0:
+            return common_frag_from_array(form_arr, gd['common_frag_db'])
+        else:
+            return common_nl_from_array(form_arr, gd['common_loss_db'])
 
 
 def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
@@ -250,8 +257,8 @@ def check_common_frag(formula: Formula, gd) -> bool:
         return False
 
     # Na, K => H
-    form_arr_1 = convert_na_k(form_arr)
-    return common_frag_from_array(form_arr_1, gd['common_frag_db'])
+    form_arr = convert_na_k(form_arr)
+    return common_frag_from_array(form_arr, gd['common_frag_db'])
 
 
 def check_common_nl(formula: Formula, gd) -> bool:
@@ -264,8 +271,8 @@ def check_common_nl(formula: Formula, gd) -> bool:
     form_arr = formula.array
 
     # Na, K => H
-    form_arr_1 = convert_na_k(form_arr)
-    return common_nl_from_array(form_arr_1, gd['common_loss_db'])
+    form_arr = convert_na_k(form_arr)
+    return common_nl_from_array(form_arr, gd['common_loss_db'])
 
 
 def _calc_t_mass_db_idx(mass: float, fragment: bool, radical: bool, convert_mass: float, pos_mode: bool,

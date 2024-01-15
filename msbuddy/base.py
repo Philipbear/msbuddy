@@ -45,7 +45,7 @@ class Formula:
                  isotope: int = 0):
         self.array = np.int16(array)
         self.charge = charge
-        self.dbe = _calc_formula_dbe(array)
+        self.dbe = calc_formula_dbe(array)
         self.isotope = isotope
 
         # fill in mass directly from formula database, otherwise calculate
@@ -65,7 +65,7 @@ class Formula:
 
 
 @njit
-def _calc_formula_dbe(arr):
+def calc_formula_dbe(arr):
     """
     calculate dbe of a formula
     :return: dbe
