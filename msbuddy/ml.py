@@ -90,7 +90,7 @@ def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     o_p_arr[p_bool_arr] = all_cf_arr[p_bool_arr, 9] / all_cf_arr[p_bool_arr, 10] / 3
 
     # generate output array
-    out = np.empty((len(all_cf_arr), 31))
+    out = np.empty((len(all_cf_arr), 32))
     # populate output array
     for i in range(len(all_cf_arr)):
         ta = ta_arr[i]
