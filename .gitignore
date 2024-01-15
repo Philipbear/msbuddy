@@ -163,6 +163,6 @@ cython_debug/
 /manuscript/
 /results/
 /ml_b/*.tsv
-/gnps_lib/
+/ms2_lib/
 
 .pypirc
