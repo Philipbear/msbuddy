@@ -1,5 +1,4 @@
 import argparse
-import json
 from brainpy import isotopic_variants
 import numpy as np
 from tqdm import tqdm
@@ -10,7 +9,8 @@ from scipy.stats import norm
 from msbuddy.base import MetaFeature, Spectrum, Formula, CandidateFormula, Adduct
 from msbuddy.main import Msbuddy, MsbuddyConfig, _gen_subformula
 from msbuddy.load import init_db
-from msbuddy.ml import gen_ml_b_feature_single, pred_formula_feasibility
+from msbuddy.ml import gen_ml_b_feature_single, _gen_arr_from_buddy_data, _gen_ml_a_feature, \
+    _fill_ml_a_arr_in_batch_data
 from msbuddy.cand import _calc_ms1_iso_sim
 from msbuddy.utils import form_arr_to_str, read_formula
 
@@ -48,9 +48,8 @@ def load_gnps_data(path):
 
         # calculate theoretical mass
         theo_mass = Formula(gt_form_arr, 0).mass
-        # print(db['ADDUCT'][i])
         adduct = Adduct(db['adduct'][i], True if db['ion_mode'][i] == 'positive' else False, True)
-        theo_mz = theo_mass + adduct.net_formula.mass / adduct.charge
+        theo_mz = theo_mass + adduct.net_formula.mass
         theo_mz = theo_mz - 0.00054858 * adduct.charge
 
         # simulate ms1 isotope pattern
@@ -65,6 +64,7 @@ def load_gnps_data(path):
 
         mf = MetaFeature(identifier=db.index[i],
                          mz=theo_mz,
+                         adduct=db['adduct'][i],
                          charge=1 if db['ion_mode'][i] == 'positive' else -1,
                          ms1=Spectrum(ms1_mz_arr, ms1_sim_arr),
                          ms2=Spectrum(ms2_mz, ms2_int))
@@ -89,12 +89,19 @@ def load_gnps_data(path):
     joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
 
 
-def pred_formula_feasibility_batch(data, db_mode, shared_data_dict, batch_size):
+def fill_ml_a_batch(data, batch_size):
     n_batch = int(np.ceil(len(data) / batch_size))
     for n in tqdm(range(n_batch)):
         start_idx = n * batch_size
         end_idx = min((n + 1) * batch_size, len(data))
-        pred_formula_feasibility(data, start_idx, end_idx, db_mode, shared_data_dict)
+
+        # generate three arrays from buddy data
+        cand_form_arr, dbe_arr, mass_arr = _gen_arr_from_buddy_data(data)
+
+        # generate ML feature array
+        feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
+        # fill in batch_data
+        _fill_ml_a_arr_in_batch_data(data, feature_arr)
 
     return data
 
@@ -111,7 +118,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(qtof_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
-        new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
+        new_data = fill_ml_a_batch(buddy.data, 1000)
         joblib.dump(new_data, 'gnps_qtof_mf_ls_cand_2.joblib')
     elif instru == 'orbi':
         orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
@@ -121,7 +128,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(orbi_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
-        new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
+        new_data = fill_ml_a_batch(buddy.data, 1000)
         joblib.dump(new_data, 'gnps_orbi_mf_ls_cand_2.joblib')
     else:  # FT-ICR
         ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
@@ -131,7 +138,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(ft_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
-        new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
+        new_data = fill_ml_a_batch(buddy.data, 1000)
         joblib.dump(new_data, 'gnps_ft_mf_ls_cand_2.joblib')
 
     return shared_data_dict
@@ -723,7 +730,7 @@ def parse_args():
     parse command line arguments
     :return: parsed arguments
     """
-    parser = argparse.ArgumentParser(description='ML model B training')
+    parser = argparse.ArgumentParser(description='ML training')
     parser.add_argument('-calc', action='store_true', help='calculate gnps data')
     parser.add_argument('-gen', action='store_true', help='generate training data')
     parser.add_argument('-ms', type=str, help='instrument type')
@@ -744,11 +751,12 @@ if __name__ == '__main__':
 
     ###############
     # cmd
-    # parse arguments
     args = parse_args()
+    # args = argparse.Namespace(calc=True, gen=False, ms='ft', cpu=1, to=999999,
+    #                           ms1=True, ms2=True)
 
     # load training data
-    # load_gnps_data('merged_ms2db_augmented.tsv')
+    load_gnps_data('merged_ms2db_augmented.tsv')
 
     email_body = ''
 
