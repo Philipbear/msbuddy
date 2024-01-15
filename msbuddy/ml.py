@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -588,10 +588,6 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
         model = gd['model_b_noms1_noms2']
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
         X_arr = X_arr[:, :-14]  # remove MS2-related features
-
-    # # predict formula probability
-    # prob_arr = model.predict_proba(X_arr)
-    # return prob_arr[:, 1]
 
     # predict formula probability
     score_arr = model.predict(X_arr)
