@@ -658,14 +658,14 @@ class MS2Explanation:
     """
 
     def __init__(self, idx_array: np.array,
-                 explanation_array: List[Union[Formula, None]]):
+                 explanation_list: List[Union[Formula, None]]):
         self.idx_array = idx_array  # indices of peaks in MS2 spectrum
-        self.explanation_array = explanation_array  # List[Formula], isotope peaks are included
+        self.explanation_list = explanation_list  # List[Formula], isotope peaks are included
 
     def __str__(self):
         out_str = ""
         for i in range(len(self.idx_array)):
-            out_str += "idx: {}, formula: {}\n".format(self.idx_array[i], str(self.explanation_array[i]))
+            out_str += "idx: {}, formula: {}\n".format(self.idx_array[i], str(self.explanation_list[i]))
         return out_str
 
     def __len__(self):

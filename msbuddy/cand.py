@@ -189,7 +189,7 @@ class CandidateSpace:
         # convert into a CandidateFormula
         # construct MS2Explanation first
         ms2_raw_exp = MS2Explanation(idx_array=np.array([f.idx for f in self.frag_exp_list], dtype=np.int16),
-                                     explanation_array=[f.optim_frag for f in self.frag_exp_list])
+                                     explanation_list=[f.optim_frag for f in self.frag_exp_list])
 
         return CandidateFormula(formula=Formula(self.pre_neutral_array, 0, self.neutral_mass),
                                 ms2_raw_explanation=ms2_raw_exp)
@@ -731,8 +731,7 @@ def _senior_subform_filter(subform_arr: np.array) -> np.array:
     """
     senior_1_1_arr = 6 * subform_arr[:, 11] + 5 * subform_arr[:, 10] + 4 * subform_arr[:, 0] + \
                      3 * subform_arr[:, 7] + 2 * subform_arr[:, 9] + subform_arr[:, 1] + subform_arr[:, 4] + \
-                     subform_arr[:, 3] + subform_arr[:, 2] + subform_arr[:, 5] + subform_arr[:, 8] + \
-                     subform_arr[:, 6]
+                     subform_arr[:, 3] + subform_arr[:, 2] + subform_arr[:, 5] + subform_arr[:, 8] + subform_arr[:, 6]
     senior_2_arr = np.sum(subform_arr, axis=1)
     senior_bool_arr = (senior_1_1_arr >= 2 * (senior_2_arr - 2))
 

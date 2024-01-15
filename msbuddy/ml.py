@@ -413,11 +413,11 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
         # explained fragment ion intensity percentage
         exp_frag_int_pct = np.sum(exp_int_arr) / np.sum(valid_int_arr)
 
-        frag_form_arr = ms2_explanation.explanation_array  # array of fragment formulas, Formula objects
+        frag_form_list = ms2_explanation.explanation_list  # array of fragment formulas, Formula objects
 
         # check db existence of all explained fragments
         pos_mode = meta_feature.adduct.pos_mode
-        db_existed = np.array([check_formula_existence(f, pos_mode, gd) for f in frag_form_arr])
+        db_existed = np.array([check_formula_existence(f, pos_mode, gd) for f in frag_form_list])
 
         # explained and db existed fragment ion count percentage
         exp_db_frag_cnt_pct = np.sum(db_existed) / len(valid_idx_arr)
@@ -426,35 +426,35 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
         exp_db_frag_int_pct = np.sum(exp_int_arr[db_existed]) / np.sum(valid_int_arr)
 
         # subformula count: how many frags are subformula of other frags
-        subform_score, subform_common_loss_score = _calc_subformula_score(frag_form_arr, gd)
+        subform_score, subform_common_loss_score = _calc_subformula_score(frag_form_list, gd)
 
         # radical ion count percentage (out of all explained fragment ions)
-        radical_cnt_pct = np.sum([1 for frag_form in frag_form_arr if frag_form.dbe % 1 == 0]) / len(frag_form_arr)
+        radical_cnt_pct = np.sum([1 for frag_form in frag_form_list if frag_form.dbe % 1 == 0]) / len(frag_form_list)
 
         # normalized explained intensity array
         normed_exp_int_arr = exp_int_arr / np.sum(exp_int_arr)
 
         # weighted average of fragment DBEs
-        frag_dbe_wavg = np.sum(np.array([frag_form.dbe for frag_form in frag_form_arr]) * normed_exp_int_arr)
+        frag_dbe_wavg = np.sum(np.array([frag_form.dbe for frag_form in frag_form_list]) * normed_exp_int_arr)
 
         # weighted average of fragment H/C ratios
         frag_h2c_wavg = np.sum(np.array([frag_form.array[1] / frag_form.array[0] if frag_form.array[0] > 0 else pre_h2c
-                                         for frag_form in frag_form_arr]) * normed_exp_int_arr)
+                                         for frag_form in frag_form_list]) * normed_exp_int_arr)
 
         # weighted average of fragment m/z ppm errors
         if ppm:
             frag_mz_err_wavg = np.sum(np.array([_calc_log_p_norm((frag_form.mass - mz) / frag_form.mass * 1e6,
                                                                  ms2_tol / 3)
                                                 for frag_form, mz in
-                                                zip(frag_form_arr, exp_mz_arr)]) * normed_exp_int_arr)
+                                                zip(frag_form_list, exp_mz_arr)]) * normed_exp_int_arr)
         else:
             frag_mz_err_wavg = np.sum(np.array([_calc_log_p_norm(frag_form.mass - mz, ms2_tol / 3)
                                                 for frag_form, mz in
-                                                zip(frag_form_arr, exp_mz_arr)]) * normed_exp_int_arr)
+                                                zip(frag_form_list, exp_mz_arr)]) * normed_exp_int_arr)
 
         # weighted average of fragment-nl DBE difference
         frag_nl_dbe_diff_wavg = np.sum(np.array([frag_form.dbe - (pre_dbe - frag_form.dbe + 1)
-                                                 for frag_form in frag_form_arr]) * normed_exp_int_arr)
+                                                 for frag_form in frag_form_list]) * normed_exp_int_arr)
 
         out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, exp_db_frag_cnt_pct, exp_db_frag_int_pct,
                             subform_score, subform_common_loss_score,

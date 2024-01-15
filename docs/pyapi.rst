@@ -435,13 +435,13 @@ Example usage:
     A class to represent MS/MS explanation.
 
    :param idx_array: numpy array. The indices of the fragments.
-   :param explanation_array: A list of :class:`msbuddy.base.Formula` objects. The explanations for the fragments.
+   :param explanation_list: A list of :class:`msbuddy.base.Formula` objects. The explanations for the fragments.
 
    .. attribute:: idx_array
 
       A numpy array of the indices of the fragments being explained.
 
-   .. attribute:: explanation_array
+   .. attribute:: explanation_list
 
       A list of :class:`msbuddy.base.Formula` objects. The explanations for the fragments.
 
@@ -452,12 +452,17 @@ Example usage:
     A class to represent a candidate formula.
 
    :param formula: :class:`msbuddy.base.Formula` object. The candidate formula (in neutral form).
+   :param charged_formula: :class:`msbuddy.base.Formula` object. The candidate formula (in charged form).
    :param optional ms1_isotope_similarity: float. The isotope similarity between the candidate formula and the MS1 isotopic pattern.
    :param optional ms2_raw_explanation: :class:`msbuddy.base.MS2Explanation` object. The MS/MS explanation for the candidate formula.
 
    .. attribute:: formula
 
       :class:`msbuddy.base.Formula` object. The candidate formula (in neutral form).
+
+   .. attribute:: charged_formula
+
+      :class:`msbuddy.base.Formula` object. The candidate formula (in charged form).
 
    .. attribute:: ms1_isotope_similarity
 

@@ -134,7 +134,7 @@ def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
 
 
 def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
-                         ppm: bool, db_mode: int, gd) -> List[Formula]:
+                         ppm: bool, db_mode: int, gd) -> Tuple[List[Formula], List[Formula]]:
     """
     search precursor mass in neutral database
     :param mass: mass to search
