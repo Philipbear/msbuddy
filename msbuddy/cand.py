@@ -192,6 +192,7 @@ class CandidateSpace:
                                      explanation_list=[f.optim_frag for f in self.frag_exp_list])
 
         return CandidateFormula(formula=Formula(self.pre_neutral_array, 0, self.neutral_mass),
+                                charged_formula=Formula(self.pre_charged_array, meta_feature.adduct.charge),
                                 ms2_raw_explanation=ms2_raw_exp)
 
 
@@ -679,13 +680,12 @@ def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float) -> M
 
     for k, cf in enumerate(mf.candidate_formula_list):
         # enumerate all subformulas
-        pre_charged_arr = cf.formula.array * mf.adduct.m + mf.adduct.net_formula.array
-        subform_arr = enumerate_subformula(pre_charged_arr)
+        subform_arr = enumerate_subformula(cf.charged_formula.array)
 
         # mono mass
         mass_arr = _calc_subform_mass(subform_arr, mf.adduct.charge)
         # assign ms2 explanation
-        mf.candidate_formula_list[k] = _assign_ms2_explanation(mf, cf, pre_charged_arr, subform_arr, mass_arr,
+        mf.candidate_formula_list[k] = _assign_ms2_explanation(mf, cf, cf.charged_formula.array, subform_arr, mass_arr,
                                                                ppm, ms2_tol)
 
     return mf
@@ -837,9 +837,11 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     ms2_iso_tol = ms2_tol if not ppm else ms2_tol * mf.mz * 1e-6
     ms2_iso_tol = max(ms2_iso_tol, 0.02)
     candidate_form = candidate_space.refine_explanation(mf, ms2_iso_tol)
-    candidate_form.ml_a_prob = cf.ml_a_prob  # copy ml_a_prob
-    candidate_form.ms1_isotope_similarity = cf.ms1_isotope_similarity  # copy ms1_isotope_similarity
-    candidate_form.ml_a_array = cf.ml_a_array  # copy ml_a_array
+
+    # copy other attributes
+    candidate_form.ml_a_prob = cf.ml_a_prob
+    candidate_form.ms1_isotope_similarity = cf.ms1_isotope_similarity
+    candidate_form.ml_a_array = cf.ml_a_array
 
     return candidate_form
 
