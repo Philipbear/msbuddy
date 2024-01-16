@@ -308,21 +308,26 @@ def assign_subform_gen_training_data(instru):
     joblib.dump(group_arr, 'gnps_group_arr_' + instru + '.joblib')
 
 
-def combine_and_clean_x_y():
-    # load training data
-    X_arr_qtof = joblib.load('gnps_X_arr_qtof_cor.joblib')
-    y_arr_qtof = joblib.load('gnps_y_arr_qtof.joblib')
-    X_arr_orbi = joblib.load('gnps_X_arr_orbi_cor.joblib')
-    y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
-    X_arr_ft = joblib.load('gnps_X_arr_ft_cor.joblib')
-    y_arr_ft = joblib.load('gnps_y_arr_ft.joblib')
-    group_arr_qtof = joblib.load('gnps_group_arr_qtof.joblib')
-    group_arr_orbi = joblib.load('gnps_group_arr_orbi.joblib')
-    group_arr_ft = joblib.load('gnps_group_arr_ft.joblib')
+def combine_and_clean_x_y(test=False):
+    if test:
+        X_arr = joblib.load('gnps_X_arr_ft_cor.joblib')
+        y_arr = joblib.load('gnps_y_arr_ft.joblib')
+        group_arr = joblib.load('gnps_group_arr_ft.joblib')
+    else:
+        # load training data
+        X_arr_qtof = joblib.load('gnps_X_arr_qtof_cor.joblib')
+        y_arr_qtof = joblib.load('gnps_y_arr_qtof.joblib')
+        X_arr_orbi = joblib.load('gnps_X_arr_orbi_cor.joblib')
+        y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
+        X_arr_ft = joblib.load('gnps_X_arr_ft_cor.joblib')
+        y_arr_ft = joblib.load('gnps_y_arr_ft.joblib')
+        group_arr_qtof = joblib.load('gnps_group_arr_qtof.joblib')
+        group_arr_orbi = joblib.load('gnps_group_arr_orbi.joblib')
+        group_arr_ft = joblib.load('gnps_group_arr_ft.joblib')
 
-    X_arr = np.vstack((X_arr_qtof, X_arr_orbi, X_arr_ft))
-    y_arr = np.append(y_arr_qtof, np.append(y_arr_orbi, y_arr_ft))
-    group_arr = np.append(group_arr_qtof, np.append(group_arr_orbi, group_arr_ft))
+        X_arr = np.vstack((X_arr_qtof, X_arr_orbi, X_arr_ft))
+        y_arr = np.append(y_arr_qtof, np.append(y_arr_orbi, y_arr_ft))
+        group_arr = np.append(group_arr_qtof, np.append(group_arr_orbi, group_arr_ft))
 
     print('X_arr shape: ' + str(X_arr.shape))
     print('y_arr shape: ' + str(y_arr.shape))
@@ -687,19 +692,6 @@ def get_feature_importance(gbm, ms1, ms2):
     return feature_importance_split, feature_importance_gain
 
 
-def correct_x_z_norm():
-    _, mean_arr, std_arr = joblib.load('ml_a_v0.2.4.joblib')
-    mean_arr = mean_arr[8:]
-    std_arr = std_arr[8:]
-    for ms in ['qtof', 'orbi', 'ft']:
-        X_arr = joblib.load('gnps_X_arr_' + ms + '.joblib')
-        y_arr = joblib.load('gnps_y_arr_' + ms + '.joblib')
-        non_correct_bool = y_arr == 0
-        # revert z-normalization
-        X_arr[non_correct_bool, 5:26] = X_arr[non_correct_bool, 5:26] * std_arr + mean_arr
-        joblib.dump(X_arr, 'gnps_X_arr_' + ms + '.joblib')
-
-
 def correct_x_ml_a_for_gt():
     for instru in ['ft', 'qtof', 'orbi']:
         print('loading data...')
@@ -758,9 +750,9 @@ if __name__ == '__main__':
 
     ###############
     # cmd
-    # args = parse_args()
-    args = argparse.Namespace(calc=True, gen=False, ms='ft', cpu=1, to=999999,
-                              ms1=True, ms2=True)
+    args = parse_args()
+    # args = argparse.Namespace(calc=True, gen=False, ms='ft', cpu=1, to=999999,
+    #                           ms1=True, ms2=True)
 
     # load training data
     # load_gnps_data('merged_ms2db_augmented.tsv')
@@ -772,7 +764,7 @@ if __name__ == '__main__':
         assign_subform_gen_training_data(instru=args.ms)
 
     elif args.gen:
-        combine_and_clean_x_y()
+        combine_and_clean_x_y(test=False)
         # z_norm()  # z-normalization
 
     else:  # train model
@@ -791,10 +783,9 @@ if __name__ == '__main__':
     # args = argparse.Namespace(calc=False, gen=True, ms='ft', cpu=1, to=999999,
     #                           ms1=True, ms2=True)
     #
-    # # correct_x_z_norm()
     # # correct_x_ml_a_for_gt()
     #
-    # # combine_and_clean_x_y()
+    # # combine_and_clean_x_y(test=True)
     # train_model(args.ms1, args.ms2)
     #
     # # get_feature_importance(joblib.load('ml_b_ms1_ms2.joblib'), True, True)

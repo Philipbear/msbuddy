@@ -414,9 +414,11 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
 
         frag_form_list = ms2_explanation.explanation_list  # list of fragment formulas, Formula objects
 
-        # check db existence of all explained fragments
         pos_mode = meta_feature.adduct.pos_mode
-        frag_db_existed, frag_common, nl_db_existed, nl_common = np.array([]), np.array([]), np.array([]), np.array([])
+
+        # check db existence of all explained fragments and neutral losses
+        frag_db_existed, frag_common = np.array([], dtype=bool), np.array([], dtype=bool)
+        nl_db_existed, nl_common = np.array([], dtype=bool), np.array([], dtype=bool)
         for f in frag_form_list:
             frag_db_bool, frag_common_bool = check_formula_existence(f.array, pos_mode, True, gd)
             frag_db_existed = np.append(frag_db_existed, frag_db_bool)
