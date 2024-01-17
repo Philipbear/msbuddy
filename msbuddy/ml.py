@@ -201,32 +201,32 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     # fill in batch_data
     _fill_ml_a_arr_in_batch_data(batch_data, feature_arr)
 
-    # z-normalize ML features
-    feature_arr_norm = _z_norm_ml_a_feature(feature_arr, gd)
-    del feature_arr
-
-    # predict formula feasibility
-    prob_arr = _predict_ml_a(feature_arr_norm, gd)
-
-    # add prediction results to candidate formula objects in the list
-    cnt = 0
-    for meta_feature in batch_data:
-        if not meta_feature.candidate_formula_list:
-            continue
-        # generate ML features for each candidate formula
-        for candidate_formula in meta_feature.candidate_formula_list:
-            candidate_formula.ml_a_prob = prob_arr[cnt]
-            # if candidate formula is in the database, set ml_a_prob
-            if candidate_formula.db_existed:
-                candidate_formula.ml_a_prob = 1
-            cnt += 1
-
-        # sort candidate formula list by formula feasibility, descending
-        meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
-        # retain top candidate formulas
-        top_n = _calc_top_n_candidate(meta_feature.mz, db_mode)
-        if len(meta_feature.candidate_formula_list) > top_n:
-            meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:top_n]
+    # # z-normalize ML features
+    # feature_arr_norm = _z_norm_ml_a_feature(feature_arr, gd)
+    # del feature_arr
+    #
+    # # predict formula feasibility
+    # prob_arr = _predict_ml_a(feature_arr_norm, gd)
+    #
+    # # add prediction results to candidate formula objects in the list
+    # cnt = 0
+    # for meta_feature in batch_data:
+    #     if not meta_feature.candidate_formula_list:
+    #         continue
+    #     # generate ML features for each candidate formula
+    #     for candidate_formula in meta_feature.candidate_formula_list:
+    #         candidate_formula.ml_a_prob = prob_arr[cnt]
+    #         # if candidate formula is in the database, set ml_a_prob
+    #         if candidate_formula.db_existed:
+    #             candidate_formula.ml_a_prob = 1
+    #         cnt += 1
+    #
+    #     # sort candidate formula list by formula feasibility, descending
+    #     meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
+    #     # retain top candidate formulas
+    #     top_n = _calc_top_n_candidate(meta_feature.mz, db_mode)
+    #     if len(meta_feature.candidate_formula_list) > top_n:
+    #         meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:top_n]
 
     # update buddy data
     buddy_data[batch_start_idx:batch_end_idx] = batch_data

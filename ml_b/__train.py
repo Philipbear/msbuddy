@@ -310,16 +310,16 @@ def assign_subform_gen_training_data(instru):
 
 def combine_and_clean_x_y(test=False):
     if test:
-        X_arr = joblib.load('gnps_X_arr_ft_cor.joblib')
+        X_arr = joblib.load('gnps_X_arr_ft.joblib')
         y_arr = joblib.load('gnps_y_arr_ft.joblib')
         group_arr = joblib.load('gnps_group_arr_ft.joblib')
     else:
         # load training data
-        X_arr_qtof = joblib.load('gnps_X_arr_qtof_cor.joblib')
+        X_arr_qtof = joblib.load('gnps_X_arr_qtof.joblib')
         y_arr_qtof = joblib.load('gnps_y_arr_qtof.joblib')
-        X_arr_orbi = joblib.load('gnps_X_arr_orbi_cor.joblib')
+        X_arr_orbi = joblib.load('gnps_X_arr_orbi.joblib')
         y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
-        X_arr_ft = joblib.load('gnps_X_arr_ft_cor.joblib')
+        X_arr_ft = joblib.load('gnps_X_arr_ft.joblib')
         y_arr_ft = joblib.load('gnps_y_arr_ft.joblib')
         group_arr_qtof = joblib.load('gnps_group_arr_qtof.joblib')
         group_arr_orbi = joblib.load('gnps_group_arr_orbi.joblib')
@@ -405,7 +405,8 @@ def train_model(ms1_iso, ms2_spec):
     # hyperparameter tuning
     # best_params = tune_hyperparams(X_arr, y_arr, group_arr)
     best_params = {'objective': 'lambdarank', 'metric': 'ndcg', 'ndcg_at': [1],
-                   'learning_rate': 0.01, 'num_leaves': 1500, 'max_depth': -1, 'min_data_in_leaf': 20,
+                   'learning_rate': 0.01, 'num_leaves': 1000, 'max_depth': -1, 'min_data_in_leaf': 10,
+                   'max_bin': 200, 'bagging_fraction': 0.9, 'bagging_freq': 1, 'feature_fraction': 1,
                    'lambda_l1': 0, 'lambda_l2': 0, 'seed': 24, 'verbose': 0}
 
     # Split training and testing data
@@ -468,11 +469,15 @@ def train_model(ms1_iso, ms2_spec):
     # mass error if MS2 only
     feature_idx = 1 if ms1_iso else 0
     avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, feature_idx, ascending=True)
-    print(f'Average NDCG@1 score with heuristic baseline: {avg_ndcg_score_heuristic}')
+    print(f'Average NDCG@1 score with heuristic baseline (mass error): {avg_ndcg_score_heuristic}')
+
+    # exp_frag_cnt_pct if MS2 only
+    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, -24, ascending=False)
+    print(f'Average NDCG@1 score with heuristic baseline (exp_frag_cnt_pct): {avg_ndcg_score_heuristic}')
 
     # exp_frag_int_pct if MS2 only
-    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, -12, ascending=False)
-    print(f'Average NDCG@1 score with heuristic baseline: {avg_ndcg_score_heuristic}')
+    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, -23, ascending=False)
+    print(f'Average NDCG@1 score with heuristic baseline (exp_frag_int_pct): {avg_ndcg_score_heuristic}')
 
     # Save the model
     model_name = 'ml_b'
@@ -682,7 +687,7 @@ def get_feature_importance(gbm, ms1, ms2):
     feature_importance_gain = sorted(zip(feature_names, importance_gain), key=lambda x: x[1], reverse=True)
 
     # print
-    print('feature importance by split:')
+    print('\n\nfeature importance by split:')
     for feature_name, score in feature_importance_split:
         print(f'{feature_name}: {score}')
     print('\n\nfeature importance by gain:')
@@ -723,6 +728,7 @@ def correct_x_ml_a_for_gt():
         X_arr_name = 'gnps_X_arr_' + instru + '_cor.joblib'
         joblib.dump(X_arr, X_arr_name)
 
+
 def parse_args():
     """
     parse command line arguments
@@ -741,56 +747,55 @@ def parse_args():
     return args
 
 
-# test
 if __name__ == '__main__':
 
-    import time
-    start_time = time.time()
-    __package__ = "msbuddy"
-
-    ###############
-    # cmd
-    args = parse_args()
-    # args = argparse.Namespace(calc=True, gen=False, ms='ft', cpu=1, to=999999,
-    #                           ms1=True, ms2=True)
-
-    # load training data
-    # load_gnps_data('merged_ms2db_augmented.tsv')
-
-    email_body = ''
-
-    if args.calc:
-        # calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
-        assign_subform_gen_training_data(instru=args.ms)
-
-    elif args.gen:
-        combine_and_clean_x_y(test=False)
-        # z_norm()  # z-normalization
-
-    else:  # train model
-        train_model(args.ms1, args.ms2)
-
-    time_elapsed = time.time() - start_time
-    time_elapsed = time_elapsed / 3600
-
-    email_body += '\n\nTime elapsed: ' + str(time_elapsed) + ' hrs'
-
-    send_hotmail_email("Job finished", email_body,
-                       "s1xing@health.ucsd.edu", smtp_password=args.p)
+    # import time
+    # start_time = time.time()
+    # __package__ = "msbuddy"
+    #
+    # ###############
+    # # cmd
+    # args = parse_args()
+    # # args = argparse.Namespace(calc=True, gen=False, ms='ft', cpu=1, to=999999,
+    # #                           ms1=True, ms2=True)
+    #
+    # # load training data
+    # # load_gnps_data('merged_ms2db_augmented.tsv')
+    #
+    # email_body = ''
+    #
+    # if args.calc:
+    #     # calc_gnps_data(args.cpu, args.to, args.ms)  # qtof, orbi, ft
+    #     assign_subform_gen_training_data(instru=args.ms)
+    #
+    # elif args.gen:
+    #     combine_and_clean_x_y(test=False)
+    #     # z_norm()  # z-normalization
+    #
+    # else:  # train model
+    #     train_model(args.ms1, args.ms2)
+    #
+    # time_elapsed = time.time() - start_time
+    # time_elapsed = time_elapsed / 3600
+    #
+    # email_body += '\n\nTime elapsed: ' + str(time_elapsed) + ' hrs'
+    #
+    # send_hotmail_email("Job finished", email_body,
+    #                    "s1xing@health.ucsd.edu", smtp_password=args.p)
 
     # ###############
-    # # local
-    # args = argparse.Namespace(calc=False, gen=True, ms='ft', cpu=1, to=999999,
-    #                           ms1=True, ms2=True)
-    #
-    # # correct_x_ml_a_for_gt()
-    #
-    # # combine_and_clean_x_y(test=True)
-    # train_model(args.ms1, args.ms2)
-    #
-    # # get_feature_importance(joblib.load('ml_b_ms1_ms2.joblib'), True, True)
-    # # get_feature_importance(joblib.load('ml_b_ms1.joblib'), True, False)
-    # # get_feature_importance(joblib.load('ml_b_ms2.joblib'), False, True)
-    # # get_feature_importance(joblib.load('ml_b.joblib'), False, False)
+    # local
+    args = argparse.Namespace(calc=False, gen=True, ms='ft', cpu=1, to=999999,
+                              ms1=True, ms2=False)
+
+    # correct_x_ml_a_for_gt()
+
+    # combine_and_clean_x_y(test=True)
+    train_model(args.ms1, args.ms2)
+
+    get_feature_importance(joblib.load('ml_b_ms1_ms2.joblib'), True, True)
+    # get_feature_importance(joblib.load('ml_b_ms1.joblib'), True, False)
+    # get_feature_importance(joblib.load('ml_b_ms2.joblib'), False, True)
+    # get_feature_importance(joblib.load('ml_b.joblib'), False, False)
 
     print('done')

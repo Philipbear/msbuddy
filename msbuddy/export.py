@@ -70,7 +70,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                     if cf.ms2_raw_explanation:
                         exp_ms2_peak = len(cf.ms2_raw_explanation)
                         ms2_explan_idx = ','.join([str(x) for x in cf.ms2_raw_explanation.idx_array])
-                        ms2_explan_str = ','.join([x.__str__() for x in cf.ms2_raw_explanation.explanation_array])
+                        ms2_explan_str = ','.join([x.__str__() for x in cf.ms2_raw_explanation.explanation_list])
                     else:
                         exp_ms2_peak = '0'
                         ms2_explan_idx = 'None'

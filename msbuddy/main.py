@@ -393,9 +393,9 @@ class Msbuddy:
         # data preprocessing and candidate space generation
         self._preprocess_and_generate_candidate_formula(start_idx, end_idx)
 
-        # tqdm.write("Formula feasibility prediction...")
-        # # ml_a feature generation + prediction, retain top candidates
-        # pred_formula_feasibility(self.data, start_idx, end_idx, self.config.db_mode, shared_data_dict)
+        tqdm.write("Formula feasibility prediction...")
+        # ml_a feature generation + prediction, retain top candidates
+        pred_formula_feasibility(self.data, start_idx, end_idx, self.config.db_mode, shared_data_dict)
 
         # assign subformula annotation
         self._assign_subformula_annotation(start_idx, end_idx)
@@ -545,22 +545,24 @@ if __name__ == '__main__':
     msb_config = MsbuddyConfig(# highly recommended to specify
                                ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
                                # whether to consider halogen atoms FClBrI
-                               halogen=True)
+                               halogen=True,
+                               # whether to use parallel processing
+                               parallel=True, n_cpu=4)
 
     # instantiate a Msbuddy object
     msb_engine = Msbuddy(msb_config)
 
     # you can load multiple USIs at once
-    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
-
+    # msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
+    #
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'
+    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'
-    # msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
+    msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
     # cmd version
-    # msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output_2')), True)
+    msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output_2')), True)
 
     # annotate molecular formula
     msb_engine.annotate_formula()
