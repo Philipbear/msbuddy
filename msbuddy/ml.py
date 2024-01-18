@@ -64,6 +64,11 @@ def _gen_form_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     :return: numpy array of ML features
     """
     # calculate ML features
+    ele_sum_1_arr = all_cf_arr[:, 2] + all_cf_arr[:, 3] + all_cf_arr[:, 4] + all_cf_arr[:, 5] + \
+                    all_cf_arr[:, 6] + all_cf_arr[:, 8]
+    ele_sum_2_arr = ele_sum_1_arr + all_cf_arr[:, 10] + all_cf_arr[:, 11]
+    chon_arr = np.clip(ele_sum_2_arr, 0, 1)  # whether only C, H, O, N exist
+    chonps_arr = np.clip(ele_sum_1_arr, 0, 1)  # whether only C, H, O, N, P, S exist
     hal_arr = np.sum(all_cf_arr[:, 2:6], axis=1)  # sum of halogen atoms
     ta_arr = np.sum(all_cf_arr, axis=1)  # total number of atoms
     f_exist_arr = np.clip(all_cf_arr[:, 4], 0, 1)  # whether F exists
@@ -90,16 +95,14 @@ def _gen_form_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     o_p_arr[p_bool_arr] = all_cf_arr[p_bool_arr, 9] / all_cf_arr[p_bool_arr, 10] / 3
 
     # generate output array
-    out = np.empty((len(all_cf_arr), 32))
+    out = np.empty((len(all_cf_arr), 26))
     # populate output array
     for i in range(len(all_cf_arr)):
         ta = ta_arr[i]
         chno = all_cf_arr[i, 0] + all_cf_arr[i, 1] + all_cf_arr[i, 7] + all_cf_arr[i, 9]
         # if C > 0
         if all_cf_arr[i, 0] > 0:
-            out[i, :] = [all_cf_arr[i, 0], all_cf_arr[i, 1], all_cf_arr[i, 7],
-                         all_cf_arr[i, 9], all_cf_arr[i, 10], all_cf_arr[i, 11],
-                         hal_arr[i], ta,
+            out[i, :] = [chon_arr[i], chonps_arr[i],
                          all_cf_arr[i, 0] / ta, all_cf_arr[i, 1] / ta,
                          all_cf_arr[i, 7] / ta,
                          all_cf_arr[i, 9] / ta, all_cf_arr[i, 10] / ta,
@@ -114,9 +117,7 @@ def _gen_form_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
                          hal_arr[i] / all_cf_arr[i, 0],
                          hal_h_arr[i], o_p_arr[i], hal_two[i], hal_three[i]]
         else:
-            out[i, :] = [all_cf_arr[i, 0], all_cf_arr[i, 1], all_cf_arr[i, 7],
-                         all_cf_arr[i, 9], all_cf_arr[i, 10], all_cf_arr[i, 11],
-                         hal_arr[i], ta,
+            out[i, :] = [chon_arr[i], chonps_arr[i],
                          all_cf_arr[i, 0] / ta, all_cf_arr[i, 1] / ta,
                          all_cf_arr[i, 7] / ta,
                          all_cf_arr[i, 9] / ta, all_cf_arr[i, 10] / ta,
@@ -195,7 +196,6 @@ def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms
     """
 
     this_adduct = meta_feature.adduct
-    this_form = cand_form.formula  # neutral formula
 
     # mz error in ppm
     theo_mass = cand_form.charged_formula.mass / abs(this_adduct.charge)
@@ -206,8 +206,6 @@ def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms
     pre_charged_arr = cand_form.charged_formula.array
     pre_dbe = cand_form.charged_formula.dbe
     pre_h2c = pre_charged_arr[1] / pre_charged_arr[0] if pre_charged_arr[0] > 0 else 0  # no carbon, assign 0
-    # chon, chonps, hetero_atom_category, hal_atom_category
-    form_feature_arr = _calc_formula_feature(this_form.array)
 
     # MS1 isotope similarity
     ms1_iso_sim = cand_form.ms1_isotope_similarity if cand_form.ms1_isotope_similarity else 0
@@ -219,29 +217,10 @@ def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms
     pos_mode = 1 if this_adduct.charge > 0 else 0
 
     # generate output array
-    out = np.concatenate((np.array([ms1_iso_sim, mz_error_log_p]),  # 2
-                          np.array([pos_mode]), form_feature_arr, cand_form.formula_feature_array[8:],  # 1 + 2 + 32 - 8
-                          ms2_feature_arr))  # 24
+    out = np.concatenate((np.array([ms1_iso_sim, mz_error_log_p, pos_mode]),  # 3
+                          cand_form.formula_feature_array, ms2_feature_arr))  # 26 + 24
 
     return out
-
-
-@njit
-def _calc_formula_feature(f: np.array) -> np.array:
-    """
-    calculate formula features
-    :param f: formula array
-    :return: numpy array of formula features: chon, chonps
-    """
-    # sum of elements other than C, H, O, N, P, S
-    ele_sum_1 = f[2] + f[3] + f[4] + f[5] + f[6] + f[8]
-    # sum of elements other than C, H, O, N
-    ele_sum_2 = ele_sum_1 + f[10] + f[11]
-
-    chon = 1 if ele_sum_2 == 0 else 0
-    chonps = 1 if ele_sum_1 == 0 else 0
-
-    return np.array([chon, chonps])
 
 
 def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
