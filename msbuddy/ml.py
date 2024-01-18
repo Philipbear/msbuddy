@@ -147,43 +147,13 @@ def _fill_ml_a_arr_in_batch_data(batch_data, feature_arr) -> None:
     return
 
 
-def _z_norm_ml_a_feature(feature_arr: np.array, gd) -> np.array:
-    """
-    z-normalize ML features for model A
-    :param feature_arr: numpy array of ML features
-    :param gd: global dependencies
-    :return: numpy array of z-normalized ML features
-    """
-    # normalize each col using mean_arr and std_arr in global dependencies, except the last two
-    feature_arr[:, :-2] = (feature_arr[:, :-2] - gd['model_a_mean_arr']) / gd['model_a_std_arr']
-
-    return feature_arr
-
-
-def _predict_ml_a(feature_arr: np.array, gd) -> np.array:
-    """
-    predict formula feasibility using model a
-    :param feature_arr: numpy array of ML features
-    :param gd: global dependencies
-    :return: numpy array of prediction results
-    """
-    # model A should be loaded in global dependencies
-    prob_arr = gd['model_a'].predict_proba(feature_arr)
-
-    return prob_arr[:, 1]
-
-
-def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: int,
-                             db_mode: int, gd) -> None:
+def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: int) -> None:
     """
     predict formula feasibility using ML model a, retain top candidate formulas
     this function is performed in batch
     :param buddy_data: buddy data
     :param batch_start_idx: batch start index
     :param batch_end_idx: batch end index
-    :param db_mode: whether halogen is considered
-    :param gd: global dependencies
-    :return: None
     """
 
     # batch data
@@ -201,83 +171,10 @@ def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: in
     # fill in batch_data
     _fill_ml_a_arr_in_batch_data(batch_data, feature_arr)
 
-    # # z-normalize ML features
-    # feature_arr_norm = _z_norm_ml_a_feature(feature_arr, gd)
-    # del feature_arr
-    #
-    # # predict formula feasibility
-    # prob_arr = _predict_ml_a(feature_arr_norm, gd)
-    #
-    # # add prediction results to candidate formula objects in the list
-    # cnt = 0
-    # for meta_feature in batch_data:
-    #     if not meta_feature.candidate_formula_list:
-    #         continue
-    #     # generate ML features for each candidate formula
-    #     for candidate_formula in meta_feature.candidate_formula_list:
-    #         candidate_formula.ml_a_prob = prob_arr[cnt]
-    #         # if candidate formula is in the database, set ml_a_prob
-    #         if candidate_formula.db_existed:
-    #             candidate_formula.ml_a_prob = 1
-    #         cnt += 1
-    #
-    #     # sort candidate formula list by formula feasibility, descending
-    #     meta_feature.candidate_formula_list.sort(key=lambda x: x.ml_a_prob, reverse=True)
-    #     # retain top candidate formulas
-    #     top_n = _calc_top_n_candidate(meta_feature.mz, db_mode)
-    #     if len(meta_feature.candidate_formula_list) > top_n:
-    #         meta_feature.candidate_formula_list = meta_feature.candidate_formula_list[:top_n]
-
     # update buddy data
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
 
     return
-
-
-def _calc_top_n_candidate(mz: float, db_mode: int) -> int:
-    """
-    calculate the number of top candidate formulas to retain
-    :param mz: precursor m/z
-    :param db_mode: whether halogen is considered
-    :return: number of top candidate formulas to retain
-    """
-    if db_mode == 0:
-        return int(mz * mz / 4000) + 50
-    else:
-        return int(mz * mz / 2000) + 50
-
-
-def pred_form_feasibility_single(formula: Union[str, np.array], gd) -> Union[float, None]:
-    """
-    predict formula feasibility for a single formula; for API use
-    :param formula: formula string or array
-    :param gd: global dependencies
-    :return: formula feasibility score
-    """
-    # read formula
-    if isinstance(formula, str):
-        form_arr = read_formula(formula)
-        if form_arr is None:
-            return None
-    else:
-        form_arr = formula
-
-    form = Formula(form_arr, 0)
-    dbe = form.dbe
-    mass = form.mass
-
-    if dbe < 0:
-        return 0
-    if mass < 0:
-        return None
-
-    # generate ML feature array
-    feature_arr = _gen_ml_a_feature(np.array([form_arr]), np.array([dbe]), np.array([mass]))
-    feature_arr = _z_norm_ml_a_feature(feature_arr, gd)
-    # predict formula feasibility
-    prob_arr = _predict_ml_a(feature_arr, gd)
-
-    return prob_arr[0]
 
 
 def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:

@@ -710,8 +710,7 @@ class CandidateFormula:
                  ms2_refined_explanation: Union[MS2Explanation, None] = None):
         self.formula = formula  # neutral formula
         self.charged_formula = charged_formula  # charged formula
-        self.ml_a_prob = None  # ml_a score for model A (formula feasibility)
-        self.estimated_prob = None  # estimated probability (ml_b score for model B)
+        self.estimated_prob = None  # estimated probability (ML score, not normalized)
         self.normed_estimated_prob = None  # normalized estimated probability considering all candidate formulas
         self.estimated_fdr = None  # estimated FDR
         self.ml_a_array = None  # ml_a feature array for model A (not z-normed)
@@ -722,7 +721,7 @@ class CandidateFormula:
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
 
     def __str__(self):
-        cf_str = form_arr_to_str(self.formula.array) + "  ml_a: " + str(self.ml_a_prob) + \
+        cf_str = form_arr_to_str(self.formula.array) + \
                  "  est_prob: " + str(self.estimated_prob) + "  est_fdr: " + str(self.estimated_fdr)
         if self.ms2_raw_explanation:
             cf_str += " ms2_raw_exp: " + str(len(self.ms2_raw_explanation))

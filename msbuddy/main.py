@@ -28,7 +28,7 @@ from msbuddy.base import MetaFeature, Adduct, check_adduct
 from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.export import write_batch_results_cmd
 from msbuddy.load import init_db, load_usi, load_mgf
-from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single, calc_fdr
+from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
 from msbuddy.query import query_neutral_mass, query_precursor_mass
 from msbuddy.utils import form_arr_to_str, FormulaResult
 
@@ -250,7 +250,6 @@ class Msbuddy:
                 async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
                                                   (mf, self.config)) for mf in batch_data]
                 # Initialize tqdm progress bar
-
                 pbar = tqdm(total=len(batch_data), colour="green", desc="Candidate space generation",
                             file=sys.stdout)
                 for i, async_result in enumerate(async_results):
@@ -393,14 +392,11 @@ class Msbuddy:
         # data preprocessing and candidate space generation
         self._preprocess_and_generate_candidate_formula(start_idx, end_idx)
 
-        tqdm.write("Formula feasibility prediction...")
-        # ml_a feature generation + prediction, retain top candidates
-        pred_formula_feasibility(self.data, start_idx, end_idx, self.config.db_mode, shared_data_dict)
-
         # assign subformula annotation
         self._assign_subformula_annotation(start_idx, end_idx)
 
         tqdm.write("Candidate formula ranking...")
+        pred_formula_feasibility(self.data, start_idx, end_idx)
         pred_formula_prob(self.data, start_idx, end_idx, self.config, shared_data_dict)
 
         # FDR calculation
@@ -458,14 +454,6 @@ class Msbuddy:
         # sort by absolute mass error, ascending
         out.sort(key=lambda x: abs(x.mass_error))
         return out
-
-    def predict_formula_feasibility(self, formula: Union[str, np.array]) -> Union[float, None]:
-        """
-        predict formula feasibility score for a single formula
-        :param formula: formula string or array
-        :return: feasibility score (float) or None
-        """
-        return pred_form_feasibility_single(formula, shared_data_dict)
 
 
 def _get_batch(data: List[MetaFeature], batch_size: int, n: int):
@@ -556,9 +544,9 @@ if __name__ == '__main__':
     # msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
     #
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'
-    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'
+    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'
     msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
     # cmd version

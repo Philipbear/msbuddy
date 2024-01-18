@@ -75,13 +75,6 @@ def init_db() -> dict:
     global_dict['basic_db_mass'], global_dict['basic_db_formula'], global_dict['basic_db_idx'] = basic_db
     global_dict['halogen_db_mass'], global_dict['halogen_db_formula'], global_dict['halogen_db_idx'] = halogen_db
 
-    # load ml_a
-    db_name = 'ml_a_' + current_model_version + '.joblib'
-    global_dict['model_a'], global_dict['model_a_mean_arr'], global_dict['model_a_std_arr'] = (
-        check_download_joblibload(
-            'https://drive.google.com/uc?id=19-htf-iifTUpAMOSB9DhFs0XkqqW1Gxm',
-            data_path / db_name))
-
     # # load ml_b
     # db_name = 'ml_b_' + current_model_version + '.joblib'
     # global_dict['model_b_ms1_ms2'], global_dict['model_b_noms1_ms2'], global_dict['model_b_ms1_noms2'], global_dict[

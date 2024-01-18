@@ -1,5 +1,4 @@
 import argparse
-from brainpy import isotopic_variants
 import numpy as np
 from tqdm import tqdm
 import pandas as pd
@@ -15,10 +14,10 @@ from msbuddy.cand import _calc_ms1_iso_sim
 from msbuddy.utils import form_arr_to_str, read_formula
 
 import lightgbm as lgb
-from sklearn.model_selection import train_test_split, GroupKFold
+from sklearn.model_selection import GroupKFold
 from sklearn.metrics import ndcg_score
 
-from __train_gnps_cmd import send_hotmail_email, sim_ms1_iso_pattern
+from ml_b.deprecated.__train_gnps_cmd import sim_ms1_iso_pattern
 
 
 def load_gnps_data(path):

@@ -472,10 +472,6 @@ Example usage:
 
       :class:`msbuddy.base.MS2Explanation` object. The MS/MS explanation for the candidate formula.
 
-   .. attribute:: ml_a_prob
-
-      float. The formula feasibility predicted by the ML-a model.
-
    .. attribute:: estimated_prob
 
       float. The estimated formula probability predicted by the ML-b model.
