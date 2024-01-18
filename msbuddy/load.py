@@ -28,7 +28,7 @@ from msbuddy.base import MetaFeature, Spectrum
 logging.basicConfig(level=logging.INFO)
 
 current_db_version = 'v0.2.4'
-current_model_version = 'v0.2.4'
+current_model_version = 'v0.3.0'
 
 
 def check_download_joblibload(url: str, path):
@@ -75,16 +75,16 @@ def init_db() -> dict:
     global_dict['basic_db_mass'], global_dict['basic_db_formula'], global_dict['basic_db_idx'] = basic_db
     global_dict['halogen_db_mass'], global_dict['halogen_db_formula'], global_dict['halogen_db_idx'] = halogen_db
 
-    # # load ml_b
-    # db_name = 'ml_b_' + current_model_version + '.joblib'
-    # global_dict['model_b_ms1_ms2'], global_dict['model_b_noms1_ms2'], global_dict['model_b_ms1_noms2'], global_dict[
-    #     'model_b_noms1_noms2'], global_dict['model_b_mean_arr'], global_dict['model_b_std_arr'] = (
+    # # load ml
+    # db_name = 'ml_' + current_model_version + '.joblib'
+    # global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[
+    #     'model_noms1_noms2'], global_dict['model_mean_arr'], global_dict['model_std_arr'] = (
     #     check_download_joblibload(
     #         'https://drive.google.com/uc?id=17fuTj7oZdFu6TRQDUaFvWNrm1UFt1JZG',
     #         data_path / db_name))
     #
-    global_dict['model_b_ms1_ms2'] = j_load('data/ml_b_ms1_ms2.joblib')
-    global_dict['model_b_noms1_ms2'] = j_load('data/ml_b_ms2.joblib')
+    global_dict['model_ms1_ms2'] = j_load('data/model_ms1_ms2.joblib')
+    global_dict['model_noms1_ms2'] = j_load('data/model_ms2.joblib')
 
     return global_dict
 
@@ -334,22 +334,15 @@ def load_usi(usi_list: Union[str, List[str]],
 # common_db = [common_loss_db, common_frag_db]
 # joblib.dump(common_db, "data/common_db.joblib")
 
-# # model_a
-# model_a = j_load('data/model_a.joblib')
-# model_a_mean_arr = j_load('data/ml_a_mean_arr.joblib')
-# model_a_std_arr = j_load('data/ml_a_std_arr.joblib')
-#
-# ml_a = [model_a, model_a_mean_arr, model_a_std_arr]
-# joblib.dump(ml_a, "data/ml_a.joblib")
 
-# # model_b
-# model_b_ms1_ms2 = j_load('data/ml_b_ms1_ms2.joblib')
-# model_b_noms1_ms2 = j_load('data/ml_b_noms1_ms2.joblib')
-# model_b_ms1_noms2 = j_load('data/ml_b_ms1_noms2.joblib')
-# model_b_noms1_noms2 = j_load('data/ml_b_noms1_noms2.joblib')
-# model_b_mean_arr = j_load('data/ml_b_mean_arr.joblib')
-# model_b_std_arr = j_load('data/ml_b_std_arr.joblib')
+# # model
+# model_ms1_ms2 = j_load('data/ml_b_ms1_ms2.joblib')
+# model_noms1_ms2 = j_load('data/ml_b_noms1_ms2.joblib')
+# model_ms1_noms2 = j_load('data/ml_b_ms1_noms2.joblib')
+# model_noms1_noms2 = j_load('data/ml_b_noms1_noms2.joblib')
+# model_mean_arr = j_load('data/ml_b_mean_arr.joblib')
+# model_std_arr = j_load('data/ml_b_std_arr.joblib')
 #
-# ml_b = [model_b_ms1_ms2, model_b_noms1_ms2, model_b_ms1_noms2, model_b_noms1_noms2,
-#         model_b_mean_arr, model_b_std_arr]
-# joblib.dump(ml_b, "data/ml_b.joblib")
+# ml = [model_ms1_ms2, model_noms1_ms2, model_ms1_noms2, model_noms1_noms2,
+#         model_mean_arr, model_std_arr]
+# joblib.dump(ml, "data/ml.joblib")

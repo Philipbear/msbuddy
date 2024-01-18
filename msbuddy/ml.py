@@ -16,16 +16,13 @@ Description: machine learning functions: feature generation, prediction, etc.
 import math
 import sys
 import warnings
-from typing import Union
 
 import numpy as np
 from numba import njit
 from scipy.stats import norm
 from tqdm import tqdm
 
-from msbuddy.base import Formula
 from msbuddy.query import common_nl_from_array, check_formula_existence
-from msbuddy.utils import read_formula
 
 # ignore warnings
 warnings.filterwarnings('ignore')
@@ -440,15 +437,15 @@ def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2
 
     # load model
     if group_no == 0:
-        model = gd['model_b_ms1_ms2']
+        model = gd['model_ms1_ms2']
     elif group_no == 1:
-        model = gd['model_b_ms1_noms2']
+        model = gd['model_ms1_noms2']
         X_arr = X_arr[:, :-24]  # remove MS2-related features
     elif group_no == 2:
-        model = gd['model_b_noms1_ms2']
+        model = gd['model_noms1_ms2']
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
     else:
-        model = gd['model_b_noms1_noms2']
+        model = gd['model_noms1_noms2']
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
         X_arr = X_arr[:, :-24]  # remove MS2-related features
 
@@ -457,7 +454,7 @@ def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2
     return score_arr
 
 
-def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int, config, gd):
+def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx: int, config, gd):
     """
     predict formula probability
     :param buddy_data: buddy data
@@ -521,7 +518,6 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int, conf
 
     # update buddy data
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
-
     return
 
 
@@ -568,5 +564,4 @@ def calc_fdr(buddy_data, batch_start_idx: int, batch_end_idx: int):
 
     # update back
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
-    del batch_data
     return

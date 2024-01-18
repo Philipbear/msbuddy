@@ -28,7 +28,7 @@ from msbuddy.base import MetaFeature, Adduct, check_adduct
 from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.export import write_batch_results_cmd
 from msbuddy.load import init_db, load_usi, load_mgf
-from msbuddy.ml import pred_formula_prob, calc_fdr
+from msbuddy.ml import predict_formula_probability, calc_fdr
 from msbuddy.query import query_neutral_mass, query_precursor_mass
 from msbuddy.utils import form_arr_to_str, FormulaResult
 
@@ -116,7 +116,7 @@ class MsbuddyConfig:
             if self.parallel:
                 logging.info(f"Processing core number is set to {self.n_cpu}.")
         else:
-            self.n_cpu = n_cpu
+            self.n_cpu = int(n_cpu)
 
         if timeout_secs <= 0:
             logging.warning("Timeout is set to 300 seconds.")
@@ -152,11 +152,11 @@ class MsbuddyConfig:
         else:
             self.isotope_bin_mztol = isotope_bin_mztol
 
-        if max_isotope_cnt <= 0:
+        if max_isotope_cnt < 1:
             self.max_isotope_cnt = 4
             logging.warning(f"Maximum isotope count is set to {self.max_isotope_cnt}.")
         else:
-            self.max_isotope_cnt = max_isotope_cnt
+            self.max_isotope_cnt = int(max_isotope_cnt)
 
         if rel_int_denoise_cutoff < 0 or rel_int_denoise_cutoff >= 1:
             self.rel_int_denoise_cutoff = 0.0
@@ -164,7 +164,11 @@ class MsbuddyConfig:
         else:
             self.rel_int_denoise_cutoff = rel_int_denoise_cutoff
 
-        self.top_n_per_50_da = top_n_per_50_da
+        if top_n_per_50_da < 1:
+            self.top_n_per_50_da = 6
+            logging.warning(f"Top n peaks per 50 Da is set to {self.top_n_per_50_da}.")
+        else:
+            self.top_n_per_50_da = int(top_n_per_50_da)
 
 
 class Msbuddy:
@@ -396,7 +400,7 @@ class Msbuddy:
         self._assign_subformula_annotation(start_idx, end_idx)
 
         tqdm.write("Candidate formula ranking...")
-        pred_formula_prob(self.data, start_idx, end_idx, self.config, shared_data_dict)
+        predict_formula_probability(self.data, start_idx, end_idx, self.config, shared_data_dict)
 
         # FDR calculation
         calc_fdr(self.data, start_idx, end_idx)
