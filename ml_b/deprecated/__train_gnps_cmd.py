@@ -126,12 +126,12 @@ def load_gnps_data(path):
             ft_mf_ls.append(mf)
 
     # save to joblib file one by one
-    joblib.dump(qtof_mf_ls, 'gnps_qtof_mf_ls.joblib')
-    joblib.dump(orbi_mf_ls, 'gnps_orbi_mf_ls.joblib')
-    joblib.dump(ft_mf_ls, 'gnps_ft_mf_ls.joblib')
-    joblib.dump(qtof_gt_ls, 'gnps_qtof_gt_ls.joblib')
-    joblib.dump(orbi_gt_ls, 'gnps_orbi_gt_ls.joblib')
-    joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
+    joblib.dump(qtof_mf_ls, '../gnps_qtof_mf_ls.joblib')
+    joblib.dump(orbi_mf_ls, '../gnps_orbi_mf_ls.joblib')
+    joblib.dump(ft_mf_ls, '../gnps_ft_mf_ls.joblib')
+    joblib.dump(qtof_gt_ls, '../gnps_qtof_gt_ls.joblib')
+    joblib.dump(orbi_gt_ls, '../gnps_orbi_gt_ls.joblib')
+    joblib.dump(ft_gt_ls, '../gnps_ft_gt_ls.joblib')
 
 
 def pred_formula_feasibility_batch(data, db_mode, shared_data_dict, batch_size):
@@ -152,32 +152,32 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
     shared_data_dict = init_db()  # database initialization
 
     if instru == 'qtof':
-        qtof_mf_ls = joblib.load('gnps_qtof_mf_ls.joblib')
+        qtof_mf_ls = joblib.load('../gnps_qtof_mf_ls.joblib')
         buddy.add_data(qtof_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
-        joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
+        joblib.dump(buddy.data, '../gnps_qtof_mf_ls_cand_1.joblib')
         new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
-        joblib.dump(new_data, 'gnps_qtof_mf_ls_cand_2.joblib')
+        joblib.dump(new_data, '../gnps_qtof_mf_ls_cand_2.joblib')
     elif instru == 'orbi':
-        orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
+        orbi_mf_ls = joblib.load('../gnps_orbi_mf_ls.joblib')
         # update parameters
         buddy.update_config(ms1_tol=5, ms2_tol=10, parallel=True, n_cpu=n_cpu,
                             halogen=True, batch_size=999999, timeout_secs=timeout_secs)
         buddy.add_data(orbi_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
-        joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
+        joblib.dump(buddy.data, '../gnps_orbi_mf_ls_cand_1.joblib')
         new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
-        joblib.dump(new_data, 'gnps_orbi_mf_ls_cand_2.joblib')
+        joblib.dump(new_data, '../gnps_orbi_mf_ls_cand_2.joblib')
     else:  # FT-ICR
-        ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
+        ft_mf_ls = joblib.load('../gnps_ft_mf_ls.joblib')
         # update parameters
         buddy.update_config(ms1_tol=2, ms2_tol=5, parallel=True, n_cpu=n_cpu,
                             halogen=True, batch_size=999999, timeout_secs=timeout_secs)
         buddy.add_data(ft_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
-        joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
+        joblib.dump(buddy.data, '../gnps_ft_mf_ls_cand_1.joblib')
         new_data = pred_formula_feasibility_batch(buddy.data, 1, shared_data_dict, 1000)
-        joblib.dump(new_data, 'gnps_ft_mf_ls_cand_2.joblib')
+        joblib.dump(new_data, '../gnps_ft_mf_ls_cand_2.joblib')
 
     return shared_data_dict
 
@@ -340,8 +340,8 @@ def combine_and_clean_X_y():
     y_arr_qtof = joblib.load('gnps_y_arr_qtof.joblib')
     X_arr_orbi = joblib.load('gnps_X_arr_orbi.joblib')
     y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
-    X_arr_ft = joblib.load('gnps_X_arr_ft.joblib')
-    y_arr_ft = joblib.load('gnps_y_arr_ft.joblib')
+    X_arr_ft = joblib.load('../gnps_X_arr_ft.joblib')
+    y_arr_ft = joblib.load('../gnps_y_arr_ft.joblib')
 
     X_arr = np.vstack((X_arr_qtof, X_arr_orbi, X_arr_ft))
     y_arr = np.append(y_arr_qtof, np.append(y_arr_orbi, y_arr_ft))
@@ -359,15 +359,15 @@ def combine_and_clean_X_y():
     print('y_arr shape: ' + str(y_arr.shape))
 
     # save to joblib file
-    joblib.dump(X_arr, 'gnps_X_arr.joblib')
-    joblib.dump(y_arr, 'gnps_y_arr.joblib')
+    joblib.dump(X_arr, '../gnps_X_arr.joblib')
+    joblib.dump(y_arr, '../gnps_y_arr.joblib')
 
 
 def z_norm_smote():
     """
     z-normalization of X_arr
     """
-    X_arr = joblib.load('gnps_X_arr.joblib')
+    X_arr = joblib.load('../gnps_X_arr.joblib')
     # z-normalization
     X_mean = np.mean(X_arr[:, 5:], axis=0)
     X_std = np.std(X_arr[:, 5:], axis=0)
@@ -377,7 +377,7 @@ def z_norm_smote():
     joblib.dump(X_mean, 'ml_b_mean_arr.joblib')
     joblib.dump(X_std, 'ml_b_std_arr.joblib')
 
-    y_arr = joblib.load('gnps_y_arr.joblib')
+    y_arr = joblib.load('../gnps_y_arr.joblib')
     smote = SMOTE(random_state=0)
     X_arr, y_arr = smote.fit_resample(X_arr, y_arr)
 

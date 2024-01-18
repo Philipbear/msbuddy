@@ -28,7 +28,7 @@ from msbuddy.base import MetaFeature, Adduct, check_adduct
 from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.export import write_batch_results_cmd
 from msbuddy.load import init_db, load_usi, load_mgf
-from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, calc_fdr
+from msbuddy.ml import pred_formula_prob, calc_fdr
 from msbuddy.query import query_neutral_mass, query_precursor_mass
 from msbuddy.utils import form_arr_to_str, FormulaResult
 
@@ -396,7 +396,6 @@ class Msbuddy:
         self._assign_subformula_annotation(start_idx, end_idx)
 
         tqdm.write("Candidate formula ranking...")
-        pred_formula_feasibility(self.data, start_idx, end_idx)
         pred_formula_prob(self.data, start_idx, end_idx, self.config, shared_data_dict)
 
         # FDR calculation

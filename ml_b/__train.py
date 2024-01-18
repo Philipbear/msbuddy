@@ -8,8 +8,8 @@ from scipy.stats import norm
 from msbuddy.base import MetaFeature, Spectrum, Formula, CandidateFormula, Adduct
 from msbuddy.main import Msbuddy, MsbuddyConfig, _gen_subformula
 from msbuddy.load import init_db
-from msbuddy.ml import gen_ml_b_feature_single, _gen_arr_from_buddy_data, _gen_ml_a_feature, \
-    _fill_ml_a_arr_in_batch_data
+from msbuddy.ml import gen_ml_feature_single, _gen_arr_from_buddy_data, _gen_form_feature, \
+    _fill_form_feature_arr_in_batch_data
 from msbuddy.cand import _calc_ms1_iso_sim
 from msbuddy.utils import form_arr_to_str, read_formula
 
@@ -100,9 +100,9 @@ def fill_ml_a_batch(data, batch_size=1000):
         cand_form_arr, dbe_arr, mass_arr = _gen_arr_from_buddy_data(batch_data)
 
         # generate ML feature array
-        feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
+        feature_arr = _gen_form_feature(cand_form_arr, dbe_arr, mass_arr)
         # fill in batch_data
-        _fill_ml_a_arr_in_batch_data(batch_data, feature_arr)
+        _fill_form_feature_arr_in_batch_data(batch_data, feature_arr)
 
         data[start_idx:end_idx] = batch_data
 
@@ -278,7 +278,7 @@ def assign_subform_gen_training_data(instru):
             this_true = True if n == 0 else False
 
             # get ML features
-            ml_feature_arr = gen_ml_b_feature_single(mf, cf, True, ms1_tol, ms2_tol, shared_data_dict)
+            ml_feature_arr = gen_ml_feature_single(mf, cf, True, ms1_tol, ms2_tol, shared_data_dict)
 
             # if true gt, perform precursor simulation
             if this_true:

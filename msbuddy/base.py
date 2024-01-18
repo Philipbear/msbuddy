@@ -713,7 +713,7 @@ class CandidateFormula:
         self.estimated_prob = None  # estimated probability (ML score, not normalized)
         self.normed_estimated_prob = None  # normalized estimated probability considering all candidate formulas
         self.estimated_fdr = None  # estimated FDR
-        self.ml_a_array = None  # ml_a feature array for model A (not z-normed)
+        self.formula_feature_array = None  # formula feature array
         self.ms1_isotope_similarity = ms1_isotope_similarity
         self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during precursor formula annotation
         self.db_existed = db_existed  # whether this formula is in the formula database

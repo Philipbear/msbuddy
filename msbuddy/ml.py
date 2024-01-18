@@ -10,7 +10,7 @@ File: ml.py
 Author: Shipei Xing
 Email: s1xing@health.ucsd.edu
 GitHub: Philipbear
-Description: machine learning functions: model A, model B; feature generation, z-normalization, prediction, etc.
+Description: machine learning functions: feature generation, prediction, etc.
              False discovery rate (FDR) estimation
 """
 import math
@@ -33,7 +33,7 @@ warnings.filterwarnings('ignore')
 
 def _gen_arr_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
     """
-    generate three arrays for ML model A
+    generate three arrays for ML
     :param buddy_data: List of MetaFeature objects
     :return: all_cand_form_arr, dbe_arr, mass_arr
     """
@@ -55,9 +55,9 @@ def _gen_arr_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
 
 
 @njit
-def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
+def _gen_form_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     """
-    generate ML features for model A (formula feasibility)
+    generate formula features for ML
     :param all_cand_form_arr: numpy array of all candidate formula arrays
     :param dbe_arr: numpy array of all candidate formula dbe
     :param mass_arr: numpy array of all candidate formula mass
@@ -129,7 +129,7 @@ def _gen_ml_a_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     return out
 
 
-def _fill_ml_a_arr_in_batch_data(batch_data, feature_arr) -> None:
+def _fill_form_feature_arr_in_batch_data(batch_data, feature_arr) -> None:
     """
     fill ML features in batch data
     :param batch_data: List of MetaFeature objects
@@ -142,44 +142,14 @@ def _fill_ml_a_arr_in_batch_data(batch_data, feature_arr) -> None:
             continue
         # fill in ML features for each candidate formula
         for cf in mf.candidate_formula_list:
-            cf.ml_a_array = feature_arr[cnt, :]
+            cf.formula_feature_array = feature_arr[cnt, :]
             cnt += 1
     return
 
 
-def pred_formula_feasibility(buddy_data, batch_start_idx: int, batch_end_idx: int) -> None:
+def gen_ml_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
     """
-    predict formula feasibility using ML model a, retain top candidate formulas
-    this function is performed in batch
-    :param buddy_data: buddy data
-    :param batch_start_idx: batch start index
-    :param batch_end_idx: batch end index
-    """
-
-    # batch data
-    batch_data = buddy_data[batch_start_idx:batch_end_idx]
-
-    # generate three arrays from buddy data
-    cand_form_arr, dbe_arr, mass_arr = _gen_arr_from_buddy_data(batch_data)
-
-    # if no candidate formula, return
-    if cand_form_arr.size == 0:
-        return
-
-    # generate ML feature array
-    feature_arr = _gen_ml_a_feature(cand_form_arr, dbe_arr, mass_arr)
-    # fill in batch_data
-    _fill_ml_a_arr_in_batch_data(batch_data, feature_arr)
-
-    # update buddy data
-    buddy_data[batch_start_idx:batch_end_idx] = batch_data
-
-    return
-
-
-def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
-    """
-    generate ML features for model B, for all metabolic features
+    generate ML features for all metabolic features
     :param meta_feature_list: List of MetaFeature objects
     :param ppm: whether to use ppm error
     :param ms1_tol: m/z tolerance for MS1
@@ -197,7 +167,7 @@ def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: floa
         # generate ML features for each candidate formula
         for cf in mf.candidate_formula_list:
             # get ML features
-            ml_feature_arr = gen_ml_b_feature_single(mf, cf, ppm, ms1_tol, ms2_tol, gd)
+            ml_feature_arr = gen_ml_feature_single(mf, cf, ppm, ms1_tol, ms2_tol, gd)
 
             # add to feature array
             if total_X_arr.size == 0:
@@ -212,9 +182,9 @@ def gen_ml_b_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: floa
     return total_X_arr
 
 
-def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
+def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
     """
-    generate ML features for model B for a single candidate formula
+    generate ML features for a single candidate formula
     :param meta_feature: MetaFeature object
     :param cand_form: CandidateFormula object
     :param ppm: whether to use ppm error
@@ -250,7 +220,7 @@ def gen_ml_b_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, 
 
     # generate output array
     out = np.concatenate((np.array([ms1_iso_sim, mz_error_log_p]),  # 2
-                          np.array([pos_mode]), form_feature_arr, cand_form.ml_a_array[8:],  # 1 + 2 + 32 - 8
+                          np.array([pos_mode]), form_feature_arr, cand_form.formula_feature_array[8:],  # 1 + 2 + 32 - 8
                           ms2_feature_arr))  # 24
 
     return out
@@ -261,18 +231,15 @@ def _calc_formula_feature(f: np.array) -> np.array:
     """
     calculate formula features
     :param f: formula array
-    :return: numpy array of formula features: cho, chon, chonps
+    :return: numpy array of formula features: chon, chonps
     """
     # sum of elements other than C, H, O, N, P, S
     ele_sum_1 = f[2] + f[3] + f[4] + f[5] + f[6] + f[8]
     # sum of elements other than C, H, O, N
     ele_sum_2 = ele_sum_1 + f[10] + f[11]
 
-    # cho = 1 if ele_sum_3 == 0 else 0
     chon = 1 if ele_sum_2 == 0 else 0
     chonps = 1 if ele_sum_1 == 0 else 0
-
-    # return np.array([cho, chon, chonps])
 
     return np.array([chon, chonps])
 
@@ -475,9 +442,9 @@ def _calc_log_p_norm_helper(arr_norm_p) -> np.array:
     return log_p
 
 
-def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
+def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
     """
-    predict using model b
+    ml prediction
     :param meta_feature_list: List of MetaFeature objects
     :param group_no: group number; 0: ms1 ms2; 1: ms1 noms2; 2: noms1 ms2; 3: noms1 noms2
     :param ppm: whether to use ppm error
@@ -487,13 +454,10 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
     :return: numpy array of prediction results
     """
     # generate feature array
-    X_arr = gen_ml_b_feature(meta_feature_list, ppm, ms1_tol, ms2_tol, gd)
+    X_arr = gen_ml_feature(meta_feature_list, ppm, ms1_tol, ms2_tol, gd)
 
     if X_arr.size == 0:
         return np.array([])
-
-    # # z-normalize
-    # X_arr[:, 5:] = (X_arr[:, 5:] - gd['model_b_mean_arr']) / gd['model_b_std_arr']
 
     # load model
     if group_no == 0:
@@ -516,7 +480,7 @@ def _predict_ml_b(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, m
 
 def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int, config, gd):
     """
-    predict formula probability using ML model b
+    predict formula probability
     :param buddy_data: buddy data
     :param batch_start_idx: batch start index
     :param batch_end_idx: batch end index
@@ -530,6 +494,19 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int, conf
 
     # batch data
     batch_data = buddy_data[batch_start_idx:batch_end_idx]
+
+    # generate three arrays from buddy data
+    cand_form_arr, dbe_arr, mass_arr = _gen_arr_from_buddy_data(batch_data)
+
+    # if no candidate formula, return
+    if cand_form_arr.size == 0:
+        return
+
+    # generate ML feature array
+    feature_arr = _gen_form_feature(cand_form_arr, dbe_arr, mass_arr)
+
+    # fill in batch_data
+    _fill_form_feature_arr_in_batch_data(batch_data, feature_arr)
 
     # split buddy data into 4 groups and store their indices in a dictionary
     group_dict = dict()
@@ -555,7 +532,7 @@ def pred_formula_prob(buddy_data, batch_start_idx: int, batch_end_idx: int, conf
         if not group_dict[i]:
             continue
         # predict formula probability
-        prob_arr = _predict_ml_b([batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
+        prob_arr = _predict_ml([batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
         # add prediction results to candidate formula objects in the list
         cnt = 0
         for j in group_dict[i]:
