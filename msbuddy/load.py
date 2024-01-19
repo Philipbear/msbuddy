@@ -62,26 +62,26 @@ def init_db() -> dict:
     db_name = 'common_db_' + current_db_version + '.joblib'
     global_dict['common_loss_db'], global_dict['common_frag_db'] = (
         check_download_joblibload(
-            'https://drive.google.com/uc?id=1mxUeHNYC_XEbDzKAeax2m5Qc-CpqPPzL',
+            'https://github.com/Philipbear/msbuddy/releases/download/msbuddy_data_v0.2.4/common_db_v0.2.4.joblib',
             data_path / db_name))
 
     # formula_db
     db_name = 'formula_db_' + current_db_version + '.joblib'
     basic_db, halogen_db = (
         check_download_joblibload(
-            'https://drive.google.com/uc?id=17UjBzBe5LBzT_c8lEE-6PVBJO6xP3WSv',
+            'https://github.com/Philipbear/msbuddy/releases/download/msbuddy_data_v0.2.4/formula_db_v0.2.4.joblib',
             data_path / db_name))
 
     global_dict['basic_db_mass'], global_dict['basic_db_formula'], global_dict['basic_db_idx'] = basic_db
     global_dict['halogen_db_mass'], global_dict['halogen_db_formula'], global_dict['halogen_db_idx'] = halogen_db
 
     # # load ml
-    # db_name = 'ml_' + current_model_version + '.joblib'
+    # ml_name = 'ml_' + current_model_version + '.joblib'
     # global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[
     #     'model_noms1_noms2'], global_dict['model_mean_arr'], global_dict['model_std_arr'] = (
     #     check_download_joblibload(
-    #         'https://drive.google.com/uc?id=17fuTj7oZdFu6TRQDUaFvWNrm1UFt1JZG',
-    #         data_path / db_name))
+    #         'https://github.com/Philipbear/msbuddy/releases/download/msbuddy_data_v0.3.0/model_v0.3.0.joblib',
+    #         data_path / ml_name))
     #
     global_dict['model_ms1_ms2'] = j_load('data/model_ms1_ms2.joblib')
     global_dict['model_noms1_ms2'] = j_load('data/model_ms2.joblib')

@@ -16,8 +16,54 @@ from msbuddy.utils import form_arr_to_str, read_formula
 import lightgbm as lgb
 from sklearn.model_selection import GroupKFold
 from sklearn.metrics import ndcg_score
+from brainpy import isotopic_variants
+# from ml_b.deprecated.__train_gnps_cmd import sim_ms1_iso_pattern
 
-from ml_b.deprecated.__train_gnps_cmd import sim_ms1_iso_pattern
+
+def sim_ms1_iso_pattern(form_arr):
+    """
+    simulate MS1 isotope pattern
+    :param form_arr: numpy array of formula
+    :return: theoretical & simulated isotope pattern
+    """
+
+    # calculate theoretical isotope pattern
+    # mapping to a dictionary
+    arr_dict = {}
+    for i, element in enumerate(Formula.alphabet):
+        arr_dict[element] = form_arr[i]
+
+    # calculate isotope pattern
+    isotope_pattern = isotopic_variants(arr_dict, npeaks=4)
+    int_arr = np.array([iso.intensity for iso in isotope_pattern])
+
+    # simulation
+    sim_int_arr = int_arr.copy()
+    a1, a2, a3 = 2, 2, 2
+    b1, b2, b3 = -1, -1, -1
+
+    # M + 1
+    while a1 * b1 < -1:
+        a1 = abs(np.random.normal(0, 0.11))
+        b1 = np.random.choice([-1, 1])
+    sim_int_arr[1] = sim_int_arr[1] * (1 + a1 * b1)
+
+    # M + 2
+    if len(int_arr) >= 3:
+        while a2 * b2 < -1:
+            a2 = abs(np.random.normal(0, 0.16))
+            # random.choice([-1, 1]), 0.7 probability to be 1
+            b2 = np.random.choice([-b1, b1], p=[0.3, 0.7])
+        sim_int_arr[2] = sim_int_arr[2] * (1 + a2 * b2)
+
+    # M + 3
+    if len(int_arr) >= 4:
+        while a3 * b3 < -1:
+            a3 = abs(np.random.normal(0, 0.19))
+            b3 = np.random.choice([-b2, b2], p=[0.3, 0.7])
+        sim_int_arr[3] = sim_int_arr[3] * (1 + a3 * b3)
+
+    return int_arr, sim_int_arr
 
 
 def load_gnps_data(path):
@@ -88,7 +134,7 @@ def load_gnps_data(path):
     joblib.dump(ft_gt_ls, 'gnps_ft_gt_ls.joblib')
 
 
-def fill_ml_a_batch(data, batch_size=1000):
+def fill_form_feature_arr_batch(data, batch_size=1000):
     n_batch = int(np.ceil(len(data) / batch_size))
     for n in tqdm(range(n_batch)):
         start_idx = n * batch_size
@@ -121,7 +167,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(qtof_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_qtof_mf_ls_cand_1.joblib')
-        new_data = fill_ml_a_batch(buddy.data)
+        new_data = fill_form_feature_arr_batch(buddy.data)
         joblib.dump(new_data, 'gnps_qtof_mf_ls_cand_2.joblib')
     elif instru == 'orbi':
         orbi_mf_ls = joblib.load('gnps_orbi_mf_ls.joblib')
@@ -131,7 +177,7 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(orbi_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_orbi_mf_ls_cand_1.joblib')
-        new_data = fill_ml_a_batch(buddy.data)
+        new_data = fill_form_feature_arr_batch(buddy.data)
         joblib.dump(new_data, 'gnps_orbi_mf_ls_cand_2.joblib')
     else:  # FT-ICR
         ft_mf_ls = joblib.load('gnps_ft_mf_ls.joblib')
@@ -141,15 +187,20 @@ def calc_gnps_data(n_cpu, timeout_secs, instru):
         buddy.add_data(ft_mf_ls)
         buddy._preprocess_and_generate_candidate_formula(0, len(buddy.data))
         joblib.dump(buddy.data, 'gnps_ft_mf_ls_cand_1.joblib')
-        new_data = fill_ml_a_batch(buddy.data)
+        new_data = fill_form_feature_arr_batch(buddy.data)
         joblib.dump(new_data, 'gnps_ft_mf_ls_cand_2.joblib')
 
     return shared_data_dict
 
 
 @njit
-def _calc_ml_a_array(form_arr, mass, dbe):
+def _calc_form_feature_array(form_arr, mass, dbe):
     # calculate ML features
+    ele_sum_1_arr = form_arr[2] + form_arr[3] + form_arr[4] + form_arr[5] + form_arr[6] + form_arr[8]
+    ele_sum_2_arr = ele_sum_1_arr + form_arr[10] + form_arr[11]
+    chon_only = np.clip(ele_sum_2_arr, 0, 1)  # whether only C, H, O, N exist
+    chonps_only = np.clip(ele_sum_1_arr, 0, 1)  # whether only C, H, O, N, P, S exist
+
     chno = form_arr[0] + form_arr[1] + form_arr[7] + form_arr[9]
     hal = np.sum(form_arr[2:6])  # sum of halogen atoms
     ta = np.sum(form_arr)  # total number of atoms
@@ -172,9 +223,7 @@ def _calc_ml_a_array(form_arr, mass, dbe):
 
     # if C > 0
     if form_arr[0] > 0:
-        out = np.array([form_arr[0], form_arr[1],
-                        form_arr[7], form_arr[9], form_arr[10],
-                        form_arr[11], hal, ta,
+        out = np.array([chon_only, chonps_only,
                         form_arr[0] / ta, form_arr[1] / ta,
                         form_arr[7] / ta,
                         form_arr[9] / ta, form_arr[10] / ta,
@@ -189,9 +238,7 @@ def _calc_ml_a_array(form_arr, mass, dbe):
                         hal / form_arr[0],
                         hal_h, o_p, hal_two, hal_three])
     else:
-        out = np.array([form_arr[0], form_arr[1],
-                        form_arr[7], form_arr[9], form_arr[10],
-                        form_arr[11], hal, ta,
+        out = np.array([chon_only, chonps_only,
                         form_arr[0] / ta, form_arr[1] / ta,
                         form_arr[7] / ta,
                         form_arr[9] / ta, form_arr[10] / ta,
@@ -245,13 +292,11 @@ def assign_subform_gen_training_data(instru):
             continue
 
         # modify the candidate formula list, such that the ground truth formula is the first one
-        # ml_a_prob = buddy.predict_formula_feasibility(gt_form_arr)
-        # ml_a_prob = 1
         form = Formula(gt_form_arr, 0)
         this_cf = CandidateFormula(formula=form,
                                    charged_formula=Formula(gt_form_arr + meta_feature.adduct.net_formula.array,
                                                            meta_feature.adduct.charge))
-        this_cf.ml_a_array = _calc_ml_a_array(gt_form_arr, form.mass, form.dbe)
+        this_cf.formula_feature_array = _calc_form_feature_array(gt_form_arr, form.mass, form.dbe)
         cand_form_ls = [this_cf]
 
         cand_cnt = 0
@@ -295,7 +340,6 @@ def assign_subform_gen_training_data(instru):
             else:
                 X_arr = np.vstack((X_arr, ml_feature_arr))
                 y_arr = np.append(y_arr, 1 if this_true else 0)
-
         del mf
         buddy.data[k] = None
 
@@ -717,10 +761,10 @@ def correct_x_ml_a_for_gt():
 
             # modify the candidate formula list, such that the ground truth formula is the first one
             form = Formula(gt_form_arr, 0)
-            new_ml_a_array = _calc_ml_a_array(gt_form_arr, form.mass, form.dbe)
+            new_ml_a_array = _calc_form_feature_array(gt_form_arr, form.mass, form.dbe)
 
             # fill in the new ml_a_array
-            X_arr[correct_idx[tmp], 5:28] = new_ml_a_array[8:].copy()
+            X_arr[correct_idx[tmp], 5:28] = new_ml_a_array.copy()
             tmp += 1
 
         assert tmp == len(correct_idx)
@@ -787,12 +831,13 @@ if __name__ == '__main__':
     args = argparse.Namespace(calc=False, gen=True, ms='ft', cpu=1, to=999999,
                               ms1=True, ms2=False)
 
-    # correct_x_ml_a_for_gt()
+
+
 
     # combine_and_clean_x_y(test=True)
-    train_model(args.ms1, args.ms2)
+    # train_model(args.ms1, args.ms2)
 
-    get_feature_importance(joblib.load('ml_b_ms1_ms2.joblib'), True, True)
+    # get_feature_importance(joblib.load('ml_b_ms1_ms2.joblib'), True, True)
     # get_feature_importance(joblib.load('ml_b_ms1.joblib'), True, False)
     # get_feature_importance(joblib.load('ml_b_ms2.joblib'), False, True)
     # get_feature_importance(joblib.load('ml_b.joblib'), False, False)
