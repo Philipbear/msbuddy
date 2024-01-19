@@ -839,9 +839,8 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     candidate_form = candidate_space.refine_explanation(mf, ms2_iso_tol)
 
     # copy other attributes
-    candidate_form.ml_a_prob = cf.ml_a_prob
     candidate_form.ms1_isotope_similarity = cf.ms1_isotope_similarity
-    candidate_form.ml_a_array = cf.ml_a_array
+    candidate_form.ml_a_array = cf.formula_feature_array
 
     return candidate_form
 
