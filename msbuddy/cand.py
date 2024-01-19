@@ -840,7 +840,7 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
 
     # copy other attributes
     candidate_form.ms1_isotope_similarity = cf.ms1_isotope_similarity
-    candidate_form.ml_a_array = cf.formula_feature_array
+    candidate_form.formula_feature_array = cf.formula_feature_array
 
     return candidate_form
 
