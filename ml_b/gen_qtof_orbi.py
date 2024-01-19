@@ -176,8 +176,8 @@ def _calc_form_feature_array(form_arr, mass, dbe):
     # calculate ML features
     ele_sum_1_arr = form_arr[2] + form_arr[3] + form_arr[4] + form_arr[5] + form_arr[6] + form_arr[8]
     ele_sum_2_arr = ele_sum_1_arr + form_arr[10] + form_arr[11]
-    chon_only = 1 - np.clip(ele_sum_2_arr, 0, 1)  # whether only C, H, O, N exist
-    chonps_only = 1 - np.clip(ele_sum_1_arr, 0, 1)  # whether only C, H, O, N, P, S exist
+    chon_only = 1 if ele_sum_2_arr == 0 else 1  # whether only C, H, O, N exist
+    chonps_only = 1 if ele_sum_1_arr == 0 else 1  # whether only C, H, O, N, P, S exist
 
     chno = form_arr[0] + form_arr[1] + form_arr[7] + form_arr[9]
     hal = np.sum(form_arr[2:6])  # sum of halogen atoms
