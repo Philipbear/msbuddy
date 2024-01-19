@@ -215,7 +215,7 @@ def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms
     pos_mode = 1 if this_adduct.charge > 0 else 0
 
     # generate output array
-    out = np.concatenate((np.array([ms1_iso_sim, mz_error_log_p, pos_mode]),  # 3
+    out = np.concatenate((np.array([ms1_iso_sim]), np.array([mz_error_log_p]), np.array([pos_mode]),  # 3
                           cand_form.formula_feature_array, ms2_feature_arr))  # 26 + 24
 
     return out
