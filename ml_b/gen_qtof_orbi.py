@@ -234,9 +234,9 @@ if __name__ == '__main__':
     # fill_formula_feature_array('qtof')
     # fill_formula_feature_array('orbi')
 
-    split_into_batches('orbi', 10000)
+    # split_into_batches('orbi', 10000)
 
-    # gen_subform_and_X_y_arr('orbi', 0, 10000)
+    gen_subform_and_X_y_arr('orbi', 0, 10000)
     # gen_subform_and_X_y_arr('orbi', 1, 10000)
     # gen_subform_and_X_y_arr('orbi', 2, 10000)
     # gen_subform_and_X_y_arr('orbi', 3, 10000)

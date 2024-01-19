@@ -83,8 +83,8 @@ def init_db() -> dict:
     #         'https://github.com/Philipbear/msbuddy/releases/download/msbuddy_data_v0.3.0/model_v0.3.0.joblib',
     #         data_path / ml_name))
     #
-    global_dict['model_ms1_ms2'] = j_load('data/model_ms1_ms2.joblib')
-    global_dict['model_noms1_ms2'] = j_load('data/model_ms2.joblib')
+    # global_dict['model_ms1_ms2'] = j_load('data/model_ms1_ms2.joblib')
+    # global_dict['model_noms1_ms2'] = j_load('data/model_ms2.joblib')
 
     return global_dict
 
