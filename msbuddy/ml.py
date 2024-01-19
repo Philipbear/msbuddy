@@ -64,8 +64,8 @@ def _gen_form_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     ele_sum_1_arr = all_cf_arr[:, 2] + all_cf_arr[:, 3] + all_cf_arr[:, 4] + all_cf_arr[:, 5] + \
                     all_cf_arr[:, 6] + all_cf_arr[:, 8]
     ele_sum_2_arr = ele_sum_1_arr + all_cf_arr[:, 10] + all_cf_arr[:, 11]
-    chon_arr = np.clip(ele_sum_2_arr, 0, 1)  # whether only C, H, O, N exist
-    chonps_arr = np.clip(ele_sum_1_arr, 0, 1)  # whether only C, H, O, N, P, S exist
+    chon_arr = 1 - np.clip(ele_sum_2_arr, 0, 1)  # whether only C, H, O, N exist
+    chonps_arr = 1 - np.clip(ele_sum_1_arr, 0, 1)  # whether only C, H, O, N, P, S exist
     hal_arr = np.sum(all_cf_arr[:, 2:6], axis=1)  # sum of halogen atoms
     ta_arr = np.sum(all_cf_arr, axis=1)  # total number of atoms
     f_exist_arr = np.clip(all_cf_arr[:, 4], 0, 1)  # whether F exists
