@@ -11,6 +11,7 @@ from msbuddy.load import init_db
 from msbuddy.main import Msbuddy, MsbuddyConfig, _gen_subformula
 from msbuddy.ml import _gen_arr_from_buddy_data, _gen_form_feature, _fill_form_feature_arr_in_batch_data, \
     gen_ml_feature_single
+import argparse
 
 
 def fill_form_feature_arr_batch(data, batch_size=1000):
@@ -32,19 +33,16 @@ def fill_form_feature_arr_batch(data, batch_size=1000):
     return data
 
 
-def fill_formula_feature_array(ms='qtof'):
+def fill_formula_feature_array_and_split(ms='qtof', batch_size=3000):
     # main
     data_name = 'gnps_' + ms + '_mf_ls_cand_1.joblib'
     data = joblib.load(data_name)
-    new_data = fill_form_feature_arr_batch(data)
+    data = fill_form_feature_arr_batch(data)
     new_data_name = 'gnps_' + ms + '_mf_ls_cand_2_new.joblib'
-    joblib.dump(new_data, new_data_name)  # new, 2 more features in the start
+    joblib.dump(data, new_data_name)  # new, 2 more features in the start
 
+    print('start splitting into batches...')
 
-def split_into_batches(ms='qtof', batch_size=3000):
-    # main
-    data_name = 'gnps_' + ms + '_mf_ls_cand_2_new.joblib'
-    data = joblib.load(data_name)
     n_batch = int(np.ceil(len(data) / batch_size))
     for n in tqdm(range(n_batch)):
         start_idx = n * batch_size
@@ -229,37 +227,28 @@ def _calc_form_feature_array(form_arr, mass, dbe):
     return out
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Generate ML features for GNPS data')
+    parser.add_argument('--ms', type=str, default='orbi', help='instrument type')
+    parser.add_argument('--batch_size', type=int, default=1900, help='batch size')
+    parser.add_argument('--n_batch', type=int, default=0, help='n batch')
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == '__main__':
+    args = parse_args()
 
-    # fill_formula_feature_array('qtof')
-    # fill_formula_feature_array('orbi')
+    # fill_formula_feature_array_and_split('orbi', 1900)
 
-    # split_into_batches('orbi', 10000)
+    gen_subform_and_X_y_arr(args.ms, args.n_batch, args.batch_size)
+    #
+    # aggregate_X_and_y('orbi', 44)
 
-    gen_subform_and_X_y_arr('orbi', 0, 10000)
-    # gen_subform_and_X_y_arr('orbi', 1, 10000)
-    # gen_subform_and_X_y_arr('orbi', 2, 10000)
-    # gen_subform_and_X_y_arr('orbi', 3, 10000)
-    # gen_subform_and_X_y_arr('orbi', 4, 10000)
-    # gen_subform_and_X_y_arr('orbi', 5, 10000)
-    # gen_subform_and_X_y_arr('orbi', 6, 10000)
-    # gen_subform_and_X_y_arr('orbi', 7, 10000)
-    # gen_subform_and_X_y_arr('orbi', 8, 10000)
-    #
-    # aggregate_X_and_y('orbi', 9)
-    #
-    #
-    # split_into_batches('qtof', 3000)
+
+    # fill_formula_feature_array_and_split('qtof', 3000)
     #
     # gen_subform_and_X_y_arr('qtof', 0, 3000)
-    # gen_subform_and_X_y_arr('qtof', 1, 3000)
-    # gen_subform_and_X_y_arr('qtof', 2, 3000)
-    # gen_subform_and_X_y_arr('qtof', 3, 3000)
-    # gen_subform_and_X_y_arr('qtof', 4, 3000)
-    # gen_subform_and_X_y_arr('qtof', 5, 3000)
-    # gen_subform_and_X_y_arr('qtof', 6, 3000)
-    # gen_subform_and_X_y_arr('qtof', 7, 3000)
-    # gen_subform_and_X_y_arr('qtof', 8, 3000)
     #
     # aggregate_X_and_y('qtof', 9)
 

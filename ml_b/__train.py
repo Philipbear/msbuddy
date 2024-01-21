@@ -356,6 +356,13 @@ def combine_and_clean_x_y(test=False):
         X_arr = joblib.load('gnps_X_arr_ft.joblib')
         y_arr = joblib.load('gnps_y_arr_ft.joblib')
         group_arr = joblib.load('gnps_group_arr_ft.joblib')
+        X_arr_orbi = joblib.load('gnps_X_arr_orbi.joblib')
+        y_arr_orbi = joblib.load('gnps_y_arr_orbi.joblib')
+        group_arr_orbi = joblib.load('gnps_group_arr_orbi.joblib')
+
+        X_arr = np.vstack((X_arr, X_arr_orbi))
+        y_arr = np.append(y_arr, y_arr_orbi)
+        group_arr = np.append(group_arr, group_arr_orbi)
     else:
         # load training data
         X_arr_qtof = joblib.load('gnps_X_arr_qtof.joblib')
@@ -523,7 +530,7 @@ def train_model(ms1_iso, ms2_spec):
     print(f'Average NDCG@1 score with heuristic baseline (exp_frag_int_pct): {avg_ndcg_score_heuristic}')
 
     # Save the model
-    model_name = 'ml_b'
+    model_name = 'model'
     model_name += '_ms1' if ms1_iso else ''
     model_name += '_ms2' if ms2_spec else ''
     model_name += '.joblib'
@@ -829,17 +836,17 @@ if __name__ == '__main__':
     # ###############
     # local
     args = argparse.Namespace(calc=False, gen=True, ms='ft', cpu=1, to=999999,
-                              ms1=True, ms2=False)
+                              ms1=True, ms2=True)
 
 
 
 
     # combine_and_clean_x_y(test=True)
-    # train_model(args.ms1, args.ms2)
+    train_model(args.ms1, args.ms2)
 
-    # get_feature_importance(joblib.load('ml_b_ms1_ms2.joblib'), True, True)
-    # get_feature_importance(joblib.load('ml_b_ms1.joblib'), True, False)
-    # get_feature_importance(joblib.load('ml_b_ms2.joblib'), False, True)
-    # get_feature_importance(joblib.load('ml_b.joblib'), False, False)
+    # get_feature_importance(joblib.load('model_ms1_ms2.joblib'), True, True)
+    # get_feature_importance(joblib.load('model_ms1.joblib'), True, False)
+    # get_feature_importance(joblib.load('model_ms2.joblib'), False, True)
+    # get_feature_importance(joblib.load('model.joblib'), False, False)
 
     print('done')
