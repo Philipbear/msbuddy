@@ -747,38 +747,6 @@ def get_feature_importance(gbm, ms1, ms2):
     return feature_importance_split, feature_importance_gain
 
 
-def correct_x_ml_a_for_gt():
-    for instru in ['ft', 'qtof', 'orbi']:
-        print('loading data...')
-        data_name = 'gnps_' + instru + '_mf_ls_cand_2.joblib'
-        data = joblib.load(data_name)
-
-        gt_name = 'gnps_' + instru + '_gt_ls.joblib'
-        gt_ls = joblib.load(gt_name)
-
-        X_arr = joblib.load('gnps_X_arr_' + instru + '.joblib')
-        y_arr = joblib.load('gnps_y_arr_' + instru + '.joblib')
-        correct_idx = np.where(y_arr == 1)[0]
-
-        tmp = 0
-        for k, meta_feature in enumerate(data):
-            if not meta_feature.candidate_formula_list:
-                continue
-            gt_form_arr = gt_ls[k]
-
-            # modify the candidate formula list, such that the ground truth formula is the first one
-            form = Formula(gt_form_arr, 0)
-            new_ml_a_array = _calc_form_feature_array(gt_form_arr, form.mass, form.dbe)
-
-            # fill in the new ml_a_array
-            X_arr[correct_idx[tmp], 5:28] = new_ml_a_array.copy()
-            tmp += 1
-
-        assert tmp == len(correct_idx)
-        X_arr_name = 'gnps_X_arr_' + instru + '_cor.joblib'
-        joblib.dump(X_arr, X_arr_name)
-
-
 def parse_args():
     """
     parse command line arguments
@@ -835,14 +803,9 @@ if __name__ == '__main__':
 
     # ###############
     # local
-    args = argparse.Namespace(calc=False, gen=True, ms='ft', cpu=1, to=999999,
-                              ms1=True, ms2=True)
 
-
-
-
-    # combine_and_clean_x_y(test=True)
-    train_model(args.ms1, args.ms2)
+    # combine_and_clean_x_y(test=False)
+    train_model(ms1_iso=True, ms2_spec=True)
 
     # get_feature_importance(joblib.load('model_ms1_ms2.joblib'), True, True)
     # get_feature_importance(joblib.load('model_ms1.joblib'), True, False)

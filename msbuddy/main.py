@@ -534,7 +534,7 @@ if __name__ == '__main__':
 
     # instantiate a MsbuddyConfig object
     msb_config = MsbuddyConfig(# highly recommended to specify
-                               ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+                               ms_instr='qtof',  # supported: "qtof", "orbitrap" and "fticr"
                                # whether to consider halogen atoms FClBrI
                                halogen=True,
                                # whether to use parallel processing
@@ -546,9 +546,9 @@ if __name__ == '__main__':
     # you can load multiple USIs at once
     # msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
     #
-    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'
+    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'
     msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
