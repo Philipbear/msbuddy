@@ -224,7 +224,8 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
 
         cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
                                         ms1_cand_form_str_ls, ms2_cand_form_str_ls)
-        # if len(ms2_cand_form_ls) == 0:  # or len(mf.ms2_processed) <= 3
+
+        # if len(mf.ms2_processed) <= 5:
         #     # merge candidate formulas from ms1 and ms2
         #     cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
         #                                     ms1_cand_form_str_ls, ms2_cand_form_str_ls)
@@ -237,7 +238,7 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     # calculate neutral mass of the precursor ion
     ion_mode = 1 if mf.adduct.pos_mode else -1
     t_neutral_mass = (mf.mz * abs(mf.adduct.charge) - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
-    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list, 300)
+    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list, 250)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if mf.ms1_processed and len(mf.ms1_processed) > 1:
@@ -491,7 +492,7 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
         for frag in frag_form_list:
             for nl in nl_form_list:
                 # DBE check, sum of DBE should be a non-integer
-                if (frag.dbe + nl.dbe) % 1 == 0 or (frag.dbe + nl.dbe) < 0:
+                if (frag.dbe + nl.dbe) % 1 == 0 or (frag.dbe + nl.dbe) < 0 or frag.dbe < 0:
                     continue
                 # sum mass check
                 if abs(frag.mass + nl.mass - mf.mz) > ms1_abs_tol:
@@ -678,8 +679,9 @@ def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula], top_n:
     if len(cf_list) <= top_n:
         return cf_list
     else:
-        # sort candidate list by exp_ms2_sum_int (decreasing), then by mz difference (increasing)
-        cf_list = sorted(cf_list, key=lambda x: (-x.exp_ms2_sum_int, abs(x.formula.mass - t_mass)))
+        # sort candidate list by mz difference (increasing), then exp_ms2_sum_int (decreasing)
+        cf_list = sorted(cf_list, key=lambda x: (round(abs(x.formula.mass - t_mass), 3), -x.exp_ms2_sum_int))
+
         return cf_list[:top_n]
 
 
@@ -758,7 +760,7 @@ def _senior_subform_filter(subform_arr: np.array) -> np.array:
                      3 * subform_arr[:, 7] + 2 * subform_arr[:, 9] + subform_arr[:, 1] + subform_arr[:, 4] + \
                      subform_arr[:, 3] + subform_arr[:, 2] + subform_arr[:, 5] + subform_arr[:, 8] + subform_arr[:, 6]
     senior_2_arr = np.sum(subform_arr, axis=1)
-    senior_bool_arr = (senior_1_1_arr >= 2 * (senior_2_arr - 2))
+    senior_bool_arr = (senior_1_1_arr >= 2 * (senior_2_arr - 1))
 
     return senior_bool_arr
 
@@ -815,8 +817,8 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
         this_subform_arr = subform_arr[idx_list, :]
         this_mass = mass_arr[idx_list]
 
-        # dbe filter (DBE >= -1)
-        bool_arr_1 = _dbe_subform_filter(this_subform_arr, -1.)
+        # dbe filter (DBE >= 0)
+        bool_arr_1 = _dbe_subform_filter(this_subform_arr, 0)
 
         # SENIOR rules filter, a soft version
         bool_arr_2 = _senior_subform_filter(this_subform_arr)
@@ -866,7 +868,7 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
 
 def assign_subformula(ms2_mz: List, precursor_formula: str, adduct: str,
                       ms2_tol: float = 10, ppm: bool = True,
-                      dbe_cutoff: float = -1.0) -> Union[List[SubformulaResult], None]:
+                      dbe_cutoff: float = 0.0) -> Union[List[SubformulaResult], None]:
     """
     Assign subformulas to a given MS2 spectrum with a given precursor formula and adduct. Radical ions are considered.
     :param ms2_mz: MS2 m/z list

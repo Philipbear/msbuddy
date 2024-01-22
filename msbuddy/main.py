@@ -506,7 +506,14 @@ def _gen_subformula(mf: MetaFeature, ps: MsbuddyConfig) -> MetaFeature:
     if not mf.candidate_formula_list:
         return mf
 
+    # assign subformula annotation
     mf = assign_subformula_cand_form(mf, ps.ppm, ps.ms2_tol)
+
+    # retain candidate formula with subformula annotations if there is any candidate formula with annotations
+    cand_form_exp_ms2_peak_list = [len(cf.ms2_raw_explanation) for cf in mf.candidate_formula_list]
+    if min(cand_form_exp_ms2_peak_list) > 0:
+        mf.candidate_formula_list = [cf for cf in mf.candidate_formula_list if len(cf.ms2_raw_explanation) > 0]
+
     return mf
 
 
@@ -532,7 +539,7 @@ if __name__ == '__main__':
     import time
     start = time.time()
 
-    msb_config = MsbuddyConfig(ms_instr='qtof',  # supported: "qtof", "orbitrap" and "fticr"
+    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
                                # whether to consider halogen atoms FClBrI
                                halogen=True,
                                # whether to use parallel processing
@@ -542,10 +549,10 @@ if __name__ == '__main__':
 
     # msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
 
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'  # 114
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'  # 265
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 153
-    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 168
+    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 153
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 168
     msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
     # cmd version

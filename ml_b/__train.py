@@ -482,9 +482,9 @@ def train_model(ms1_iso, ms2_spec):
                    'max_depth': -1,
                    'min_data_in_leaf': 30,
                    'max_bin': 200,
-                   'bagging_fraction': 0.9,
+                   'bagging_fraction': 0.85,
                    'bagging_freq': 1,
-                   'feature_fraction': 0.9,
+                   'feature_fraction': 0.85,
                    'lambda_l1': 0.0001,
                    'lambda_l2': 0.0001,
                    'seed': 24, 'verbose': 1}
@@ -852,7 +852,8 @@ if __name__ == '__main__':
     # combine_and_clean_x_y(test=False)
 
     # tune_hyperparams(ms1_iso=True, ms2_spec=True)
-    train_model(ms1_iso=True, ms2_spec=True)
+
+    train_model(ms1_iso=False, ms2_spec=True)
 
     # get_feature_importance(joblib.load('model_ms1_ms2.joblib'), True, True)
     # get_feature_importance(joblib.load('model_ms1.joblib'), True, False)

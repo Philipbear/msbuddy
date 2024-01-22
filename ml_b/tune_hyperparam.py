@@ -212,6 +212,6 @@ def tune_hyperparams(ms1_iso, ms2_spec):
 if __name__ == "__main__":
 
     tune_hyperparams(ms1_iso=False, ms2_spec=True)
-    tune_hyperparams(ms1_iso=True, ms2_spec=False)
-    tune_hyperparams(ms1_iso=True, ms2_spec=True)
-    tune_hyperparams(ms1_iso=False, ms2_spec=False)
+    # tune_hyperparams(ms1_iso=True, ms2_spec=False)
+    # tune_hyperparams(ms1_iso=True, ms2_spec=True)
+    # tune_hyperparams(ms1_iso=False, ms2_spec=False)

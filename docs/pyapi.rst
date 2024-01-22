@@ -57,7 +57,7 @@ Example Usage:
 
    subformla_list = assign_subformula([107.05, 149.02, 209.04, 221.04, 230.96],
                                       precursor_formula="C15H16O5", adduct="[M+H]+",
-                                      ms2_tol=0.02, ppm=False, dbe_cutoff=-1.0)
+                                      ms2_tol=0.02, ppm=False, dbe_cutoff=0.0)
 
 
 .. function:: enumerate_subform_arr (formula_array: List[int])
