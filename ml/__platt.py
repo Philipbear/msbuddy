@@ -2,7 +2,7 @@ from sklearn.linear_model import LogisticRegression
 import numpy as np
 import joblib
 
-from ml_b.__train import _train_val_test_split
+from ml.__train import _train_val_test_split
 
 
 def platt_calibration(y_pred, y_gt):

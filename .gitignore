@@ -163,8 +163,9 @@ cython_debug/
 /manuscript/
 /results/
 /ml_a/
-/ml_b/*.tsv
-/ml_b/deprecated/
+/ml/*.tsv
+/ml/*.joblib
+/ml/deprecated/
 /ms2_lib/
 
 .pypirc
