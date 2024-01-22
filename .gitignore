@@ -162,7 +162,7 @@ cython_debug/
 /msbuddy/data/
 /manuscript/
 /results/
-/ml_a/
+/ml_a_deprecated/
 /ml/*.tsv
 /ml/*.joblib
 /ml/deprecated/
