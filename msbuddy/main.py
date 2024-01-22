@@ -544,7 +544,7 @@ if __name__ == '__main__':
     import time
     start = time.time()
 
-    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+    msb_config = MsbuddyConfig(ms_instr='qtof',  # supported: "qtof", "orbitrap" and "fticr"
                                # whether to consider halogen atoms FClBrI
                                halogen=True,
                                # whether to use parallel processing
@@ -556,8 +556,8 @@ if __name__ == '__main__':
 
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'  # 114
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'  # 265
-    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 153
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 168
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 153
+    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 168
     msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
     # cmd version

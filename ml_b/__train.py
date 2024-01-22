@@ -17,6 +17,8 @@ import lightgbm as lgb
 from sklearn.model_selection import GroupKFold
 from sklearn.metrics import ndcg_score
 from brainpy import isotopic_variants
+
+
 # from ml_b.deprecated.__train_gnps_cmd import sim_ms1_iso_pattern
 
 
@@ -546,17 +548,17 @@ def train_model(ms1_iso, ms2_spec):
     print(out_str)
 
     # heuristic baseline model
-    # mass error if MS2 only
+    # mass error log p if MS2 only
     feature_idx = 1 if ms1_iso else 0
-    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, feature_idx, ascending=True)
+    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, feature_idx, descending=True)
     print(f'Average NDCG@1 score with heuristic baseline (mass error): {avg_ndcg_score_heuristic}')
 
     # exp_frag_cnt_pct if MS2 only
-    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, -24, ascending=False)
+    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, -24, descending=True)
     print(f'Average NDCG@1 score with heuristic baseline (exp_frag_cnt_pct): {avg_ndcg_score_heuristic}')
 
     # exp_frag_int_pct if MS2 only
-    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, -23, ascending=False)
+    avg_ndcg_score_heuristic = heuristic_ranking_baseline(X_test, y_test, groups_test, -23, descending=True)
     print(f'Average NDCG@1 score with heuristic baseline (exp_frag_int_pct): {avg_ndcg_score_heuristic}')
 
     # Save the model
@@ -705,7 +707,6 @@ def perform_cross_validation(X, y, group_sizes, params, n_splits=5):
 
 
 def grid_search_cv(X, y, groups, param_grid, n_splits=5):
-
     df_rows = []
 
     # Generate all combinations of hyperparameters
@@ -733,13 +734,34 @@ def grid_search_cv(X, y, groups, param_grid, n_splits=5):
     return df
 
 
-def heuristic_ranking_baseline(X_test, y_test, groups_test, feature_index, ascending=True):
+def heuristic_ranking_baseline(X_test, y_test, groups_test, feature_index, descending=True):
     ndcg_scores = []
     start_idx = 0
     for group_size in groups_test:
         end_idx = start_idx + group_size
         true_labels = y_test[start_idx:end_idx]
-        heuristic_scores = X_test[start_idx:end_idx, feature_index] if ascending else -X_test[start_idx:end_idx, feature_index]
+        heuristic_scores = X_test[start_idx:end_idx, feature_index] if descending else -X_test[start_idx:end_idx,
+                                                                                       feature_index]
+        if group_size > 1 and np.any(true_labels):
+            ndcg_scores.append(ndcg_score([true_labels], [heuristic_scores], k=1))
+        start_idx = end_idx
+    return np.mean(ndcg_scores) if ndcg_scores else None
+
+
+def heuristic_ranking_baseline_modified(X_test, y_test, groups_test, feature_idx1, feature_idx2, x1, x2,
+                                        descending=True):
+    ndcg_scores = []
+    start_idx = 0
+    for group_size in groups_test:
+        end_idx = int(start_idx + group_size)
+        true_labels = y_test[start_idx:end_idx]
+        if descending:  # descending order
+            heuristic_scores = X_test[start_idx:end_idx, feature_idx1] * x1 + X_test[start_idx:end_idx,
+                                                                              feature_idx2] * x2
+        else:  # descending order
+            heuristic_scores = -X_test[start_idx:end_idx, feature_idx1] * x1 - X_test[start_idx:end_idx,
+                                                                               feature_idx2] * x2
+
         if group_size > 1 and np.any(true_labels):
             ndcg_scores.append(ndcg_score([true_labels], [heuristic_scores], k=1))
         start_idx = end_idx
@@ -751,7 +773,8 @@ def get_feature_importance(gbm, ms1, ms2):
                      'c_ta', 'h_ta', 'n_ta', 'o_ta', 'p_ta', 's_ta', 'chno_ta', 'hal_ta', 'senior_1_1',
                      'senior_1_2', '2ta_1', 'dbe', 'dbe_mass_1', 'dbe_mass_2',
                      'h_c', 'n_c', 'o_c', 'p_c', 's_c', 'hal_c', 'hal_h',
-                     'o_p', 'hal_two', 'hal_three', 'exp_frag_cnt_pct', 'exp_db_frag_cnt_pct', 'exp_db_nl_cnt_pct',
+                     'o_p', 'hal_two', 'hal_three', 'exp_frag_cnt_pct', 'exp_frag_int_pct',
+                     'exp_db_frag_cnt_pct', 'exp_db_nl_cnt_pct',
                      'exp_db_fragnl_cnt_pct', 'exp_db_frag_int_pct', 'exp_db_nl_frag_int_pct', 'exp_db_fragnl_int_pct',
                      'exp_common_frag_cnt_pct', 'exp_common_nl_cnt_pct', 'exp_common_fragnl_cnt_pct',
                      'exp_common_frag_int_pct', 'exp_common_nl_int_pct', 'exp_common_fragnl_int_pct',
@@ -853,7 +876,31 @@ if __name__ == '__main__':
 
     # tune_hyperparams(ms1_iso=True, ms2_spec=True)
 
-    train_model(ms1_iso=False, ms2_spec=True)
+    # train_model(ms1_iso=False, ms2_spec=True)
+
+    group = joblib.load('gnps_group_arr.joblib')
+    X = joblib.load('gnps_X_arr_filled.joblib')
+    y = joblib.load('gnps_y_arr.joblib')
+
+    X_1, X_test, y_1, y_test, groups_1, groups_test = _train_test_split(X, y, group, test_size=0.1)
+
+    # # ms1_iso_sim + 0.05 * mz_error_log_p
+    # x2_ls = [0.05 * i for i in range(6)]
+    # score_ls = []
+    # for x2 in x2_ls:
+    #     print('x2: ' + str(x2))
+    #     score_ls.append(heuristic_ranking_baseline_modified(X_test, y_test, groups_test,
+    #                                                         0, 1, 1, x2,
+    #                                                         descending=True))
+
+    # mz_error_log_p + 4 * exp_frag_int_pnt
+    x2_ls = [2 + 1 * i for i in range(10)]
+    score_ls = []
+    for x2 in x2_ls:
+        print('x2: ' + str(x2))
+        score_ls.append(heuristic_ranking_baseline_modified(X_test, y_test, groups_test,
+                                                            1, 30, 1, x2,
+                                                            descending=True))
 
     # get_feature_importance(joblib.load('model_ms1_ms2.joblib'), True, True)
     # get_feature_importance(joblib.load('model_ms1.joblib'), True, False)

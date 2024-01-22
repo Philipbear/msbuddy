@@ -235,18 +235,20 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
         #     cf_list = _fill_in_db_existence(ms1_cand_form_ls, ms2_cand_form_ls,
         #                                     ms1_cand_form_str_ls, ms2_cand_form_str_ls)
 
-    # retain top candidate formulas
     # calculate neutral mass of the precursor ion
     ion_mode = 1 if mf.adduct.pos_mode else -1
     t_neutral_mass = (mf.mz * abs(mf.adduct.charge) - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
     # calculate mz error
     cf_list = _calc_mz_error(cf_list, t_neutral_mass, ppm)
-    mf.candidate_formula_list = _retain_top_cand_form(cf_list, ms1_tol, 500)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
-    if mf.ms1_processed and len(mf.ms1_processed) > 1:
-        for k, cf in enumerate(mf.candidate_formula_list):
-            mf.candidate_formula_list[k].ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, max_isotope_cnt)
+    ms1_iso_available = mf.ms1_processed and len(mf.ms1_processed) > 1
+    if ms1_iso_available:
+        for k, cf in enumerate(cf_list):
+            cf_list[k].ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, max_isotope_cnt)
+
+    # retain top candidate formulas
+    mf.candidate_formula_list = _retain_top_cand_form(cf_list, ms1_tol, ms1_iso_available, 400)
 
     return mf
 
@@ -689,7 +691,7 @@ def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     return ms2_cand_list
 
 
-def _retain_top_cand_form(cf_list: List[CandidateFormula], ms1_tol: float,
+def _retain_top_cand_form(cf_list: List[CandidateFormula], ms1_tol: float, ms1_iso_available: bool,
                           top_n: int) -> List[CandidateFormula]:
     """
     Retain top candidate formulas by explained MS2 intensity, then by mz difference.
@@ -701,9 +703,14 @@ def _retain_top_cand_form(cf_list: List[CandidateFormula], ms1_tol: float,
     if len(cf_list) <= top_n:
         return cf_list
     else:
-        # sort candidate list by mz difference (increasing), then exp_ms2_sum_int (decreasing)
-        cf_list = sorted(cf_list, key=lambda x: (_calc_log_p_norm(x.mz_error, ms1_tol / 3) + x.exp_ms2_sum_int),
-                         reverse=True)
+        if ms1_iso_available:
+            # sort candidate list by logp mz difference * 0.05 + ms1_iso_sim
+            cf_list = sorted(cf_list, key=lambda x: (_calc_log_p_norm(x.mz_error, ms1_tol / 3) * 0.05 +
+                                                     x.ms1_isotope_similarity), reverse=True)
+        else:
+            # sort candidate list by mz_error_log_p + 4 * exp_frag_int_pnt
+            cf_list = sorted(cf_list, key=lambda x: (_calc_log_p_norm(x.mz_error, ms1_tol / 3) + 4 * x.exp_ms2_sum_int),
+                             reverse=True)
 
         return cf_list[:top_n]
 
