@@ -510,7 +510,12 @@ def _gen_subformula(mf: MetaFeature, ps: MsbuddyConfig) -> MetaFeature:
     mf = assign_subformula_cand_form(mf, ps.ppm, ps.ms2_tol)
 
     # retain candidate formula with subformula annotations if there is any candidate formula with annotations
-    cand_form_exp_ms2_peak_list = [len(cf.ms2_raw_explanation) for cf in mf.candidate_formula_list]
+    cand_form_exp_ms2_peak_list = []
+    for cf in mf.candidate_formula_list:
+        if cf.ms2_raw_explanation:
+            cand_form_exp_ms2_peak_list.append(len(cf.ms2_raw_explanation))
+        else:
+            cand_form_exp_ms2_peak_list.append(0)
     if min(cand_form_exp_ms2_peak_list) > 0:
         mf.candidate_formula_list = [cf for cf in mf.candidate_formula_list if len(cf.ms2_raw_explanation) > 0]
 
@@ -549,14 +554,14 @@ if __name__ == '__main__':
 
     # msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
 
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'  # 114
+    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'  # 114
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'  # 265
-    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 153
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 153
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 168
     msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
     # cmd version
-    msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output_4')), True)
+    msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output_2')), True)
 
     # annotate molecular formula
     msb_engine.annotate_formula()
