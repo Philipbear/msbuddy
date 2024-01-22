@@ -97,6 +97,9 @@ class Spectrum:
         :param mz_array: np.array
         :param int_array: np.array
         """
+        # convert to np array
+        mz_array = np.array(mz_array, dtype=np.float32)
+        int_array = np.array(int_array, dtype=np.float32)
 
         # mz_array and int_array must have the same length
         if len(mz_array) != len(int_array):

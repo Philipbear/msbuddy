@@ -540,28 +540,25 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
 
 
 if __name__ == '__main__':
-
     import time
+
     start = time.time()
 
-    msb_config = MsbuddyConfig(ms_instr='qtof',  # supported: "qtof", "orbitrap" and "fticr"
-                               # whether to consider halogen atoms FClBrI
-                               halogen=True,
-                               # whether to use parallel processing
-                               parallel=True, n_cpu=8)
+    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+                               halogen=True, parallel=False, n_cpu=8)
 
     msb_engine = Msbuddy(msb_config)
 
-    # msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
+    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
 
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'  # 114
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'  # 265
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 153
-    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 168
-    msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 168
+    # msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
     # cmd version
-    msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output_3')), True)
+    # msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output')), True)
 
     # annotate molecular formula
     msb_engine.annotate_formula()
@@ -573,6 +570,6 @@ if __name__ == '__main__':
 
     print(result)
     form_top1 = [r['formula_rank_1'] for r in result]
-    # form_est_fdr = [r['estimated_fdr'] for r in result]
+    form_est_fdr = [r['estimated_fdr'] for r in result]
     print(form_top1)
-    # print(form_est_fdr)
+    print(form_est_fdr)

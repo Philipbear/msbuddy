@@ -52,9 +52,9 @@ if __name__ == '__main__':
     X_test = X_test[:, 1:]
     #
     # # discard the last 24 features in X_arr
-    # X_test = X_test[:, :-24]
+    X_test = X_test[:, :-24]
 
-    y_prediction = ml_pred(X_test, 'model_ms2.joblib')
+    y_prediction = ml_pred(X_test, 'model.joblib')
 
     a, b = platt_calibration(y_prediction, y_test)
     print(a, b)
