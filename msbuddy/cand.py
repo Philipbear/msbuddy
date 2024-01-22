@@ -20,6 +20,7 @@ from brainpy import isotopic_variants
 from numba import njit
 
 from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature, check_adduct, Adduct
+from msbuddy.ml import _calc_log_p_norm
 from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
 from msbuddy.utils import form_arr_to_str, enumerate_subformula, read_formula, SubformulaResult, FormulaResult
 
@@ -238,7 +239,9 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     # calculate neutral mass of the precursor ion
     ion_mode = 1 if mf.adduct.pos_mode else -1
     t_neutral_mass = (mf.mz * abs(mf.adduct.charge) - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
-    mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list, 250)
+    # calculate mz error
+    cf_list = _calc_mz_error(cf_list, t_neutral_mass, ppm)
+    mf.candidate_formula_list = _retain_top_cand_form(cf_list, ms1_tol, 500)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     if mf.ms1_processed and len(mf.ms1_processed) > 1:
@@ -246,6 +249,24 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
             mf.candidate_formula_list[k].ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, max_isotope_cnt)
 
     return mf
+
+
+def _calc_mz_error(cf_list: List[CandidateFormula], t_neutral_mass: float,
+                   ppm: bool) -> List[CandidateFormula]:
+    """
+    Calculate mz error for each candidate formula.
+    :param cf_list: list of candidate formulas
+    :param t_neutral_mass: theoretical neutral mass
+    :param ppm: whether to use ppm as the unit of tolerance
+    :return: list of candidate formulas
+    """
+    if ppm:
+        for k, cf in enumerate(cf_list):
+            cf_list[k].mz_error = (cf.formula.mass - t_neutral_mass) / t_neutral_mass * 1e6
+    else:
+        for k, cf in enumerate(cf_list):
+            cf_list[k].mz_error = cf.formula.mass - t_neutral_mass
+    return cf_list
 
 
 @njit
@@ -668,11 +689,12 @@ def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     return ms2_cand_list
 
 
-def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula], top_n: int) -> List[CandidateFormula]:
+def _retain_top_cand_form(cf_list: List[CandidateFormula], ms1_tol: float,
+                          top_n: int) -> List[CandidateFormula]:
     """
     Retain top candidate formulas by explained MS2 intensity, then by mz difference.
-    :param t_mass: target neutral mass of the precursor ion
     :param cf_list: candidate formula list
+    :param ms1_tol: MS1 tolerance
     :param top_n: number of top candidate formulas to retain
     :return: retained candidate formula list
     """
@@ -680,7 +702,8 @@ def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula], top_n:
         return cf_list
     else:
         # sort candidate list by mz difference (increasing), then exp_ms2_sum_int (decreasing)
-        cf_list = sorted(cf_list, key=lambda x: (round(abs(x.formula.mass - t_mass), 3), -x.exp_ms2_sum_int))
+        cf_list = sorted(cf_list, key=lambda x: (_calc_log_p_norm(x.mz_error, ms1_tol / 3) + x.exp_ms2_sum_int),
+                         reverse=True)
 
         return cf_list[:top_n]
 

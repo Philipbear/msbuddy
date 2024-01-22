@@ -703,6 +703,7 @@ class CandidateFormula:
 
     def __init__(self, formula: Formula,
                  charged_formula: Union[Formula, None] = None,
+                 mz_error: Union[float, None] = None,
                  ms1_isotope_similarity: Union[float, None] = None,
                  exp_ms2_sum_int: Union[float, None] = None,
                  ms2_raw_explanation: Union[MS2Explanation, None] = None,
@@ -711,6 +712,7 @@ class CandidateFormula:
                  ms2_refined_explanation: Union[MS2Explanation, None] = None):
         self.formula = formula  # neutral formula
         self.charged_formula = charged_formula  # charged formula
+        self.mz_error = mz_error  # mz error in ppm or Da, depending on config
         self.estimated_prob = None  # estimated probability (ML score, not normalized)
         self.normed_estimated_prob = None  # normalized estimated probability considering all candidate formulas
         self.estimated_fdr = None  # estimated FDR

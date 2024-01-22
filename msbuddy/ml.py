@@ -196,8 +196,7 @@ def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms
     this_adduct = meta_feature.adduct
 
     # mz error in ppm
-    theo_mass = cand_form.charged_formula.mass / abs(this_adduct.charge)
-    mz_error = (meta_feature.mz - theo_mass) / theo_mass * 1e6 if ppm else meta_feature.mz - theo_mass
+    mz_error = cand_form.mz_error
     mz_error_log_p = _calc_log_p_norm(mz_error, ms1_tol / 3)
 
     # precursor charged formula
