@@ -2,6 +2,8 @@ from sklearn.linear_model import LogisticRegression
 import numpy as np
 import joblib
 
+from ml.__train import _train_val_test_split
+
 
 def platt_calibration(y_pred, y_gt):
     """
@@ -25,7 +27,7 @@ def platt_calibration(y_pred, y_gt):
     return a, b
 
 
-def ml_b_pred(x, model_path):
+def ml_pred(x, model_path):
     """
     ML b prediction
     :param x: X matrix
@@ -33,25 +35,26 @@ def ml_b_pred(x, model_path):
     :return: np.array
     """
     model = joblib.load(model_path)
-    return model.predict_proba(x)[:, 1]
-
+    return model.predict(x)
 
 
 if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
-    X_arr = joblib.load('gnps_X_arr_SMOTE.joblib')
-    y_gt = joblib.load('gnps_y_arr_SMOTE.joblib')
+    X_arr = joblib.load('gnps_X_arr_filled.joblib')
+    y_arr = joblib.load('gnps_y_arr.joblib')
+    group_arr = joblib.load('gnps_group_arr.joblib')
 
-    X_train, X_test, y_train, y_test = train_test_split(X_arr, y_gt,
-                                                        test_size=0.2, random_state=0)
+    (X_train, X_val, X_test, y_train, y_val, y_test,
+     groups_train, groups_val, groups_test) = _train_val_test_split(X_arr, y_arr, group_arr,
+                                                                    val_size=0.1, test_size=0.1, random_state=24)
 
-    # discard the last 2 columns
-    X_test = X_test[:, :-2]
-    # discard the 2nd column
-    X_test = np.delete(X_test, 1, 1)
+    # # discard the ms1 iso feature in X_arr
+    X_test = X_test[:, 1:]
+    #
+    # # discard the last 24 features in X_arr
+    X_test = X_test[:, :-24]
 
-    y_prediction = ml_b_pred(X_test,
-                             '../msbuddy/data/model_b_noms1_ms2.joblib')
+    y_prediction = ml_pred(X_test, 'model.joblib')
 
     a, b = platt_calibration(y_prediction, y_test)
     print(a, b)

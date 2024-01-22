@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,11 +28,11 @@ from msbuddy.base import MetaFeature, Adduct, check_adduct
 from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.export import write_batch_results_cmd
 from msbuddy.load import init_db, load_usi, load_mgf
-from msbuddy.ml import pred_formula_feasibility, pred_formula_prob, pred_form_feasibility_single, calc_fdr
+from msbuddy.ml import predict_formula_probability, calc_fdr
 from msbuddy.query import query_neutral_mass, query_precursor_mass
 from msbuddy.utils import form_arr_to_str, FormulaResult
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 
 # global variable containing shared data
 global shared_data_dict
@@ -53,7 +53,6 @@ class MsbuddyConfig:
                  n_cpu: int = -1,
                  timeout_secs: float = 300,
                  batch_size: int = 1000,
-                 top_n_candidate: int = 500,
                  c_range: Tuple[int, int] = (0, 80),
                  h_range: Tuple[int, int] = (0, 150),
                  n_range: Tuple[int, int] = (0, 20),
@@ -66,7 +65,7 @@ class MsbuddyConfig:
                  i_range: Tuple[int, int] = (0, 10),
                  isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4,
                  rel_int_denoise_cutoff: float = 0.01,
-                 max_frag_reserved: int = 50):
+                 top_n_per_50_da: int = 6):
         """
         :param ms_instr: mass spectrometry instrument, one of "orbitrap, "fticr", "qtof".
         :param ppm: whether ppm is used for m/z tolerance
@@ -77,7 +76,6 @@ class MsbuddyConfig:
         :param n_cpu: number of CPU cores used for parallel processing; if -1, all available cores will be used
         :param timeout_secs: timeout in seconds
         :param batch_size: batch size for formula annotation; a larger batch size takes more memory
-        :param top_n_candidate: top N formula candidates reserved prior to subformula assignment
         :param c_range: C range
         :param h_range: H range
         :param n_range: N range
@@ -91,7 +89,7 @@ class MsbuddyConfig:
         :param isotope_bin_mztol: m/z tolerance for isotope bin, used for MS1 isotope pattern
         :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern
         :param rel_int_denoise_cutoff: relative intensity cutoff, used for MS2 denoise
-        :param max_frag_reserved: max fragment number reserved, used for MS2 data
+        :param top_n_per_50_da: top n peaks to keep in each 50 Da, used for MS2 denoise
         """
         if ms_instr is None:
             self.ppm = ppm
@@ -118,26 +116,20 @@ class MsbuddyConfig:
             if self.parallel:
                 logging.info(f"Processing core number is set to {self.n_cpu}.")
         else:
-            self.n_cpu = n_cpu
+            self.n_cpu = int(n_cpu)
 
         if timeout_secs <= 0:
             logging.warning("Timeout is set to 300 seconds.")
             self.timeout_secs = 300
         self.timeout_secs = timeout_secs
         if self.parallel:
-            self.timeout_secs += 20  # add 20 seconds for db initialization
+            self.timeout_secs += 30  # add 30 seconds for db initialization
 
         if batch_size <= 1:
             self.batch_size = 1000
             logging.warning(f"Batch size is set to {self.batch_size}.")
         else:
             self.batch_size = int(batch_size)
-
-        if top_n_candidate <= 1:
-            self.top_n_candidate = 500
-            logging.warning(f"Top N candidate is set to {self.top_n_candidate}.")
-        else:
-            self.top_n_candidate = int(top_n_candidate)
 
         self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
                                    0, n_range[0], 0, o_range[0], p_range[0], s_range[0]], dtype=np.int16)
@@ -160,11 +152,11 @@ class MsbuddyConfig:
         else:
             self.isotope_bin_mztol = isotope_bin_mztol
 
-        if max_isotope_cnt <= 0:
+        if max_isotope_cnt < 1:
             self.max_isotope_cnt = 4
             logging.warning(f"Maximum isotope count is set to {self.max_isotope_cnt}.")
         else:
-            self.max_isotope_cnt = max_isotope_cnt
+            self.max_isotope_cnt = int(max_isotope_cnt)
 
         if rel_int_denoise_cutoff < 0 or rel_int_denoise_cutoff >= 1:
             self.rel_int_denoise_cutoff = 0.0
@@ -172,11 +164,11 @@ class MsbuddyConfig:
         else:
             self.rel_int_denoise_cutoff = rel_int_denoise_cutoff
 
-        if max_frag_reserved <= 0:
-            self.max_frag_reserved = 50
-            logging.warning(f"Maximum fragment reserved is set to {self.max_frag_reserved}.")
+        if top_n_per_50_da < 1:
+            self.top_n_per_50_da = 6
+            logging.warning(f"Top n peaks per 50 Da is set to {self.top_n_per_50_da}.")
         else:
-            self.max_frag_reserved = max_frag_reserved
+            self.top_n_per_50_da = int(top_n_per_50_da)
 
 
 class Msbuddy:
@@ -207,8 +199,8 @@ class Msbuddy:
 
         self.data = None  # List[MetabolicFeature]
 
-    def update_config(self, new_config: MsbuddyConfig):
-        self.config = new_config
+    def update_config(self, **kwargs):
+        self.config = MsbuddyConfig(**kwargs)
         global shared_data_dict  # Declare it as a global variable
         shared_data_dict = init_db()  # database initialization
 
@@ -262,7 +254,6 @@ class Msbuddy:
                 async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
                                                   (mf, self.config)) for mf in batch_data]
                 # Initialize tqdm progress bar
-
                 pbar = tqdm(total=len(batch_data), colour="green", desc="Candidate space generation",
                             file=sys.stdout)
                 for i, async_result in enumerate(async_results):
@@ -405,17 +396,11 @@ class Msbuddy:
         # data preprocessing and candidate space generation
         self._preprocess_and_generate_candidate_formula(start_idx, end_idx)
 
-        # ml_a feature generation + prediction, retain top candidates
-        tqdm.write("Formula feasibility assessment...")
-        pred_formula_feasibility(self.data, start_idx, end_idx, self.config.top_n_candidate,
-                                 self.config.db_mode, shared_data_dict)
-
         # assign subformula annotation
         self._assign_subformula_annotation(start_idx, end_idx)
 
-        # ml_b feature generation + prediction
-        tqdm.write("Formula probability prediction...")
-        pred_formula_prob(self.data, start_idx, end_idx, self.config, shared_data_dict)
+        tqdm.write("Candidate formula ranking...")
+        predict_formula_probability(self.data, start_idx, end_idx, self.config, shared_data_dict)
 
         # FDR calculation
         calc_fdr(self.data, start_idx, end_idx)
@@ -464,7 +449,7 @@ class Msbuddy:
             raise ValueError("Invalid adduct string.")
         # query
         ion = Adduct(adduct, pos_mode)
-        formulas = query_precursor_mass(mz, ion, mz_tol, ppm, 1, shared_data_dict)
+        formulas, _ = query_precursor_mass(mz, ion, mz_tol, ppm, 1, shared_data_dict)
         ion_int = 1 if pos_mode else -1
         out = [FormulaResult(form_arr_to_str(f.array),
                              (f.mass * ion.m + ion.net_formula.mass - ion_int * 0.00054858) / abs(ion.charge),
@@ -472,14 +457,6 @@ class Msbuddy:
         # sort by absolute mass error, ascending
         out.sort(key=lambda x: abs(x.mass_error))
         return out
-
-    def predict_formula_feasibility(self, formula: Union[str, np.array]) -> Union[float, None]:
-        """
-        predict formula feasibility score for a single formula
-        :param formula: formula string or array
-        :return: feasibility score (float) or None
-        """
-        return pred_form_feasibility_single(formula, shared_data_dict)
 
 
 def _get_batch(data: List[MetaFeature], batch_size: int, n: int):
@@ -529,7 +506,19 @@ def _gen_subformula(mf: MetaFeature, ps: MsbuddyConfig) -> MetaFeature:
     if not mf.candidate_formula_list:
         return mf
 
+    # assign subformula annotation
     mf = assign_subformula_cand_form(mf, ps.ppm, ps.ms2_tol)
+
+    # retain candidate formula with subformula annotations if there is any candidate formula with annotations
+    cand_form_exp_ms2_peak_list = []
+    for cf in mf.candidate_formula_list:
+        if cf.ms2_raw_explanation:
+            cand_form_exp_ms2_peak_list.append(len(cf.ms2_raw_explanation))
+        else:
+            cand_form_exp_ms2_peak_list.append(0)
+    if min(cand_form_exp_ms2_peak_list) > 0:
+        mf.candidate_formula_list = [cf for cf in mf.candidate_formula_list if len(cf.ms2_raw_explanation) > 0]
+
     return mf
 
 
@@ -542,46 +531,45 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
     :return: MetaFeature object
     """
     # data preprocessing
-    mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol,
-                       ps.isotope_bin_mztol, ps.max_isotope_cnt,
-                       ps.rel_int_denoise_cutoff, ps.max_frag_reserved)
+    mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.isotope_bin_mztol, ps.max_isotope_cnt,
+                       ps.rel_int_denoise_cutoff, ps.top_n_per_50_da)
     # generate candidate formula space
     gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
                           ps.max_isotope_cnt, global_dict)
     return mf
 
 
-# if __name__ == '__main__':
-#
-#     import time
-#     start = time.time()
-#
-#     # instantiate a MsbuddyConfig object
-#     msb_config = MsbuddyConfig(# highly recommended to specify
-#                                ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
-#                                # whether to consider halogen atoms FClBrI
-#                                halogen=True)
-#
-#     # instantiate a Msbuddy object
-#     msb_engine = Msbuddy(msb_config)
-#
-#     # you can load multiple USIs at once
-#     msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
-#
-#     # cmd version
-#     msb_engine.annotate_formula_cmd(pathlib.Path('/Users/shipei/Documents/projects/msbuddy/demo/msbuddy_output'), True)
-#
-#     # annotate molecular formula
-#     msb_engine.annotate_formula()
-#
-#     # retrieve the annotation result summary
-#     result = msb_engine.get_summary()
-#
-#     end = time.time()
-#     print(end - start)
-#
-#     # print(result)
-#     form_top1 = [r['formula_rank_1'] for r in result]
-#     form_est_fdr = [r['estimated_fdr'] for r in result]
-#     print(form_top1)
-#     print(form_est_fdr)
+if __name__ == '__main__':
+    import time
+
+    start = time.time()
+
+    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+                               halogen=True, parallel=False, n_cpu=8)
+
+    msb_engine = Msbuddy(msb_config)
+
+    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
+
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'  # 114
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'  # 265
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 153
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 168
+    # msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
+
+    # cmd version
+    # msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output')), True)
+
+    # annotate molecular formula
+    msb_engine.annotate_formula()
+    # retrieve the annotation result summary
+    result = msb_engine.get_summary()
+
+    end = time.time()
+    print(end - start)
+
+    print(result)
+    form_top1 = [r['formula_rank_1'] for r in result]
+    form_est_fdr = [r['estimated_fdr'] for r in result]
+    print(form_top1)
+    print(form_est_fdr)

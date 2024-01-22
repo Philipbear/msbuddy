@@ -162,5 +162,10 @@ cython_debug/
 /msbuddy/data/
 /manuscript/
 /results/
+/ml_a_deprecated/
+/ml/*.tsv
+/ml/*.joblib
+/ml/deprecated/
+/ms2_lib/
 
 .pypirc

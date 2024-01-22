@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ from msbuddy.utils import read_formula, form_arr_to_str
 mass_i = 1.0033548  # mass of neutron
 mass_e = 0.0005486  # mass of electron
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 
 
 class Formula:
@@ -45,7 +45,7 @@ class Formula:
                  isotope: int = 0):
         self.array = np.int16(array)
         self.charge = charge
-        self.dbe = _calc_formula_dbe(array)
+        self.dbe = calc_formula_dbe(array)
         self.isotope = isotope
 
         # fill in mass directly from formula database, otherwise calculate
@@ -65,7 +65,7 @@ class Formula:
 
 
 @njit
-def _calc_formula_dbe(arr):
+def calc_formula_dbe(arr):
     """
     calculate dbe of a formula
     :return: dbe
@@ -97,6 +97,9 @@ class Spectrum:
         :param mz_array: np.array
         :param int_array: np.array
         """
+        # convert to np array
+        mz_array = np.array(mz_array, dtype=np.float32)
+        int_array = np.array(int_array, dtype=np.float32)
 
         # mz_array and int_array must have the same length
         if len(mz_array) != len(int_array):
@@ -535,11 +538,11 @@ class ProcessedMS2:
     def __init__(self, mz: float, raw_spec: Spectrum,
                  mz_tol: float, ppm: bool,
                  rel_int_denoise_cutoff: float,
-                 max_frag_reserved: int):
+                 top_n_per_50_da: int):
         if raw_spec:
             self.mz_tol = mz_tol
             self.ppm = ppm
-            self._preprocess(mz, raw_spec, rel_int_denoise_cutoff, max_frag_reserved)
+            self._preprocess(mz, raw_spec, rel_int_denoise_cutoff, top_n_per_50_da)
         else:
             self.idx_array = np.array([], dtype=int)
             self.mz_array = np.array([], dtype=np.float32)
@@ -555,13 +558,13 @@ class ProcessedMS2:
         return len(self.mz_array)
 
     def _preprocess(self, mz: float, raw_spec: Spectrum,
-                    rel_int_denoise_cutoff: float, max_frag_reserved: int):
+                    rel_int_denoise_cutoff: float, top_n_per_50_da: int):
         """
         preprocess MS2 spectrum, denoise (optional), de-precursor
         :param mz: precursor mz
         :param raw_spec: raw ms2 spectrum
         :param rel_int_denoise_cutoff: relative intensity cutoff
-        :param max_frag_reserved: max fragment count reserved
+        :param top_n_per_50_da: max fragment count reserved for every 50 Da
         :return: fill self.idx_array, self.mz_array, self.int_array
         """
 
@@ -571,8 +574,11 @@ class ProcessedMS2:
         # denoise
         self._denoise(rel_int_denoise_cutoff)
 
+        # keep top_n_per_50_da peaks in each 50 Da
+        self._keep_top_n_per_50_da(top_n_per_50_da)
+
         # top n fragment
-        top_n_frag = _calc_top_n_frag(mz, max_frag_reserved)
+        top_n_frag = _calc_top_n_frag(mz)
         if len(self.mz_array) > top_n_frag:
             idx = np.argsort(self.int_array)
             reserved_idx = self.int_array >= self.int_array[idx[-top_n_frag]]
@@ -615,6 +621,20 @@ class ProcessedMS2:
         self.mz_array = raw_spec.mz_array[idx]
         self.int_array = raw_spec.int_array[idx]
 
+    def _keep_top_n_per_50_da(self, top_n_per_50_da: int):
+        """
+        keep top_n_per_50_da peaks in each 50 Da
+        :param top_n_per_50_da: max fragment count reserved for every 50 Da
+        :return: fill self.idx_array, self.mz_array, self.int_array
+        """
+        if top_n_per_50_da <= 1:
+            return
+
+        bool_arr = ms2_denoise(mz_arr=self.mz_array, int_arr=self.int_array, top_n=top_n_per_50_da)
+        self.idx_array = self.idx_array[bool_arr]
+        self.mz_array = self.mz_array[bool_arr]
+        self.int_array = self.int_array[bool_arr]
+
     def normalize_intensity(self, method: str = 'sum'):
         """
         normalize intensity
@@ -627,18 +647,32 @@ class ProcessedMS2:
             self.int_array = self.int_array / np.max(self.int_array)
 
 
-def _calc_top_n_frag(pre_mz: float, max_frag_reserved: int) -> int:
+@njit
+def ms2_denoise(mz_arr, int_arr, top_n=6, per_mass_range=50):
+    """
+    keep top_n peaks in each per_mass_range
+    """
+    group_arr = mz_arr // per_mass_range
+    bool_arr = np.array([True] * len(int_arr))
+
+    for group in np.unique(group_arr):
+        group_idx = np.where(group_arr == group)[0]
+        if len(group_idx) > top_n:
+            int_threshold = np.sort(int_arr[group_idx])[-top_n]
+            bool_arr[group_idx] = int_arr[group_idx] >= int_threshold
+
+    return bool_arr
+
+
+def _calc_top_n_frag(pre_mz: float) -> int:
     """
     calculate top n frag No., a linear function of precursor m/z (for class ProcessedMS2)
     :param pre_mz: precursor m/z
     :param max_frag_reserved: max fragment count reserved
     :return: top n frag No. (int)
     """
-    if pre_mz < 1000:
-        top_n = int(50 - 0.04 * pre_mz)
-    else:
-        top_n = int(30 - 0.02 * pre_mz)
-    return min(top_n, max_frag_reserved)
+    top_n = int(20 + 0.05 * pre_mz)
+    return top_n
 
 
 class MS2Explanation:
@@ -647,14 +681,14 @@ class MS2Explanation:
     """
 
     def __init__(self, idx_array: np.array,
-                 explanation_array: List[Union[Formula, None]]):
+                 explanation_list: List[Union[Formula, None]]):
         self.idx_array = idx_array  # indices of peaks in MS2 spectrum
-        self.explanation_array = explanation_array  # List[Formula], isotope peaks are included
+        self.explanation_list = explanation_list  # List[Formula], isotope peaks are included
 
     def __str__(self):
         out_str = ""
         for i in range(len(self.idx_array)):
-            out_str += "idx: {}, formula: {}\n".format(self.idx_array[i], str(self.explanation_array[i]))
+            out_str += "idx: {}, formula: {}\n".format(self.idx_array[i], str(self.explanation_list[i]))
         return out_str
 
     def __len__(self):
@@ -671,24 +705,29 @@ class CandidateFormula:
     """
 
     def __init__(self, formula: Formula,
-                 ms1_isotope_similarity: Union[float, None] = None,
+                 charged_formula: Union[Formula, None] = None,
+                 mz_error: Union[float, None] = None,
+                 exp_ms2_sum_int: Union[float, None] = None,
                  ms2_raw_explanation: Union[MS2Explanation, None] = None,
                  db_existed: bool = False,
                  optimal_formula: bool = False,
                  ms2_refined_explanation: Union[MS2Explanation, None] = None):
         self.formula = formula  # neutral formula
-        self.ml_a_prob = None  # ml_a score for model A (formula feasibility)
-        self.estimated_prob = None  # estimated probability (ml_b score for model B)
+        self.charged_formula = charged_formula  # charged formula
+        self.mz_error = mz_error  # mz error in ppm or Da, depending on config
+        self.estimated_prob = None  # estimated probability (ML score, not normalized)
         self.normed_estimated_prob = None  # normalized estimated probability considering all candidate formulas
         self.estimated_fdr = None  # estimated FDR
-        self.ms1_isotope_similarity = ms1_isotope_similarity
-        self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during precursor formula annotation
+        self.formula_feature_array = None  # formula feature array
+        self.ms1_isotope_similarity = None
+        self.exp_ms2_sum_int = exp_ms2_sum_int  # sum of MS2 intensity of peaks explained (during bottom-up search)
+        self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during subformula assignment
         self.db_existed = db_existed  # whether this formula is in the formula database
         # self.optimal_formula = optimal_formula
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
 
     def __str__(self):
-        cf_str = form_arr_to_str(self.formula.array) + "  ml_a: " + str(self.ml_a_prob) + \
+        cf_str = form_arr_to_str(self.formula.array) + \
                  "  est_prob: " + str(self.estimated_prob) + "  est_fdr: " + str(self.estimated_fdr)
         if self.ms2_raw_explanation:
             cf_str += " ms2_raw_exp: " + str(len(self.ms2_raw_explanation))
@@ -745,7 +784,7 @@ class MetaFeature:
     def data_preprocess(self, ppm: bool, ms1_tol: float, ms2_tol: float,
                         isotope_bin_mztol: float, max_isotope_cnt: int,
                         rel_int_denoise_cutoff: float,
-                        max_frag_reserved: int):
+                        top_n_per_50_da: int):
         """
         Data preprocessing.
         :param ppm: whether to use ppm as m/z tolerance
@@ -754,7 +793,7 @@ class MetaFeature:
         :param isotope_bin_mztol: m/z tolerance for isotope bin, used for MS1 isotope pattern
         :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern
         :param rel_int_denoise_cutoff: relative intensity cutoff for MS2 denoise
-        :param max_frag_reserved: max fragment number reserved, used for MS2 data
+        :param top_n_per_50_da: max fragment count reserved for every 50 Da
         :return: fill in ms1_processed and ms2_processed for each metaFeature
         """
         if self.ms1_raw:
@@ -763,7 +802,7 @@ class MetaFeature:
                                               ms1_tol, ppm, isotope_bin_mztol, max_isotope_cnt)
         if self.ms2_raw:
             self.ms2_processed = ProcessedMS2(self.mz, self.ms2_raw,
-                                              ms2_tol, ppm, rel_int_denoise_cutoff, max_frag_reserved)
+                                              ms2_tol, ppm, rel_int_denoise_cutoff, top_n_per_50_da)
 
     def summarize_result(self) -> dict:
         """

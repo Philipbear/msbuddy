@@ -25,5 +25,5 @@ Alternatively, you can download the latest release from `PyPI <https://pypi.org/
 
 .. code-block:: bash
 
-   tar -zxvf msbuddy-0.2.0.tar.gz
+   tar -zxvf msbuddy-0.3.0.tar.gz
 

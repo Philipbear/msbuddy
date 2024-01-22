@@ -57,7 +57,7 @@ Example Usage:
 
    subformla_list = assign_subformula([107.05, 149.02, 209.04, 221.04, 230.96],
                                       precursor_formula="C15H16O5", adduct="[M+H]+",
-                                      ms2_tol=0.02, ppm=False, dbe_cutoff=-1.0)
+                                      ms2_tol=0.02, ppm=False, dbe_cutoff=0.0)
 
 
 .. function:: enumerate_subform_arr (formula_array: List[int])
@@ -129,27 +129,6 @@ Example Usage:
       print(f.formula, f.mass_error, f.mass_error_ppm)
 
 
-.. function:: predict_formula_feasibility (formula: Union[str, np.array])
-
-   Predict formula feasibility score for a single formula string or a single formula array.
-   The prediction is based on a multi-layer perceptron (MLP) model trained on the combined formula database.
-
-   :param formula: str or numpy array. The formula string or formula array.
-   :returns: A float number between 0 and 1, indicating the formula feasibility score.
-
-Example Usage:
-
-.. code-block:: python
-
-   from msbuddy import Msbuddy
-
-   # create a Msbuddy object
-   engine = Msbuddy()
-
-   # predict formula feasibility score
-   feasibility_score = engine.predict_formula_feasibility("C10H20O5")
-   print(feasibility_score)
-
 
 Classes
 ~~~~~~~~~~~~~~~
@@ -171,11 +150,11 @@ Classes
 
       bool. True if the database is loaded.
 
-   .. method:: update_config (config: MsbuddyConfig)
+   .. method:: update_config (config: **kwargs)
 
       Update the configuration for the :class:`msbuddy.Msbuddy` object.
 
-      :param param_set: :class:`msbuddy.MsbuddyConfig` object. The parameter set to be updated.
+      :param config: **kwargs, attributes in :class:`msbuddy.MsbuddyConfig` class.
       :returns: None. The ``config`` attribute of the :class:`msbuddy.Msbuddy` object will be updated.
 
    .. method:: load_usi (usi_list: Union[str, List[str]], adduct_list: Union[None, str, List[str]] = None)
@@ -236,8 +215,11 @@ Example Usage:
    # clear data
    engine.clear_data()
 
+   # update configuration
+   engine.update_config(ms_instr="fticr", halogen=True, timeout_secs=100)
 
-.. class:: msbuddy.MsbuddyConfig (ms_instr: str = None, ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 500, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, rel_int_denoise_cutoff: float = 0.01, max_frag_reserved: int = 50)
+
+.. class:: msbuddy.MsbuddyConfig (ms_instr: str = None, ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 1000, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, rel_int_denoise_cutoff: float = 0.01, top_n_per_50_da: int = 6)
 
    It is a class to store all the configurations for **msbuddy**.
 
@@ -263,7 +245,7 @@ Example Usage:
    :param isotope_bin_mztol: float. The mass tolerance for MS1 isotope binning, in Da. Default is 0.02 Da.
    :param max_isotope_cnt: int. The maximum number of isotopes to consider. Default is 4.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising. Default is 0.01 (1%).
-   :param max_frag_reserved: int. The maximum number of fragments to reserve. Default is 50.
+   :param top_n_per_50_da: int. The maximum number of fragments to reserve in every 50 Da. Default is 6.
 
 Example Usage:
 
@@ -317,12 +299,12 @@ Example usage:
    :param array: numpy array. The molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S].
    :param charge: int. The charge of the molecular formula.
    :param optional mass: float. The exact mass of the molecular formula. Default is None, exact mass will be calculated.
-   :param isotope: int. The isotopologue of the formula. Default is 0, which means M+0.
+   :param isotope: int. The isotopologue of the formula (e.g., 1 for M+1). Default is 0, which means M+0.
 
 
    .. attribute:: array
 
-      A numpy arrat of the molecular formula array.
+      A numpy array of the molecular formula array.
 
    .. attribute:: charge
 
@@ -408,7 +390,7 @@ Example usage:
 
 
 
-.. class:: msbuddy.base.ProcessedMS2 (mz: float, raw_spec: Spectrum, mz_tol: float, ppm: bool, denoise: bool, rel_int_denoise_cutoff: float, max_frag_reserved: int)
+.. class:: msbuddy.base.ProcessedMS2 (mz: float, raw_spec: Spectrum, mz_tol: float, ppm: bool, denoise: bool, rel_int_denoise_cutoff: float, top_n_per_50_da: int)
 
     A class to represent a processed MS/MS spectrum, for MS/MS preprocessing (deprecursor, denoise, reserve top N fragments).
 
@@ -417,7 +399,7 @@ Example usage:
    :param mz_tol: float. The mass tolerance for MS1 spectra.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising.
-   :param max_frag_reserved: int. The maximum number of fragments to reserve.
+   :param top_n_per_50_da: int. The maximum number of fragments to reserve in every 50 Da.
 
    .. attribute:: mz_tol
 
@@ -453,13 +435,13 @@ Example usage:
     A class to represent MS/MS explanation.
 
    :param idx_array: numpy array. The indices of the fragments.
-   :param explanation_array: A list of :class:`msbuddy.base.Formula` objects. The explanations for the fragments.
+   :param explanation_list: A list of :class:`msbuddy.base.Formula` objects. The explanations for the fragments.
 
    .. attribute:: idx_array
 
       A numpy array of the indices of the fragments being explained.
 
-   .. attribute:: explanation_array
+   .. attribute:: explanation_list
 
       A list of :class:`msbuddy.base.Formula` objects. The explanations for the fragments.
 
@@ -470,12 +452,17 @@ Example usage:
     A class to represent a candidate formula.
 
    :param formula: :class:`msbuddy.base.Formula` object. The candidate formula (in neutral form).
+   :param charged_formula: :class:`msbuddy.base.Formula` object. The candidate formula (in charged form).
    :param optional ms1_isotope_similarity: float. The isotope similarity between the candidate formula and the MS1 isotopic pattern.
    :param optional ms2_raw_explanation: :class:`msbuddy.base.MS2Explanation` object. The MS/MS explanation for the candidate formula.
 
    .. attribute:: formula
 
       :class:`msbuddy.base.Formula` object. The candidate formula (in neutral form).
+
+   .. attribute:: charged_formula
+
+      :class:`msbuddy.base.Formula` object. The candidate formula (in charged form).
 
    .. attribute:: ms1_isotope_similarity
 
@@ -484,10 +471,6 @@ Example usage:
    .. attribute:: ms2_raw_explanation
 
       :class:`msbuddy.base.MS2Explanation` object. The MS/MS explanation for the candidate formula.
-
-   .. attribute:: ml_a_prob
-
-      float. The formula feasibility predicted by the ML-a model.
 
    .. attribute:: estimated_prob
 

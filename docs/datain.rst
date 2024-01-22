@@ -61,67 +61,56 @@ Custom Data Import
 
 Users can also import data from custom data sources using the :class:`msbuddy.base.MetaFeature` class and the :class:`msbuddy.base.Spectrum` class.
 
-We first show an easy example of importing data from a pandas DataFrame (with columns 'mz', 'intensity') containing an MS/MS spectrum .
+We first show an example of importing an MS/MS spectrum only.
 
 .. code-block:: python
 
    from msbuddy import Msbuddy
    from msbuddy.base import MetaFeature, Spectrum
-   import pandas as pd
    import numpy as np
 
    # instantiate a Msbuddy object
    engine = Msbuddy()
 
-   # read an MS/MS spectrum from a pandas DataFrame, with columns 'mz', 'intensity'
-   ms2_df = pd.read_csv('ms2_file.csv')
-
    # create a Spectrum object
-   ms2_spec = Spectrum(mz_array = np.array(ms2_df['mz']),
-                       int_array = np.array(ms2_df['intensity']))
+   ms2_spec = Spectrum(mz_array = np.array([100, 200, 300]),
+                       int_array = np.array([1, 2, 3]))
 
    # create a MetaFeature object
-   metafeature = MetaFeature(identifier = 0,
-                             mz = 123.4567,
-                             rt = 12.34,
-                             charge = 1,
+   metafeature = MetaFeature(identifier = 0,  # unique identifier for the MetaFeature object
+                             mz = 400.00,  # precursor m/z
+                             rt = None,  # retention time, can be None if not available
+                             charge = 1,  # precursor charge
                              ms2 = ms2_spec)
 
    # add to the Msbuddy object, List[MetaFeature] is accepted
    engine.add_data([metafeature])
 
 
-Note that for :class:`msbuddy.base.MetaFeature` class, the ``identifier``, ``mz`` and ``charge`` attributes are required, while attributes ``rt``, ``ms1`` and ``ms2`` are optional. If they are not provided, ``None`` will be assigned.
+Note that for :class:`msbuddy.base.MetaFeature` class, the ``identifier``, ``mz`` and ``charge`` attributes are required; attributes ``rt``, ``ms1`` and ``ms2`` are optional. If they are not provided, ``None`` will be assigned.
 
-A more complicated example with MS1 isotope pattern and MS/MS spectra is shown below.
+A more complicated example with both MS1 isotope pattern and MS/MS is shown below.
 
 .. code-block:: python
 
    from msbuddy import Msbuddy
    from msbuddy.base import MetaFeature, Spectrum
-   import pandas as pd
    import numpy as np
 
    # instantiate a Msbuddy object
    engine = Msbuddy()
 
-   # read MS1 isotope pattern from a pandas DataFrame, with columns 'mz', 'intensity'
-   ms1_df = pd.read_csv('ms1_file.csv')
+   # create a Spectrum object for MS1 isotope pattern
+   ms2_spec = Spectrum(mz_array = np.array([400, 401, 402]),
+                       int_array = np.array([100, 20, 5]))
 
-   # create a Spectrum object
-   ms1_spec = Spectrum(mz_array = np.array(ms1_df['mz']),
-                       int_array = np.array(ms1_df['intensity']))
-
-   # read an MS/MS spectrum from a pandas DataFrame, with columns 'mz', 'intensity'
-   ms2_df = pd.read_csv('ms2_file.csv')
-
-   # create a Spectrum object
-   ms2_spec = Spectrum(mz_array = np.array(ms2_df['mz']),
-                       int_array = np.array(ms2_df['intensity']))
+   # create a Spectrum object for MS/MS
+   ms2_spec = Spectrum(mz_array = np.array([100, 200, 300]),
+                       int_array = np.array([1, 2, 3]))
 
    # create a MetaFeature object
    metafeature = MetaFeature(identifier = 0,
-                             mz = 123.4567,
+                             mz = 400.00,
                              charge = 1,
                              ms1 = ms1_spec,
                              ms2 = ms2_spec)

@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                     if cf.ms2_raw_explanation:
                         exp_ms2_peak = len(cf.ms2_raw_explanation)
                         ms2_explan_idx = ','.join([str(x) for x in cf.ms2_raw_explanation.idx_array])
-                        ms2_explan_str = ','.join([x.__str__() for x in cf.ms2_raw_explanation.explanation_array])
+                        ms2_explan_str = ','.join([x.__str__() for x in cf.ms2_raw_explanation.explanation_list])
                     else:
                         exp_ms2_peak = '0'
                         ms2_explan_idx = 'None'
@@ -86,7 +86,6 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                 all_candidates_df_rows.append({
                     'rank': str(m + 1),
                     'formula': cf.formula.__str__(),
-                    'formula_feasibility': cf.ml_a_prob if cf.ml_a_prob is not None else 'NA',
                     'ms1_isotope_similarity': round(cf.ms1_isotope_similarity,
                                                     5) if cf.ms1_isotope_similarity is not None else 'NA',
                     'mz_error_ppm': round(mz_error_ppm, 5),

@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -174,3 +174,68 @@ def form_arr_to_str(form_arr) -> str:
     :return: formula string
     """
     return _ascii_to_str(_form_arr_to_str(form_arr))
+
+
+def _read_formula_str(x: str) -> dict:
+    """
+    Read formula string and return a dictionary
+    :param x: formula string
+    :return: formula dictionary
+    """
+    # if x starts with a number
+    m = 1
+    idx = 0
+    while x[idx].isdigit():
+        idx += 1
+    if idx > 0:
+        m = int(x[:idx])
+    x = x[idx:]
+    # parse formula
+    form = parse_formula(x)
+    # multiply by m
+    for k, v in form.items():
+        form[k] = v * m
+    return form
+
+
+def read_formula_str(x: str) -> dict:
+    """
+    Read formula string and return a dictionary
+    :param x: formula string
+    :return: formula dictionary
+    """
+    # if x contains '.', read two parts
+    if '.' in x:
+        x1 = x.split('.')[0]
+        x2 = x.split('.')[1]
+        form1 = _read_formula_str(x1)  # this is a dict
+        form2 = _read_formula_str(x2)
+        # merge two dicts, add values with same keys
+        for k, v in form2.items():
+            if k in form1.keys():
+                form1[k] += v
+            else:
+                # add new key
+                form1[k] = v
+        return form1
+    else:
+        return _read_formula_str(x)
+
+
+def add_formula_str(x: str, y: str) -> dict:
+    """
+    Add two formula strings
+    :param x: formula string x
+    :param y: formula string y
+    :return: formula dictionary
+    """
+    form1 = read_formula_str(x)
+    form2 = read_formula_str(y)
+    # merge two dicts, add values with same keys
+    for k, v in form2.items():
+        if k in form1.keys():
+            form1[k] += v
+        else:
+            # add new key
+            form1[k] = v
+    return form1

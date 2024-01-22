@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2023 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ from typing import List, Tuple, Union
 import numpy as np
 from numba import njit
 
-from msbuddy.base import Adduct, Formula, calc_formula_mass
+from msbuddy.base import Adduct, Formula, calc_formula_mass, calc_formula_dbe
 
 # constants
 na_h_delta = 22.989769 - 1.007825
@@ -93,23 +93,25 @@ def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, gd) -> List[Formul
     return formulas
 
 
-def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
+def check_formula_existence(form_arr, pos_mode: bool, frag: bool, gd) -> Tuple[bool, bool]:
     """
     check whether this formula exists in the database
-    :param formula: formula to check
+    :param form_arr: 12-dim array
+    :param pos_mode: whether this is a frag in positive ion mode
+    :param frag: whether this is a fragment ion or neutral loss
     :param gd: global dependencies dictionary
     :return: True if this formula exists in the database
     """
-    form_arr = formula.array
-    radical_bool = formula.dbe % 2 == 0
     halogen_bool = (form_arr[2] + form_arr[3] + form_arr[4] + form_arr[5]) > 0
 
     # Na, K => H
     form_arr = convert_na_k(form_arr)
 
     # if not a radical fragment, convert to neutral form
-    if not radical_bool:
-        form_arr = convert_neutral(form_arr, pos_mode)
+    if frag:
+        radical_bool = calc_formula_dbe(form_arr) % 2 == 0
+        if not radical_bool:
+            form_arr = convert_neutral(form_arr, pos_mode)
 
     # recalculated target mass
     target_mass = calc_formula_mass(form_arr, 0, 0)
@@ -129,11 +131,18 @@ def check_formula_existence(formula: Formula, pos_mode: bool, gd) -> bool:
         results_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
     forms = _func_a(results_mass, results_formula, target_mass, mass_tol, None)
 
-    return len(forms) > 0
+    db_existed_bool = len(forms) > 0
+
+    if frag and form_arr[0] == 0:
+        common_bool = common_frag_from_array(form_arr, gd['common_frag_db'])
+    else:
+        common_bool = common_nl_from_array(form_arr, gd['common_loss_db'])
+
+    return db_existed_bool, common_bool
 
 
 def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
-                         ppm: bool, db_mode: int, gd) -> List[Formula]:
+                         ppm: bool, db_mode: int, gd) -> Tuple[List[Formula], List[Formula]]:
     """
     search precursor mass in neutral database
     :param mass: mass to search
@@ -151,7 +160,8 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
     target_mass = (mass * abs(adduct.charge) + ion_mode_int * 0.00054858 - adduct.net_formula.mass) / adduct.m
 
     # formulas to return
-    formulas = []
+    neutral_formulas = []
+    charged_formulas = []
 
     # query database, quick filter by in-memory index array
     # quick filter by in-memory index array
@@ -162,7 +172,9 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
     results_basic_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
     results_basic_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
     forms_basic = _func_a(results_basic_mass, results_basic_formula, target_mass, mass_tol, adduct.loss_formula)
-    formulas.extend(forms_basic)
+    neutral_formulas.extend(forms_basic)
+    charged_formulas.extend([Formula(adduct.m * f.array + adduct.net_formula.array,
+                                     charge=adduct.charge) for f in forms_basic])
 
     if db_mode > 0:
         db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
@@ -170,9 +182,11 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
         results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
         forms_halogen = _func_a(results_halogen_mass, results_halogen_formula,
                                 target_mass, mass_tol, adduct.loss_formula)
-        formulas.extend(forms_halogen)
+        neutral_formulas.extend(forms_halogen)
+        charged_formulas.extend([Formula(adduct.m * f.array + adduct.net_formula.array,
+                                         charge=adduct.charge) for f in forms_halogen])
 
-    return formulas
+    return neutral_formulas, charged_formulas
 
 
 def query_fragnl_mass(mass: float, fragment: bool, pos_mode: bool, na_contain: bool, k_contain: bool,
@@ -244,8 +258,8 @@ def check_common_frag(formula: Formula, gd) -> bool:
         return False
 
     # Na, K => H
-    form_arr_1 = convert_na_k(form_arr)
-    return common_frag_from_array(form_arr_1, gd['common_frag_db'])
+    form_arr = convert_na_k(form_arr)
+    return common_frag_from_array(form_arr, gd['common_frag_db'])
 
 
 def check_common_nl(formula: Formula, gd) -> bool:
@@ -258,8 +272,8 @@ def check_common_nl(formula: Formula, gd) -> bool:
     form_arr = formula.array
 
     # Na, K => H
-    form_arr_1 = convert_na_k(form_arr)
-    return common_nl_from_array(form_arr_1, gd['common_loss_db'])
+    form_arr = convert_na_k(form_arr)
+    return common_nl_from_array(form_arr, gd['common_loss_db'])
 
 
 def _calc_t_mass_db_idx(mass: float, fragment: bool, radical: bool, convert_mass: float, pos_mode: bool,
