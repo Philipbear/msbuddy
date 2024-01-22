@@ -1,11 +1,10 @@
 # test msbuddy
-# ver 0.2.5
+# ver 0.3.0
 
 def test_main():
     from msbuddy import Msbuddy, MsbuddyConfig
     # instantiate a MsbuddyConfig object
-    msb_config = MsbuddyConfig(ms_instr='orbitrap',
-                               halogen=False)
+    msb_config = MsbuddyConfig(ms_instr='orbitrap', halogen=False)
 
     # instantiate a Msbuddy object
     msb_engine = Msbuddy(msb_config)
@@ -61,17 +60,6 @@ def test_mass_formula():
         print(f.formula, f.mass_error, f.mass_error_ppm)
 
 
-def test_pred_formula_feasibility():
-    from msbuddy import Msbuddy
-
-    # create a Msbuddy object
-    engine = Msbuddy()
-
-    # predict formula feasibility score
-    feasibility_score = engine.predict_formula_feasibility("C10H20O5")
-    print(feasibility_score)
-
-
 def test_subformula():
     from msbuddy import assign_subformula
 
@@ -85,5 +73,4 @@ if __name__ == '__main__':
     test_main()
     test_formula()
     test_mass_formula()
-    test_pred_formula_feasibility()
     test_subformula()
