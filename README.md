@@ -27,7 +27,7 @@ The minimum requirement for an msbuddy query is a single _m/z_ value and its ion
 ```commandline
 pip install msbuddy
 ```
-You also have to install the [lightgbm](https://github.com/microsoft/LightGBM/blob/master/docs/Installation-Guide.rst) package.
+You also have to install the [lightgbm](https://github.com/microsoft/LightGBM/tree/master/python-package) package.
 
 ## Python usage 
 
