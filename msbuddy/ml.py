@@ -510,6 +510,8 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
             continue
         # predict formula probability
         prob_arr = _predict_ml([batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
+        # Platt calibration
+        prob_arr = _platt_calibrated_probability(prob_arr, gd['platt_a_' + str(i)], gd['platt_b_' + str(i)])
         # add prediction results to candidate formula objects in the list
         cnt = 0
         for j in group_dict[i]:
@@ -520,6 +522,18 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
     # update buddy data
     buddy_data[batch_start_idx:batch_end_idx] = batch_data
     return
+
+
+def _platt_calibrated_probability(score, a, b):
+    """
+    Platt calibration for FDR estimation
+    :param score: predicted scores
+    :param a: coefficient of the sigmoid function
+    :param b: intercept of the sigmoid function
+    :return: calibrated probability
+    """
+    probability = 1 / (1 + np.exp(-(a * score + b)))
+    return probability
 
 
 def calc_fdr(buddy_data, batch_start_idx: int, batch_end_idx: int):

@@ -561,7 +561,7 @@ if __name__ == '__main__':
     msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
     # cmd version
-    msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output_4')), True)
+    msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output_3')), True)
 
     # annotate molecular formula
     msb_engine.annotate_formula()

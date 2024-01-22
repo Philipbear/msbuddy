@@ -37,7 +37,7 @@ setuptools.setup(
         "gdown",
         "chemparse",
         "scipy",
-        "scikit-learn",
+        "lightgbm",
         "tqdm",
         "timeout_decorator",
         "pandas",

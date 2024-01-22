@@ -407,12 +407,16 @@ def combine_and_clean_x_y(test=False):
 
 
 def tune_hyperparams(ms1_iso, ms2_spec):
-    group_arr = joblib.load('gnps_group_arr.joblib')[:500]
-    total_cnt = int(np.sum(group_arr))
+    # group_arr = joblib.load('gnps_group_arr.joblib')[:500]
+    # total_cnt = int(np.sum(group_arr))
+    #
+    # # load training data
+    # X_arr = joblib.load('gnps_X_arr_filled.joblib')[:total_cnt, :]
+    # y_arr = joblib.load('gnps_y_arr.joblib')[:total_cnt]
 
-    # load training data
-    X_arr = joblib.load('gnps_X_arr_filled.joblib')[:total_cnt, :]
-    y_arr = joblib.load('gnps_y_arr.joblib')[:total_cnt]
+    X_arr = joblib.load('gnps_X_arr_filled.joblib')
+    y_arr = joblib.load('gnps_y_arr.joblib')
+    group_arr = joblib.load('gnps_group_arr.joblib')
 
     # group arr as int
     group_arr = group_arr.astype(np.int32)
@@ -431,16 +435,16 @@ def tune_hyperparams(ms1_iso, ms2_spec):
         'metric': ['ndcg'],
         'ndcg_at': [[1]],
         'learning_rate': [0.01],
-        'num_leaves': [1000, 1500, 2000],  # [500, 750, 1000, 1250],
+        'num_leaves': [1500, 2000],  # [500, 750, 1000, 1250],
         'max_depth': [-1],
-        'min_data_in_leaf': [30, 50, 70, 100],  # [10, 20, 30],
-        'max_bin': [200, 350, 500],  # [200, 300]
-        'bagging_fraction': [0.9, 0.95, 1],  # [0.9, 0.95, 1]
-        'bagging_freq': [0.9, 0.95, 1],
-        'feature_fraction': [0.9, 0.95, 1],
-        'lambda_l1': [0, 0.001, 0.01, 0.1, 1],
-        'lambda_l2': [0, 0.001, 0.01, 0.1, 1],
-        'seed': [24],
+        'min_data_in_leaf': [20, 30, 40, 50],  # [10, 20, 30],
+        'max_bin': [200, 300],
+        'bagging_fraction': [0.9, 0.95],  # [0.9, 0.95, 1]
+        'bagging_freq': [1, 2],
+        'feature_fraction': [0.8, 0.85, 0.9, 0.95],
+        'lambda_l1': [0.00001, 0.0001, 0.001],
+        'lambda_l2': [0.00001, 0.0001, 0.001],
+        'seed': [1],
         'verbose': [0]
     }
 
@@ -480,15 +484,15 @@ def train_model(ms1_iso, ms2_spec):
     best_params = {'objective': 'lambdarank',
                    'metric': 'ndcg', 'ndcg_at': [1],
                    'learning_rate': 0.01,
-                   'num_leaves': 1500,
+                   'num_leaves': 1500,  # 2000 if ms2 available
                    'max_depth': -1,
-                   'min_data_in_leaf': 30,
+                   'min_data_in_leaf': 20,
                    'max_bin': 200,
-                   'bagging_fraction': 0.85,
+                   'bagging_fraction': 0.8,
                    'bagging_freq': 1,
-                   'feature_fraction': 0.85,
-                   'lambda_l1': 0.0001,
-                   'lambda_l2': 0.0001,
+                   'feature_fraction': 0.8,  # 0.7 if ms2 available
+                   'lambda_l1': 0,
+                   'lambda_l2': 0,
                    'seed': 24, 'verbose': 1}
 
     # Split training and testing data
@@ -503,7 +507,7 @@ def train_model(ms1_iso, ms2_spec):
 
     print("Training model...")
     # Train the model
-    gbm = lgb.train(best_params, train_data, valid_sets=[val_data], num_boost_round=1000,
+    gbm = lgb.train(best_params, train_data, valid_sets=[val_data], num_boost_round=1500,
                     callbacks=[lgb.early_stopping(stopping_rounds=30)])
 
     # Predict on test data
@@ -876,31 +880,7 @@ if __name__ == '__main__':
 
     # tune_hyperparams(ms1_iso=True, ms2_spec=True)
 
-    # train_model(ms1_iso=False, ms2_spec=True)
-
-    group = joblib.load('gnps_group_arr.joblib')
-    X = joblib.load('gnps_X_arr_filled.joblib')
-    y = joblib.load('gnps_y_arr.joblib')
-
-    X_1, X_test, y_1, y_test, groups_1, groups_test = _train_test_split(X, y, group, test_size=0.1)
-
-    # # ms1_iso_sim + 0.05 * mz_error_log_p
-    # x2_ls = [0.05 * i for i in range(6)]
-    # score_ls = []
-    # for x2 in x2_ls:
-    #     print('x2: ' + str(x2))
-    #     score_ls.append(heuristic_ranking_baseline_modified(X_test, y_test, groups_test,
-    #                                                         0, 1, 1, x2,
-    #                                                         descending=True))
-
-    # mz_error_log_p + 4 * exp_frag_int_pnt
-    x2_ls = [2 + 1 * i for i in range(10)]
-    score_ls = []
-    for x2 in x2_ls:
-        print('x2: ' + str(x2))
-        score_ls.append(heuristic_ranking_baseline_modified(X_test, y_test, groups_test,
-                                                            1, 30, 1, x2,
-                                                            descending=True))
+    train_model(ms1_iso=True, ms2_spec=False)
 
     # get_feature_importance(joblib.load('model_ms1_ms2.joblib'), True, True)
     # get_feature_importance(joblib.load('model_ms1.joblib'), True, False)
@@ -908,3 +888,4 @@ if __name__ == '__main__':
     # get_feature_importance(joblib.load('model.joblib'), False, False)
 
     print('done')
+

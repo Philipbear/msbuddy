@@ -75,16 +75,27 @@ def init_db() -> dict:
     global_dict['basic_db_mass'], global_dict['basic_db_formula'], global_dict['basic_db_idx'] = basic_db
     global_dict['halogen_db_mass'], global_dict['halogen_db_formula'], global_dict['halogen_db_idx'] = halogen_db
 
-    # # load ml
-    # ml_name = 'ml_' + current_model_version + '.joblib'
-    # global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[
-    #     'model_noms1_noms2'], global_dict['model_mean_arr'], global_dict['model_std_arr'] = (
-    #     check_download_joblibload(
-    #         'https://github.com/Philipbear/msbuddy/releases/download/msbuddy_data_v0.3.0/model_v0.3.0.joblib',
-    #         data_path / ml_name))
-    #
+    # load ml
+    ml_name = 'ml_' + current_model_version + '.joblib'
+    (global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[
+        'model_noms1_noms2'], global_dict['platt_a_0'], global_dict['platt_b_0'], global_dict['platt_a_1'],
+     global_dict['platt_b_1'], global_dict['platt_a_2'], global_dict['platt_b_2'], global_dict['platt_a_3'],
+     global_dict['platt_b_3']) = (
+        check_download_joblibload(
+            'https://github.com/Philipbear/msbuddy/releases/download/msbuddy_data_v0.3.0/model_v0.3.0.joblib',
+            data_path / ml_name))
+
     global_dict['model_ms1_ms2'] = j_load('data/model_ms1_ms2.joblib')
     global_dict['model_noms1_ms2'] = j_load('data/model_ms2.joblib')
+
+    global_dict['platt_a_0'] = 1.898745
+    global_dict['platt_b_0'] = -2.012396
+    # global_dict['platt_a_1'] =
+    # global_dict['platt_b_1'] =
+    global_dict['platt_a_2'] = 1.428206
+    global_dict['platt_b_2'] = -1.237494
+    # global_dict['platt_a_3'] =
+    # global_dict['platt_b_3'] =
 
     return global_dict
 
@@ -306,12 +317,13 @@ def load_usi(usi_list: Union[str, List[str]],
             continue
     return data_list
 
-# test
-# if __name__ == '__main__':
+
+if __name__ == '__main__':
+    import joblib
 #     ################
 #     init_db()
+#
 
-# import joblib
 # compile all these databases
 
 # basic_db_mass = j_load('../db_prep/basic_db_mass.joblib')
@@ -334,15 +346,12 @@ def load_usi(usi_list: Union[str, List[str]],
 # common_db = [common_loss_db, common_frag_db]
 # joblib.dump(common_db, "data/common_db.joblib")
 
+    # model
+    model_ms1_ms2 = j_load('data/model_ms1_ms2.joblib')
+    model_noms1_ms2 = j_load('data/model_ms2.joblib')
+    model_ms1_noms2 = j_load('data/model_ms1.joblib')
+    model_noms1_noms2 = j_load('data/model.joblib')
 
-# # model
-# model_ms1_ms2 = j_load('data/ml_b_ms1_ms2.joblib')
-# model_noms1_ms2 = j_load('data/ml_b_noms1_ms2.joblib')
-# model_ms1_noms2 = j_load('data/ml_b_ms1_noms2.joblib')
-# model_noms1_noms2 = j_load('data/ml_b_noms1_noms2.joblib')
-# model_mean_arr = j_load('data/ml_b_mean_arr.joblib')
-# model_std_arr = j_load('data/ml_b_std_arr.joblib')
-#
-# ml = [model_ms1_ms2, model_noms1_ms2, model_ms1_noms2, model_noms1_noms2,
-#         model_mean_arr, model_std_arr]
-# joblib.dump(ml, "data/ml.joblib")
+    # ml = [model_ms1_ms2, model_noms1_ms2, model_ms1_noms2, model_noms1_noms2, 1.898745, -2.012396,
+    # , , 1.428206, -1.237494, , ]
+    # joblib.dump(ml, "data/ml.joblib")
