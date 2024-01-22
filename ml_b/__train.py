@@ -475,19 +475,18 @@ def train_model(ms1_iso, ms2_spec):
         X_arr = X_arr[:, :-24]
 
     # hyperparameter tuning
-    # best_params = tune_hyperparams(X_arr, y_arr, group_arr)
     best_params = {'objective': 'lambdarank',
-                   'metric': 'ndcg', 'ndcg_at': [[1]],
+                   'metric': 'ndcg', 'ndcg_at': [1],
                    'learning_rate': 0.01,
                    'num_leaves': 1500,
                    'max_depth': -1,
-                   'min_data_in_leaf': 20,
+                   'min_data_in_leaf': 30,
                    'max_bin': 200,
                    'bagging_fraction': 0.9,
                    'bagging_freq': 1,
-                   'feature_fraction': 1,
-                   'lambda_l1': 0,
-                   'lambda_l2': 0,
+                   'feature_fraction': 0.9,
+                   'lambda_l1': 0.0001,
+                   'lambda_l2': 0.0001,
                    'seed': 24, 'verbose': 1}
 
     # Split training and testing data
@@ -852,9 +851,8 @@ if __name__ == '__main__':
     # fill_X_arr()
     # combine_and_clean_x_y(test=False)
 
-
-    tune_hyperparams(ms1_iso=True, ms2_spec=True)
-    # train_model(ms1_iso=True, ms2_spec=True)
+    # tune_hyperparams(ms1_iso=True, ms2_spec=True)
+    train_model(ms1_iso=True, ms2_spec=True)
 
     # get_feature_importance(joblib.load('model_ms1_ms2.joblib'), True, True)
     # get_feature_importance(joblib.load('model_ms1.joblib'), True, False)
