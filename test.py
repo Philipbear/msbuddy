@@ -23,17 +23,17 @@ def test_main():
 
 # test other msbuddy APIs
 def test_formula():
-    from msbuddy.utils import read_formula
+    from msbuddy import read_formula
 
     formula_array = read_formula("C10H20O5")
     print(formula_array)
 
-    from msbuddy.utils import form_arr_to_str
+    from msbuddy import form_arr_to_str
 
     formula_str = form_arr_to_str([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
     print(formula_str)
 
-    from msbuddy.utils import enumerate_subform_arr
+    from msbuddy import enumerate_subform_arr
 
     all_subform_arr = enumerate_subform_arr([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
     print(all_subform_arr)
