@@ -1,0 +1,25 @@
+# Core libraries for scientific computing
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Machine Learning libraries
+lightgbm>=4.2.0
+joblib>=1.2.0
+
+# For downloading data
+gdown>=4.7.0
+requests>=2.31.0
+
+# Data manipulation
+pandas>=1.2.0
+
+# Utilities
+tqdm>=4.65.0
+timeout-decorator>=0.5.0
+
+# Custom dependencies
+brain-isotopic-distribution>=1.5.14
+chemparse>=0.1.2
+
+# For JIT compilation
+numba>=0.57.0

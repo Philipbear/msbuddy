@@ -11,6 +11,9 @@ Option 1: Using pip (recommended)
 
    pip install msbuddy
 
+You also have to install the `lightgbm <https://github.com/microsoft/LightGBM/blob/master/docs/Installation-Guide.rst>`_ package.
+
+
 Option 2: From source
 ~~~~~~~~~~~~~~~~~~~~~
 You can also install **msbuddy** from source:
