@@ -704,6 +704,7 @@ class CandidateFormula:
     def __init__(self, formula: Formula,
                  charged_formula: Union[Formula, None] = None,
                  ms1_isotope_similarity: Union[float, None] = None,
+                 exp_ms2_sum_int: Union[float, None] = None,
                  ms2_raw_explanation: Union[MS2Explanation, None] = None,
                  db_existed: bool = False,
                  optimal_formula: bool = False,
@@ -715,7 +716,8 @@ class CandidateFormula:
         self.estimated_fdr = None  # estimated FDR
         self.formula_feature_array = None  # formula feature array
         self.ms1_isotope_similarity = ms1_isotope_similarity
-        self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during precursor formula annotation
+        self.exp_ms2_sum_int = exp_ms2_sum_int  # sum of MS2 intensity of peaks explained (during bottom-up search)
+        self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during subformula assignment
         self.db_existed = db_existed  # whether this formula is in the formula database
         # self.optimal_formula = optimal_formula
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.

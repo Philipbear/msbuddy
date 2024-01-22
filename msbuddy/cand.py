@@ -110,18 +110,6 @@ class FragExplanation:
         return
 
 
-@njit
-def _find_closest_mass_idx(mass: float, mass_arr: np.array) -> int:
-    """
-    find the closest mass in mass_arr to mass
-    :param mass: float
-    :param mass_arr: np.array
-    :return: index of the closest mass
-    """
-    idx = np.argmin(np.abs(mass - mass_arr))
-    return idx
-
-
 class CandidateSpace:
     """
     CandidateSpace is a class for bottom-up MS/MS interrogation.
@@ -129,11 +117,17 @@ class CandidateSpace:
     """
 
     def __init__(self, pre_neutral_array: np.array, pre_charged_array: np.array,
+                 pre_neutral_form_str: Union[str, None] = None,
+                 exp_frag_sum_int: Union[float, None] = None,
+                 exp_frag_idx_ls: Union[List[int], None] = None,
                  frag_exp_ls: Union[List[FragExplanation], None] = None):
         self.pre_neutral_array = np.int16(pre_neutral_array)  # precursor neutral array
         self.pre_charged_array = np.int16(pre_charged_array)  # used for ms2 global optim.
+        self.pre_neutral_form_str = pre_neutral_form_str
+        self.exp_frag_sum_int = exp_frag_sum_int  # during candidate space generation
+        self.exp_frag_idx_ls = exp_frag_idx_ls  # during candidate space generation
         self.neutral_mass = float(np.sum(pre_neutral_array * Formula.mass_arr))
-        self.frag_exp_list = frag_exp_ls  # List[FragExplanation]
+        self.frag_exp_list = frag_exp_ls  # during subformula assignment, List[FragExplanation]
 
     def add_frag_exp(self, frag_exp: FragExplanation):
         self.frag_exp_list.append(frag_exp)
@@ -196,53 +190,6 @@ class CandidateSpace:
                                 ms2_raw_explanation=ms2_raw_exp)
 
 
-def calc_isotope_pattern(formula: Formula,
-                         iso_peaks: Union[int, None] = 4) -> np.array:
-    """
-    calculate isotope pattern of a neutral formula with a given adduct
-    :param formula: Formula object
-    :param iso_peaks: number of isotope peaks to calculate
-    :return: intensity array of isotope pattern
-    """
-    # mapping to a dictionary
-    arr_dict = {}
-    for i, element in enumerate(Formula.alphabet):
-        arr_dict[element] = formula.array[i]
-
-    # calculate isotope pattern
-    isotope_pattern = isotopic_variants(arr_dict, npeaks=iso_peaks)
-    int_arr = np.array([iso.intensity for iso in isotope_pattern], dtype=np.float32)
-
-    return int_arr
-
-
-@njit
-def calc_isotope_similarity(int_arr_x, int_arr_y, iso_num: int) -> float:
-    """
-    calculate isotope similarity between two ms1 isotope patterns
-    :param int_arr_x: intensity array of theoretical isotope pattern
-    :param int_arr_y: intensity array of experimental isotope pattern
-    :param iso_num: number of isotope peaks to calculate
-    :return: isotope similarity, a float between 0 and 1
-    """
-    min_len = min(len(int_arr_x), iso_num)
-    int_arr_x = int_arr_x[:min_len]  # theoretical isotope pattern
-    if len(int_arr_y) > min_len:  # experimental isotope pattern
-        int_arr_y = int_arr_y[:min_len]
-    if len(int_arr_y) < min_len:
-        int_arr_y = np.append(int_arr_y, np.zeros(min_len - len(int_arr_y), dtype=np.float32))
-
-    # normalize
-    int_arr_x = int_arr_x / np.sum(int_arr_x, dtype=np.float32)
-    int_arr_y = int_arr_y / np.sum(int_arr_y, dtype=np.float32)
-
-    # calculate the similarity
-    int_diff_arr = np.abs(int_arr_y - int_arr_x)
-    sim_score = 1 - np.sum(int_diff_arr)
-
-    return sim_score
-
-
 def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
                           db_mode: int, ele_lower_limit: np.array, ele_upper_limit: np.array,
                           max_isotope_cnt: int, gd: dict) -> MetaFeature:
@@ -274,19 +221,22 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
         # query precursor mass, for fill in db_existed
         ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol, ele_lower_limit,
                                                                                 ele_upper_limit, db_mode, gd)
-        if len(ms2_cand_form_ls) == 0:
-            # merge candidate formulas from ms1 and ms2
-            cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
-                                            ms1_cand_form_str_ls, ms2_cand_form_str_ls)
-        else:
-            # fill in db_existed
-            cf_list = _fill_in_db_existence(ms1_cand_form_ls, ms2_cand_form_ls,
-                                            ms1_cand_form_str_ls, ms2_cand_form_str_ls)
+
+        cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
+                                        ms1_cand_form_str_ls, ms2_cand_form_str_ls)
+        # if len(ms2_cand_form_ls) == 0:  # or len(mf.ms2_processed) <= 3
+        #     # merge candidate formulas from ms1 and ms2
+        #     cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
+        #                                     ms1_cand_form_str_ls, ms2_cand_form_str_ls)
+        # else:
+        #     # fill in db_existed
+        #     cf_list = _fill_in_db_existence(ms1_cand_form_ls, ms2_cand_form_ls,
+        #                                     ms1_cand_form_str_ls, ms2_cand_form_str_ls)
 
     # retain top candidate formulas
     # calculate neutral mass of the precursor ion
     ion_mode = 1 if mf.adduct.pos_mode else -1
-    t_neutral_mass = (mf.mz - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
+    t_neutral_mass = (mf.mz * abs(mf.adduct.charge) - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
     mf.candidate_formula_list = _retain_top_cand_form(t_neutral_mass, cf_list, 300)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
@@ -295,6 +245,64 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
             mf.candidate_formula_list[k].ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, max_isotope_cnt)
 
     return mf
+
+
+@njit
+def _find_closest_mass_idx(mass: float, mass_arr: np.array) -> int:
+    """
+    find the closest mass in mass_arr to mass
+    :param mass: float
+    :param mass_arr: mass array
+    :return: index of the closest mass
+    """
+    idx = np.argmin(np.abs(mass - mass_arr))
+    return idx
+
+
+def calc_isotope_pattern(formula: Formula, iso_peaks: Union[int, None] = 4) -> np.array:
+    """
+    calculate isotope pattern of a neutral formula with a given adduct
+    :param formula: Formula object
+    :param iso_peaks: number of isotope peaks to calculate
+    :return: intensity array of isotope pattern
+    """
+    # mapping to a dictionary
+    arr_dict = {}
+    for i, element in enumerate(Formula.alphabet):
+        arr_dict[element] = formula.array[i]
+
+    # calculate isotope pattern
+    isotope_pattern = isotopic_variants(arr_dict, npeaks=iso_peaks)
+    int_arr = np.array([iso.intensity for iso in isotope_pattern], dtype=np.float32)
+
+    return int_arr
+
+
+@njit
+def calc_isotope_similarity(int_arr_x, int_arr_y, iso_num: int) -> float:
+    """
+    calculate isotope similarity between two ms1 isotope patterns
+    :param int_arr_x: intensity array of theoretical isotope pattern
+    :param int_arr_y: intensity array of experimental isotope pattern
+    :param iso_num: number of isotope peaks to calculate
+    :return: isotope similarity
+    """
+    min_len = min(len(int_arr_x), iso_num)
+    int_arr_x = int_arr_x[:min_len]  # theoretical isotope pattern
+    if len(int_arr_y) > min_len:  # experimental isotope pattern
+        int_arr_y = int_arr_y[:min_len]
+    if len(int_arr_y) < min_len:
+        int_arr_y = np.append(int_arr_y, np.zeros(min_len - len(int_arr_y), dtype=np.float32))
+
+    # normalize
+    int_arr_x = int_arr_x / np.sum(int_arr_x, dtype=np.float32)
+    int_arr_y = int_arr_y / np.sum(int_arr_y, dtype=np.float32)
+
+    # calculate the similarity
+    int_diff_arr = np.abs(int_arr_y - int_arr_x)
+    sim_score = 1 - np.sum(int_diff_arr)
+
+    return sim_score
 
 
 @njit
@@ -391,11 +399,8 @@ def _calc_ms1_iso_sim(cand_form, meta_feature, max_isotope_cnt) -> float:
     :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern matching
     :return: ms1 isotope similarity
     """
-    # convert neutral formula into charged form
-    charged_form = Formula(cand_form.formula.array * meta_feature.adduct.m + meta_feature.adduct.net_formula.array,
-                           meta_feature.adduct.charge)
     # calculate theoretical isotope pattern
-    theo_isotope_pattern = calc_isotope_pattern(charged_form, max_isotope_cnt)
+    theo_isotope_pattern = calc_isotope_pattern(cand_form.charged_formula, max_isotope_cnt)
 
     # calculate ms1 isotope similarity
     ms1_isotope_sim = calc_isotope_similarity(meta_feature.ms1_processed.int_array, theo_isotope_pattern,
@@ -431,7 +436,7 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
             charged_forms.append(charged_formulas[m])
 
     # convert neutral formulas into CandidateFormula objects
-    cand_form_list = [CandidateFormula(formula=form, charged_formula=charged_form,
+    cand_form_list = [CandidateFormula(formula=form, charged_formula=charged_form, exp_ms2_sum_int=0.0,
                                        db_existed=True) for form, charged_form in zip(neutral_forms, charged_forms)]
     cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in cand_form_list]
 
@@ -478,6 +483,9 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
         if frag_form_list is None or nl_form_list is None:
             continue
 
+        # frag intensity
+        frag_int = mf.ms2_processed.int_array[i]
+
         # formula stitching
         # iterate fragment formula list and neutral loss formula list
         for frag in frag_form_list:
@@ -502,7 +510,8 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
                 candidate_space_list, existing_cand_str_list = _add_to_candidate_space_list(candidate_space_list,
                                                                                             existing_cand_str_list,
                                                                                             pre_form_arr.astype(int),
-                                                                                            frag.array, nl.array)
+                                                                                            frag.array, nl.array,
+                                                                                            frag_int, i)
 
     # element limit check, SENIOR rules, O/P check, DBE check
     candidate_list = [cs for cs in candidate_space_list
@@ -517,7 +526,7 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
     # generate CandidateFormula object
     candidate_formula_list = [CandidateFormula(formula=Formula(cs.pre_neutral_array, 0, cs.neutral_mass),
                                                charged_formula=Formula(cs.pre_charged_array, mf.adduct.charge),
-                                               ms2_raw_explanation=None) for cs in candidate_list]
+                                               exp_ms2_sum_int=cs.exp_frag_sum_int) for cs in candidate_list]
     cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in candidate_formula_list]
 
     return candidate_formula_list, cand_form_str_list
@@ -561,8 +570,8 @@ def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: b
 
 
 def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], existing_cand_str_list: List[str],
-                                 pre_form_arr: np.array, frag_arr: np.array,
-                                 nl_arr: np.array) -> Tuple[List[CandidateSpace], List[str]]:
+                                 pre_form_arr: np.array, frag_arr: np.array, nl_arr: np.array,
+                                 fragment_intensity: float, frag_idx: int) -> Tuple[List[CandidateSpace], List[str]]:
     """
     add a new candidate formula to the candidate space list
     :param candidate_space_list: candidate space list
@@ -570,6 +579,8 @@ def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], exi
     :param pre_form_arr: precursor formula array
     :param frag_arr: fragment formula array
     :param nl_arr: neutral loss formula array
+    :param fragment_intensity: fragment intensity
+    :param frag_idx: index of the fragment in ms2_processed
     :return: updated candidate space list
     """
     # check whether the precursor formula is already in the candidate space list
@@ -577,8 +588,22 @@ def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], exi
     candidate_exist = True if this_pre_str in existing_cand_str_list else False
     # this precursor formula has not been added to the candidate space list
     if not candidate_exist:
-        candidate_space_list.append(CandidateSpace(pre_form_arr, frag_arr + nl_arr))
+        candidate_space_list.append(CandidateSpace(pre_form_arr, frag_arr + nl_arr,
+                                                   pre_neutral_form_str=this_pre_str,
+                                                   exp_frag_sum_int=fragment_intensity,
+                                                   exp_frag_idx_ls=[frag_idx]))
         existing_cand_str_list.append(this_pre_str)
+    else:
+        # find the index of the existing candidate space
+        idx = existing_cand_str_list.index(this_pre_str)
+        # if the fragment is already in the exp_frag_idx_ls
+        if frag_idx in candidate_space_list[idx].exp_frag_idx_ls:
+            pass
+        else:
+            # add fragment intensity
+            candidate_space_list[idx].exp_frag_sum_int += fragment_intensity
+            # add fragment idx
+            candidate_space_list[idx].exp_frag_idx_ls.append(frag_idx)
 
     return candidate_space_list, existing_cand_str_list
 
@@ -644,7 +669,7 @@ def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
 
 def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula], top_n: int) -> List[CandidateFormula]:
     """
-    Retain top candidate formulas.
+    Retain top candidate formulas by explained MS2 intensity, then by mz difference.
     :param t_mass: target neutral mass of the precursor ion
     :param cf_list: candidate formula list
     :param top_n: number of top candidate formulas to retain
@@ -653,8 +678,8 @@ def _retain_top_cand_form(t_mass: float, cf_list: List[CandidateFormula], top_n:
     if len(cf_list) <= top_n:
         return cf_list
     else:
-        # sort candidate list by mz difference (increasing)
-        cf_list.sort(key=lambda x: abs(x.formula.mass - t_mass))
+        # sort candidate list by exp_ms2_sum_int (decreasing), then by mz difference (increasing)
+        cf_list = sorted(cf_list, key=lambda x: (-x.exp_ms2_sum_int, abs(x.formula.mass - t_mass)))
         return cf_list[:top_n]
 
 
@@ -792,20 +817,14 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
 
         # dbe filter (DBE >= -1)
         bool_arr_1 = _dbe_subform_filter(this_subform_arr, -1.)
-        # this_subform_arr = this_subform_arr[bool_arr_1, :]
-        # this_mass = this_mass[bool_arr_1]
 
         # SENIOR rules filter, a soft version
         bool_arr_2 = _senior_subform_filter(this_subform_arr)
-        # this_subform_arr = this_subform_arr[bool_arr_2, :]
-        # this_mass = this_mass[bool_arr_2]
 
         # valid subformula check
         bool_arr_3 = _valid_subform_check(this_subform_arr, pre_charged_arr)
-        # this_subform_arr = this_subform_arr[bool_arr_3, :]
-        # this_mass = this_mass[bool_arr_3]
 
-        # # combine filters
+        # combine filters
         bool_arr = bool_arr_1 & bool_arr_2 & bool_arr_3
         this_subform_arr = this_subform_arr[bool_arr, :]
         this_mass = this_mass[bool_arr]
@@ -825,7 +844,7 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
 
         if candidate_space is None:
             # create CandidateSpace object
-            candidate_space = CandidateSpace(cf.formula.array, pre_charged_arr, [frag_exp])
+            candidate_space = CandidateSpace(cf.formula.array, pre_charged_arr, frag_exp_ls=[frag_exp])
         else:
             candidate_space.add_frag_exp(frag_exp)
 

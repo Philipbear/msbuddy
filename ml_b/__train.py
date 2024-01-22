@@ -404,31 +404,53 @@ def combine_and_clean_x_y(test=False):
     joblib.dump(group_arr, 'gnps_group_arr.joblib')
 
 
-def tune_hyperparams(X_arr, y_arr, group_arr):
+def tune_hyperparams(ms1_iso, ms2_spec):
+    group_arr = joblib.load('gnps_group_arr.joblib')[:500]
+    total_cnt = int(np.sum(group_arr))
+
+    # load training data
+    X_arr = joblib.load('gnps_X_arr_filled.joblib')[:total_cnt, :]
+    y_arr = joblib.load('gnps_y_arr.joblib')[:total_cnt]
+
+    # group arr as int
+    group_arr = group_arr.astype(np.int32)
+    assert np.sum(group_arr) == len(X_arr) == len(y_arr)
+
+    if not ms1_iso:
+        # discard the ms1 iso feature in X_arr
+        X_arr = X_arr[:, 1:]
+    if not ms2_spec:
+        # discard the last 24 features in X_arr
+        X_arr = X_arr[:, :-24]
+
     # Parameters for training
     param_grid = {
         'objective': ['lambdarank'],  # 'rank_xendcg', 'lambdarank'
         'metric': ['ndcg'],
         'ndcg_at': [[1]],
         'learning_rate': [0.01],
-        'num_leaves': [500],  # [500, 750, 1000, 1250],
+        'num_leaves': [1000, 1500, 2000],  # [500, 750, 1000, 1250],
         'max_depth': [-1],
-        'min_data_in_leaf': [20],  # [10, 20, 30],
-        'max_bin': [200],
-        'bagging_fraction': [0.9],  # [0.9, 1], optimized
-        'bagging_freq': [1],
-        'feature_fraction': [1],
-        'lambda_l1': [0],
-        'lambda_l2': [0],
+        'min_data_in_leaf': [30, 50, 70, 100],  # [10, 20, 30],
+        'max_bin': [200, 350, 500],  # [200, 300]
+        'bagging_fraction': [0.9, 0.95, 1],  # [0.9, 0.95, 1]
+        'bagging_freq': [0.9, 0.95, 1],
+        'feature_fraction': [0.9, 0.95, 1],
+        'lambda_l1': [0, 0.001, 0.01, 0.1, 1],
+        'lambda_l2': [0, 0.001, 0.01, 0.1, 1],
         'seed': [24],
         'verbose': [0]
     }
 
     print("Grid search for hyperparameter tuning...")
-    best_params, best_score = grid_search_cv(X_arr, y_arr, group_arr, param_grid)
-    print(f"Best Parameters: {best_params}, Best Score: {best_score}")
-
-    return best_params
+    df = grid_search_cv(X_arr, y_arr, group_arr, param_grid)
+    file_name = 'hyperparam_tuning_result'
+    if ms1_iso:
+        file_name += '_ms1'
+    if ms2_spec:
+        file_name += '_ms2'
+    file_name += '.csv'
+    df.to_csv(file_name, index=False)
 
 
 def train_model(ms1_iso, ms2_spec):
@@ -437,7 +459,7 @@ def train_model(ms1_iso, ms2_spec):
     :return: trained model
     """
     # load training data
-    X_arr = joblib.load('gnps_X_arr.joblib')
+    X_arr = joblib.load('gnps_X_arr_filled.joblib')
     y_arr = joblib.load('gnps_y_arr.joblib')
     group_arr = joblib.load('gnps_group_arr.joblib')
 
@@ -454,10 +476,19 @@ def train_model(ms1_iso, ms2_spec):
 
     # hyperparameter tuning
     # best_params = tune_hyperparams(X_arr, y_arr, group_arr)
-    best_params = {'objective': 'lambdarank', 'metric': 'ndcg', 'ndcg_at': [1],
-                   'learning_rate': 0.01, 'num_leaves': 1000, 'max_depth': -1, 'min_data_in_leaf': 10,
-                   'max_bin': 200, 'bagging_fraction': 0.9, 'bagging_freq': 1, 'feature_fraction': 1,
-                   'lambda_l1': 0, 'lambda_l2': 0, 'seed': 24, 'verbose': 0}
+    best_params = {'objective': 'lambdarank',
+                   'metric': 'ndcg', 'ndcg_at': [[1]],
+                   'learning_rate': 0.01,
+                   'num_leaves': 1500,
+                   'max_depth': -1,
+                   'min_data_in_leaf': 20,
+                   'max_bin': 200,
+                   'bagging_fraction': 0.9,
+                   'bagging_freq': 1,
+                   'feature_fraction': 1,
+                   'lambda_l1': 0,
+                   'lambda_l2': 0,
+                   'seed': 24, 'verbose': 1}
 
     # Split training and testing data
     (X_train, X_val, X_test, y_train, y_val, y_test,
@@ -585,7 +616,7 @@ def _train_val_test_split(X_arr, y_arr, group_arr, val_size=0.1, test_size=0.1, 
     return X_train, X_val, X_test, y_train, y_val, y_test, groups_train, groups_val, groups_test
 
 
-def _train_test_split(X_arr, y_arr, group_arr, test_size=0.1, random_state=24):
+def _train_test_split(X_arr, y_arr, group_arr, test_size=0.1, random_state=1):
     # Calculate the cumulative sum of group sizes
     cumulative_group_sizes = np.cumsum(group_arr)
 
@@ -627,7 +658,7 @@ def perform_cross_validation(X, y, group_sizes, params, n_splits=5):
     """
     Perform cross-validation.
     """
-    X_1, X_test, y_1, y_test, groups_1, groups_test = _train_test_split(X, y, group_sizes)
+    X_1, X_test, y_1, y_test, groups_1, groups_test = _train_test_split(X, y, group_sizes, test_size=0.1)
 
     # Transform group_sizes to group assignments
     groups = np.repeat(np.arange(len(groups_1)), groups_1)
@@ -675,8 +706,8 @@ def perform_cross_validation(X, y, group_sizes, params, n_splits=5):
 
 
 def grid_search_cv(X, y, groups, param_grid, n_splits=5):
-    best_score = 0
-    best_params = None
+
+    df_rows = []
 
     # Generate all combinations of hyperparameters
     from itertools import product
@@ -687,13 +718,20 @@ def grid_search_cv(X, y, groups, param_grid, n_splits=5):
         # Perform cross-validation
         val_score, test_score = perform_cross_validation(X, y, groups, params, n_splits=n_splits)
 
-        if test_score > best_score:
-            best_score = test_score
-            best_params = params
+        # Save results, param_values, val_score, test_score
+        df_rows.append([params['objective'], params['metric'], params['ndcg_at'], params['learning_rate'],
+                        params['num_leaves'], params['max_depth'], params['min_data_in_leaf'], params['max_bin'],
+                        params['bagging_fraction'], params['bagging_freq'], params['feature_fraction'],
+                        params['lambda_l1'], params['lambda_l2'], params['seed'], params['verbose'],
+                        val_score, test_score])
 
         print(f"Tested params: {params}, test NDCG@1 Score: {test_score}, val NDCG@1 Score: {val_score}")
 
-    return best_params, best_score
+    df = pd.DataFrame(df_rows, columns=['objective', 'metric', 'ndcg_at', 'learning_rate', 'num_leaves',
+                                        'max_depth', 'min_data_in_leaf', 'max_bin', 'bagging_fraction',
+                                        'bagging_freq', 'feature_fraction', 'lambda_l1', 'lambda_l2',
+                                        'seed', 'verbose', 'val_score', 'test_score'])
+    return df
 
 
 def heuristic_ranking_baseline(X_test, y_test, groups_test, feature_index, ascending=True):
@@ -745,6 +783,13 @@ def get_feature_importance(gbm, ms1, ms2):
         print(f'{feature_name}: {score}')
 
     return feature_importance_split, feature_importance_gain
+
+
+def fill_X_arr():
+    X_arr = joblib.load('gnps_X_arr.joblib')
+    # for X_arr, fill negative values with uniform random numbers between 0 and 1
+    X_arr[:, 0] = np.where(X_arr[:, 0] <= 0, np.random.uniform(0, 1), X_arr[:, 0])
+    joblib.dump(X_arr, 'gnps_X_arr_filled.joblib')
 
 
 def parse_args():
@@ -804,8 +849,12 @@ if __name__ == '__main__':
     # ###############
     # local
 
+    # fill_X_arr()
     # combine_and_clean_x_y(test=False)
-    train_model(ms1_iso=True, ms2_spec=True)
+
+
+    tune_hyperparams(ms1_iso=True, ms2_spec=True)
+    # train_model(ms1_iso=True, ms2_spec=True)
 
     # get_feature_importance(joblib.load('model_ms1_ms2.joblib'), True, True)
     # get_feature_importance(joblib.load('model_ms1.joblib'), True, False)
