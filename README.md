@@ -16,7 +16,7 @@
   * with or without MS/MS spectra
   * in either positive or negative ionization mode
 
-The minimum requirement for an msbuddy query is a single _m/z_ value and its ionization polarity.
+The minimum requirement for a msbuddy query is a single _m/z_ value and its ionization polarity.
 
 **Official documentation**  is available at https://msbuddy.readthedocs.io/en/latest/.
 
@@ -27,7 +27,7 @@ The minimum requirement for an msbuddy query is a single _m/z_ value and its ion
 ```commandline
 pip install msbuddy
 ```
-You also have to install the [lightgbm](https://github.com/microsoft/LightGBM/tree/master/python-package) package.
+To perform formula annotation, you also have to install the [lightgbm](https://github.com/microsoft/LightGBM/tree/master/python-package) package.
 
 ## Python usage 
 
