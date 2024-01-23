@@ -71,6 +71,7 @@ msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 ```
 
 ### Other API functions
+- parse a formula string (e.g., C6H12O6, 2H2O, C5H7NO2.HCl) ([read_formula_str](https://msbuddy.readthedocs.io/en/latest/pyapi.html#read_formula_str))
 - assign subformulas for an MS/MS with a given precursor formula ([assign_subformula](https://msbuddy.readthedocs.io/en/latest/pyapi.html#assign_subformula))
 - enumerate all possible subformulas of a given precursor formula ([enumerate_subform_arr](https://msbuddy.readthedocs.io/en/latest/pyapi.html#enumerate_subform_arr))
 - generate molecular formulas from a neutral mass ([mass_to_formula](https://msbuddy.readthedocs.io/en/latest/pyapi.html#mass_to_formula))
