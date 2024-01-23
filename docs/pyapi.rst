@@ -82,7 +82,7 @@ Example Usage:
    :param adduct: str. The adduct type string. e.g., "[M+H]+". If the input adduct is not recognized, the default adduct type (M +/- H) will be used.
    :param ms2_tol: float. The m/z tolerance for MS/MS spectra. Default is 10 ppm.
    :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da. Default is True.
-   :param dbe_cutoff: float. The DBE cutoff for filtering out subformulas. Default is -1.0.
+   :param dbe_cutoff: float. The DBE cutoff for filtering out subformulas. Default is 0.0.
    :returns: A list of :class:`msbuddy.utils.SubformulaResult` objects.
 
 Example Usage:
