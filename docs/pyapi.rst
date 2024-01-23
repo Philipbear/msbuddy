@@ -5,7 +5,7 @@ Functions
 ~~~~~~~~~~~~~~~
 .. function:: read_formula (formula_string: str)
 
-   Read a formula string (in neutral form) and return a numpy array, return None if invalid
+   Read a formula string (in neutral form) and return a numpy array ([C, H, Br, Cl, F, I, K, N, Na, O, P, S]), return None if invalid. For a more general approach (no element restriction), use :func:`msbuddy.utils.read_formula_str`.
 
    :param formula_string: str. The molecular formula string.
    :returns: A numpy array of the molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S]. None if invalid.
@@ -18,6 +18,42 @@ Example Usage:
 
    formula_array = read_formula("C10H20O5")
    print(formula_array)
+
+
+.. function:: read_formula_str (formula_string: str)
+
+   Read a formula string and return a dictionary. It can deal with cases such as "2H2O" and "C5H7NO2.HCl".
+
+   :param formula_string: str. The molecular formula string.
+   :returns: A dictionary of the parsed molecular formula.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy.utils import read_formula_str
+
+   formula_dict = read_formula_str("2H2O")
+   print(formula_dict)
+
+
+.. function:: add_formula_str (formula_str1: str, formula_str2: str)
+
+   Add up two formula strings and return a dictionary.
+
+   :param formula_str1: str. The molecular formula string.
+   :param formula_str2: str. The molecular formula string.
+   :returns: A dictionary of the summed molecular formula.
+
+Example Usage:
+
+.. code-block:: python
+
+   from msbuddy.utils import add_formula_str
+
+   formula_dict = add_formula_str("C6H12O5", "H2O")
+   print(formula_dict)
+
 
 .. function:: form_arr_to_str (formula_array: List[int])
 
