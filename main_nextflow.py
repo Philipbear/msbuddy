@@ -67,8 +67,8 @@ def main():
                         help='Maximum isotope count, used for MS1 isotope pattern. Default: 4.')
     parser.add_argument('-rel_int_denoise_cutoff', type=float, default=0.01,
                         help='Relative intensity cutoff, used for MS2 denoise. Default: 0.01.')
-    parser.add_argument('-max_frag_reserved', type=int, default=50,
-                        help='Max fragment number reserved, used for MS2 data.')
+    parser.add_argument('-top_n_per_50_da', type=int, default=6,
+                        help='Top N peaks per 50 Da, used for MS2 denoise. Default: 6.')
     parser.add_argument('-parallel', '-p', type=int, default=0,
                         help='Whether to use parallel computing. Default: parallel computing is disabled.')
     parser.add_argument('-n_cpu', type=int, default=1, help='Number of CPUs to use. Default: 1.')
@@ -94,7 +94,7 @@ def main():
         f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
         i_range=(args.i_min, args.i_max),
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
-        rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, max_frag_reserved=args.max_frag_reserved
+        rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, top_n_per_50_da=args.top_n_per_50_da
     )
 
     import os
