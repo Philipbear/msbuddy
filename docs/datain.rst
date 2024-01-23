@@ -89,7 +89,7 @@ We first show an example of importing an MS/MS spectrum only.
 
 Note that for :class:`msbuddy.base.MetaFeature` class, the ``identifier``, ``mz`` and ``charge`` attributes are required; attributes ``rt``, ``ms1`` and ``ms2`` are optional. If they are not provided, ``None`` will be assigned.
 
-A more complicated example with both MS1 isotope pattern and MS/MS is shown below.
+A more complicated example with both MS1 isotope pattern and MS/MS is shown below. You can also specify the adduct type.
 
 .. code-block:: python
 
@@ -101,7 +101,7 @@ A more complicated example with both MS1 isotope pattern and MS/MS is shown belo
    engine = Msbuddy()
 
    # create a Spectrum object for MS1 isotope pattern
-   ms2_spec = Spectrum(mz_array = np.array([400, 401, 402]),
+   ms1_spec = Spectrum(mz_array = np.array([400, 401, 402]),
                        int_array = np.array([100, 20, 5]))
 
    # create a Spectrum object for MS/MS
@@ -112,6 +112,7 @@ A more complicated example with both MS1 isotope pattern and MS/MS is shown belo
    metafeature = MetaFeature(identifier = 0,
                              mz = 400.00,
                              charge = 1,
+                             adduct = '[M+H]+',
                              ms1 = ms1_spec,
                              ms2 = ms2_spec)
 
