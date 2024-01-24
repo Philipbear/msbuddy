@@ -28,6 +28,9 @@ The minimum requirement for a msbuddy query is a single _m/z_ value and its ioni
 pip install msbuddy
 ```
 To perform formula annotation, you also have to install the [lightgbm](https://github.com/microsoft/LightGBM/tree/master/python-package) package.
+```commandline
+pip install lightgbm
+```
 
 ## Python usage 
 
