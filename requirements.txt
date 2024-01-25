@@ -15,7 +15,6 @@ pandas>=1.2.0
 
 # Utilities
 tqdm>=4.65.0
-timeout-decorator>=0.5.0
 
 # Custom dependencies
 brain-isotopic-distribution>=1.5.14

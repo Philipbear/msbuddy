@@ -21,7 +21,6 @@ from typing import Tuple, Union, List
 
 import numpy as np
 import pandas as pd
-from timeout_decorator import timeout
 from tqdm import tqdm
 
 from msbuddy.base import MetaFeature, Adduct, check_adduct
@@ -233,7 +232,6 @@ class Msbuddy:
         :return: None. Update self.data
         """
 
-        @timeout(self.config.timeout_secs)
         def _preprocess_and_gen_cand_nonparallel(meta_feature: MetaFeature, ps: MsbuddyConfig) -> MetaFeature:
             """
             a wrapper function for data preprocessing and candidate formula space generation

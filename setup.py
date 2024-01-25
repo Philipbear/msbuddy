@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="msbuddy",
-    version="0.3.1",
+    version="0.3.2",
     author="Shipei Xing",
     author_email="s1xing@health.ucsd.edu",
     description="Molecular formula annotation for MS-based small molecule analysis.",
@@ -38,7 +38,6 @@ setuptools.setup(
         "chemparse",
         "scipy",
         "tqdm",
-        "timeout_decorator",
         "pandas",
     ],
     python_requires=">=3.8"
