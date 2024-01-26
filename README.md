@@ -73,7 +73,7 @@ msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
                      'mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037'])
 ```
 
-Here is a test case on [Google Colab](https://colab.research.google.com/drive/1jFnuzSssxMJtd29lrQwPOBs-qUzmKAic?usp=sharing).
+Here is a test case on [Google Colab](https://colab.research.google.com/drive/1oLIapoylGbh37ivhcAN-X4tK6l5kIIpf?usp=sharing).
 
 ### Other API functions
 - parse a formula string (e.g., C6H12O6, 2H2O, C5H7NO2.HCl) ([read_formula_str](https://msbuddy.readthedocs.io/en/latest/pyapi.html#read_formula_str))
