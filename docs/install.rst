@@ -11,7 +11,11 @@ Option 1: Using pip (recommended)
 
    pip install msbuddy
 
-You also have to install the `lightgbm <https://github.com/microsoft/LightGBM/tree/master/python-package>`_ package.
+To perform formula annotation, you also have to install the `lightgbm <https://github.com/microsoft/LightGBM/tree/master/python-package>`_ package.
+
+.. code-block:: bash
+
+   pip install lightgbm
 
 
 Option 2: From source
