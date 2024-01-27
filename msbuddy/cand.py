@@ -235,11 +235,8 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
         #     cf_list = _fill_in_db_existence(ms1_cand_form_ls, ms2_cand_form_ls,
         #                                     ms1_cand_form_str_ls, ms2_cand_form_str_ls)
 
-    # calculate neutral mass of the precursor ion
-    ion_mode = 1 if mf.adduct.pos_mode else -1
-    t_neutral_mass = (mf.mz * abs(mf.adduct.charge) - mf.adduct.net_formula.mass - ion_mode * 0.0005486) / mf.adduct.m
     # calculate mz error
-    cf_list = _calc_mz_error(cf_list, t_neutral_mass, ppm)
+    cf_list = _calc_mz_error(cf_list, mf.mz, ppm)
 
     # if MS1 isotope data is available and >1 iso peaks, calculate isotope similarity
     ms1_iso_available = mf.ms1_processed and len(mf.ms1_processed) > 1
@@ -247,27 +244,28 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
         for k, cf in enumerate(cf_list):
             cf_list[k].ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, max_isotope_cnt)
 
+    ms2_available = mf.ms2_processed
+
     # retain top candidate formulas
-    mf.candidate_formula_list = _retain_top_cand_form(cf_list, ms1_tol, ms1_iso_available, 400)
+    mf.candidate_formula_list = _retain_top_cand_form(cf_list, ms1_tol, ms1_iso_available, ms2_available, 350)
 
     return mf
 
 
-def _calc_mz_error(cf_list: List[CandidateFormula], t_neutral_mass: float,
-                   ppm: bool) -> List[CandidateFormula]:
+def _calc_mz_error(cf_list: List[CandidateFormula], precursor_mz: float, ppm: bool) -> List[CandidateFormula]:
     """
     Calculate mz error for each candidate formula.
     :param cf_list: list of candidate formulas
-    :param t_neutral_mass: theoretical neutral mass
+    :param precursor_mz: precursor mz
     :param ppm: whether to use ppm as the unit of tolerance
     :return: list of candidate formulas
     """
     if ppm:
         for k, cf in enumerate(cf_list):
-            cf_list[k].mz_error = (cf.formula.mass - t_neutral_mass) / t_neutral_mass * 1e6
+            cf_list[k].mz_error = (cf.charged_formula.mass - precursor_mz) / precursor_mz * 1e6
     else:
         for k, cf in enumerate(cf_list):
-            cf_list[k].mz_error = cf.formula.mass - t_neutral_mass
+            cf_list[k].mz_error = cf.charged_formula.mass - precursor_mz
     return cf_list
 
 
@@ -692,11 +690,13 @@ def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
 
 
 def _retain_top_cand_form(cf_list: List[CandidateFormula], ms1_tol: float, ms1_iso_available: bool,
-                          top_n: int) -> List[CandidateFormula]:
+                          ms2_available: bool, top_n: int) -> List[CandidateFormula]:
     """
     Retain top candidate formulas by explained MS2 intensity, then by mz difference.
     :param cf_list: candidate formula list
     :param ms1_tol: MS1 tolerance
+    :param ms1_iso_available: whether MS1 isotope data is available
+    :param ms2_available: whether MS2 data is available
     :param top_n: number of top candidate formulas to retain
     :return: retained candidate formula list
     """
@@ -708,9 +708,13 @@ def _retain_top_cand_form(cf_list: List[CandidateFormula], ms1_tol: float, ms1_i
             cf_list = sorted(cf_list, key=lambda x: (_calc_log_p_norm(x.mz_error, ms1_tol / 3) * 0.05 +
                                                      x.ms1_isotope_similarity), reverse=True)
         else:
-            # sort candidate list by mz_error_log_p + 4 * exp_frag_int_pnt
-            cf_list = sorted(cf_list, key=lambda x: (_calc_log_p_norm(x.mz_error, ms1_tol / 3) + 4 * x.exp_ms2_sum_int),
-                             reverse=True)
+            if ms2_available:
+                # sort candidate list by mz_error_log_p + 4 * exp_frag_int_pnt
+                cf_list = sorted(cf_list, key=lambda x: (_calc_log_p_norm(x.mz_error, ms1_tol / 3) + 4 * x.exp_ms2_sum_int),
+                                 reverse=True)
+            else:
+                # sort candidate list by abs mz_error, ascending
+                cf_list = sorted(cf_list, key=lambda x: abs(x.mz_error), reverse=False)
 
         return cf_list[:top_n]
 
