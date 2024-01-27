@@ -42,3 +42,6 @@ Now we use a learning-to-rank model to rank the formula candidates.
 
 0.3.2 (2024-01-24)
 - timeout_decorator package seems not working on Windows, so we remove it.
+
+0.3.3 (2024-01-27)
+- Bug fix for candidate formula generation (pre-ranking).
