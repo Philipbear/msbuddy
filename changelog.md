@@ -45,3 +45,6 @@ Now we use a learning-to-rank model to rank the formula candidates.
 
 0.3.3 (2024-01-27)
 - Bug fix for candidate formula generation (pre-ranking).
+
+0.3.4 (2024-01-29)
+- Update function 'load_mgf': 'FEATURE_ID' now is added as a new identifier for metabolite features.
