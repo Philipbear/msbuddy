@@ -569,22 +569,26 @@ class ProcessedMS2:
         """
 
         # de-precursor
-        self._deprecursor(mz, raw_spec)
+        if len(raw_spec.mz_array) > 0:
+            self._deprecursor(mz, raw_spec)
 
         # denoise
-        self._denoise(rel_int_denoise_cutoff)
+        if self.mz_array:
+            self._denoise(rel_int_denoise_cutoff)
 
         # keep top_n_per_50_da peaks in each 50 Da
-        self._keep_top_n_per_50_da(top_n_per_50_da)
+        if self.mz_array:
+            self._keep_top_n_per_50_da(top_n_per_50_da)
 
         # top n fragment
-        top_n_frag = _calc_top_n_frag(mz)
-        if len(self.mz_array) > top_n_frag:
-            idx = np.argsort(self.int_array)
-            reserved_idx = self.int_array >= self.int_array[idx[-top_n_frag]]
-            self.idx_array = self.idx_array[reserved_idx]
-            self.mz_array = self.mz_array[reserved_idx]
-            self.int_array = self.int_array[reserved_idx]
+        if self.mz_array:
+            top_n_frag = _calc_top_n_frag(mz)
+            if len(self.mz_array) > top_n_frag:
+                idx = np.argsort(self.int_array)
+                reserved_idx = self.int_array >= self.int_array[idx[-top_n_frag]]
+                self.idx_array = self.idx_array[reserved_idx]
+                self.mz_array = self.mz_array[reserved_idx]
+                self.int_array = self.int_array[reserved_idx]
 
     def _denoise(self, rel_int_denoise_cutoff: float):
         """
