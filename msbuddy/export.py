@@ -64,6 +64,22 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
 
             # write the tsv file containing all the candidate formulas
             all_candidates_df_rows = []
+            if not mf.candidate_formula_list:
+                all_candidates_df_rows.append({
+                    'rank': 'NA',
+                    'formula': 'NA',
+                    'ms1_isotope_similarity': 'NA',
+                    'mz_error_ppm': 'NA',
+                    'explained_ms2_peak': 'NA',
+                    'total_valid_ms2_peak': 'NA',
+                    'estimated_prob': 'NA',
+                    'normalized_estimated_prob': 'NA',
+                    'estimated_fdr': 'NA',
+                    'ms2_explanation_idx': 'NA',
+                    'ms2_explanation': 'NA'
+                })
+                continue
+
             for m, cf in enumerate(mf.candidate_formula_list):
                 # strings for explained ms2 peak
                 if mf.ms2_processed:

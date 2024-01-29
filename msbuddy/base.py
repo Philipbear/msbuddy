@@ -573,15 +573,15 @@ class ProcessedMS2:
             self._deprecursor(mz, raw_spec)
 
         # denoise
-        if self.mz_array:
+        if len(self.mz_array) > 0:
             self._denoise(rel_int_denoise_cutoff)
 
         # keep top_n_per_50_da peaks in each 50 Da
-        if self.mz_array:
+        if len(self.mz_array) > 0:
             self._keep_top_n_per_50_da(top_n_per_50_da)
 
         # top n fragment
-        if self.mz_array:
+        if len(self.mz_array) > 0:
             top_n_frag = _calc_top_n_frag(mz)
             if len(self.mz_array) > top_n_frag:
                 idx = np.argsort(self.int_array)

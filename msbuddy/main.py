@@ -542,24 +542,24 @@ if __name__ == '__main__':
 
     start = time.time()
 
-    msb_config = MsbuddyConfig(ms_instr='qtof',  # supported: "qtof", "orbitrap" and "fticr"
+    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
                                halogen=True, parallel=True, n_cpu=10)
 
     msb_engine = Msbuddy(msb_config)
 
-    # msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
+    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
 
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'  # 83
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'  # 194
     # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 118
-    mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 146
-    msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
+    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 146
+    # msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
 
     # cmd version
-    msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output')), True)
+    # msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output')), True)
 
     # annotate molecular formula
-    # msb_engine.annotate_formula()
+    msb_engine.annotate_formula()
 
     end = time.time()
     print(end - start)
