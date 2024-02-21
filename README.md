@@ -1,8 +1,8 @@
 # msbuddy
-![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)
+[![Maintainer](https://img.shields.io/badge/maintainer-Shipei_Xing-blue)](https://scholar.google.ca/citations?user=en0zumcAAAAJ&hl=en)
 [![PyPI](https://img.shields.io/pypi/v/msbuddy?color=green)](https://pypi.org/project/msbuddy/)
 [![docs](https://readthedocs.org/projects/msbuddy/badge/?version=latest)](https://msbuddy.readthedocs.io/en/latest/?badge=latest)
-[![Generic badge](https://img.shields.io/badge/msbuddy-mass_spec_tools-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
+[![Generic badge](https://img.shields.io/badge/msbuddy-MS_tool-<COLOR>.svg)](https://github.com/Philipbear/msbuddy)
 
 <p align="center">
   <img src="https://github.com/Philipbear/msbuddy/blob/main/logo/logo.svg" alt="Sample Image" height="100"/>
@@ -37,7 +37,7 @@ pip install lightgbm
 ### Quick start ([docs](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 As a quick start, we here load a mgf file and annotate the molecular formula for each query.
 All the configurations are specified in the [`MsbuddyConfig`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.MsbuddyConfig) class.
-[Parallel computing](https://msbuddy.readthedocs.io/en/latest/quickstart.html) is supported.
+Parallel computing is supported.
 
 ```python
 from msbuddy import Msbuddy, MsbuddyConfig
