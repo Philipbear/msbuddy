@@ -22,7 +22,7 @@ from msbuddy.main import Msbuddy, MsbuddyConfig
 
 
 def main():
-    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.3.0)")
+    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.3.6)")
     parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('-usi', type=str, help='A single USI string.')
     parser.add_argument('-csv', type=str,
@@ -42,8 +42,8 @@ def main():
                         help='Store true. Whether to use parallel computing. Default: parallel computing is disabled.')
     parser.add_argument('-n_cpu', type=int, default=-1, help='Number of CPUs to use. Default: -1, use all CPUs.')
     parser.add_argument('-timeout_secs', '-t', type=int, default=300, help='Timeout in seconds. Default: 300.')
-    parser.add_argument('-batch_size', '-bs', type=int, default=1000,
-                        help='Batch size. Default: 1000. A larger batch size needs more memory, but is faster.')
+    parser.add_argument('-batch_size', '-bs', type=int, default=2000,
+                        help='Batch size. Default: 2000. A larger batch size needs more memory, but is faster.')
     parser.add_argument('-c_min', type=int, default=0, help='Minimum number of C atoms. Default: 0.')
     parser.add_argument('-c_max', type=int, default=80, help='Maximum number of C atoms. Default: 80.')
     parser.add_argument('-h_min', type=int, default=0, help='Minimum number of H atoms. Default: 0.')
