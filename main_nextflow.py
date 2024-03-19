@@ -23,13 +23,7 @@ from msbuddy.main import Msbuddy, MsbuddyConfig
 
 def main():
     parser = argparse.ArgumentParser(description="msbuddy on Nextflow.")
-    # parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
-    # parser.add_argument('-usi', type=str, help='A single USI string.')
-    # parser.add_argument('-csv', type=str, help='Path to the CSV file containing USI strings in the first column (no header row).')
     parser.add_argument('-input', type=str, default=None, help='Path to the input file.')
-    # parser.add_argument('-output', '-o', type=str, help='The output file path.')
-    # parser.add_argument('-details', '-d', type=int, default=0,
-    #                     help='Whether to write detailed results. Default: False.')
     parser.add_argument('-ms_instr', '-ms', type=str, default=None,
                         help='MS instrument type. Supported types: orbitrap, qtof, fticr.')
     parser.add_argument('-ppm', type=int, default=1,

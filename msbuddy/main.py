@@ -90,7 +90,7 @@ class MsbuddyConfig:
         :param rel_int_denoise_cutoff: relative intensity cutoff, used for MS2 denoise
         :param top_n_per_50_da: top n peaks to keep in each 50 Da, used for MS2 denoise
         """
-        if ms_instr is None:
+        if ms_instr is None or ms_instr == "None":
             self.ppm = ppm
             self.ms1_tol = ms1_tol
             self.ms2_tol = ms2_tol
