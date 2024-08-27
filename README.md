@@ -31,6 +31,9 @@ To perform formula annotation, you also have to install the [lightgbm](https://g
 ```commandline
 pip install lightgbm
 ```
+``
+Note: Python 3.9 or later is required.
+``
 
 ## Python usage 
 
