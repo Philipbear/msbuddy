@@ -169,3 +169,4 @@ cython_debug/
 /ms2_lib/
 
 .pypirc
+package_update.md
