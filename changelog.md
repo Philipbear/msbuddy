@@ -51,3 +51,10 @@ Now we use a learning-to-rank model to rank the formula candidates.
 
 0.3.5 / 0.3.6 (2024-01-29)
 - Bug fix for MS/MS preprocessing.
+
+0.3.7 (2024-03-19)
+- Update cmd line bug.
+
+0.3.8 (2024-10-14)
+- Update mgf loader. Add more field names for adduct loading.
+

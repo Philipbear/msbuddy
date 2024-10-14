@@ -171,7 +171,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     key, value = _line.split('=', 1)
                     key, value = key.strip(), value.strip()
                     # if key (into all upper case) is 'PEPMASS', it is precursor mz
-                    if key.upper() in ['PEPMASS', 'PRECURSOR_MZ']:
+                    if key.upper() in ['PEPMASS', 'PRECURSOR_MZ', 'PRECURSORMZ']:
                         precursor_mz = float(value)
                     # identifier
                     elif key.upper() in ['TITLE', 'FEATURE_ID', 'SPECTRUMID', 'SPECTRUM_ID']:
@@ -187,10 +187,10 @@ def load_mgf(file_path) -> List[MetaFeature]:
                             value = value.replace('+', '')
                             charge = int(value)
                     # if key is 'ION', it is adduct type
-                    elif key.upper() == 'ION':
+                    elif key.upper() in ['ION', 'IONTYPE', 'ION_TYPE', 'ADDUCT', 'ADDUCTTYPE', 'ADDUCT_TYPE']:
                         adduct_str = value
                     # if key is 'IONMODE', it is ion mode
-                    elif key.upper() == 'IONMODE':
+                    elif key.upper() in ['IONMODE', 'ION_MODE']:
                         if value.upper() in ['POSITIVE', 'POS', 'P']:
                             pos_mode = True
                         elif value.upper() in ['NEGATIVE', 'NEG', 'N']:
