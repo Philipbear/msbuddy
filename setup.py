@@ -24,7 +24,7 @@ setuptools.setup(
     },
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: Apache 2.0 License",
         "Operating System :: OS Independent",
     ],
     packages=["msbuddy"],
