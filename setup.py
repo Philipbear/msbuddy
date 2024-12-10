@@ -7,7 +7,7 @@ setuptools.setup(
     name="msbuddy",
     version="0.3.8",
     author="Shipei Xing",
-    author_email="s1xing@health.ucsd.edu",
+    author_email="philipxsp@hotmail.com",
     description="Molecular formula annotation for MS-based small molecule analysis.",
     long_description=long_description,
     long_description_content_type="text/markdown",

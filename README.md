@@ -138,4 +138,4 @@ msbuddy --help
 This work is licensed under the Apache License 2.0.
 
 ## Contact
-Please contact the msbuddy developer & maintainer Shipei Xing via **s1xing@health.ucsd.edu** or **philipxsp@hotmail.com**.
+Please contact the msbuddy developer & maintainer Shipei Xing via **philipxsp@hotmail.com**.
