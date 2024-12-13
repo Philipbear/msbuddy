@@ -32,7 +32,7 @@ To perform formula annotation, you also have to install the [lightgbm](https://g
 pip install lightgbm
 ```
 ``
-Note: Python 3.9 or later is required.
+Note: Python version >= 3.9 and <3.13 is required.
 ``
 
 ## Python usage 
