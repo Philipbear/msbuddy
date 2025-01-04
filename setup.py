@@ -40,5 +40,5 @@ setuptools.setup(
         "tqdm",
         "pandas"
     ],
-    python_requires=">=3.9"
+    python_requires=">=3.8"
 )
