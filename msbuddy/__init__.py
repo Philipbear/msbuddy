@@ -9,7 +9,7 @@ __email__ = "philipxsp@hotmail.com"
 __author_email__ = "philipxsp@hotmail.com"
 
 __copyright__ = "Copyright 2024 Shipei Xing"
-__license__ = "Apache 2.0 License"
+__license_expression__ = "Apache 2.0"
 
 __url__ = "https://github.com/Philipbear/msbuddy"
 __docs__ = "https://msbuddy.readthedocs.io/en/latest"
