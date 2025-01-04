@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024 Shipei Xing <philipxsp@hotmail.com>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,7 +8,7 @@
 """
 File: query.py
 Author: Shipei Xing
-Email: s1xing@health.ucsd.edu
+Email: philipxsp@hotmail.com
 GitHub: Philipbear
 Description: query mass in database
 """
@@ -57,12 +57,13 @@ def _get_formula_db_idx(start_idx, end_idx, db_mode: int, gd) -> Tuple[int, int]
     return int(db_start_idx), int(db_end_idx)
 
 
-def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, gd) -> List[Formula]:
+def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, halogen: bool, gd) -> List[Formula]:
     """
     search neutral mass in neutral formula database
     :param mass: mass to search
     :param mz_tol: mass tolerance
     :param ppm: whether ppm is used
+    :param halogen: whether halogen is considered
     :param gd: global dependencies dictionary
     :return: list of Formula
     """
@@ -84,11 +85,12 @@ def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, gd) -> List[Formul
     forms_basic = _func_a(results_basic_mass, results_basic_formula, target_mass, mass_tol, None)
     formulas.extend(forms_basic)
 
-    db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
-    results_halogen_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
-    results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
-    forms_halogen = _func_a(results_halogen_mass, results_halogen_formula, target_mass, mass_tol, None)
-    formulas.extend(forms_halogen)
+    if halogen:
+        db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
+        results_halogen_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
+        results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
+        forms_halogen = _func_a(results_halogen_mass, results_halogen_formula, target_mass, mass_tol, None)
+        formulas.extend(forms_halogen)
 
     return formulas
 

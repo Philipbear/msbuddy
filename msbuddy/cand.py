@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024 Shipei Xing <philipxsp@hotmail.com>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,7 +8,7 @@
 """
 File: cand.py
 Author: Shipei Xing
-Email: s1xing@health.ucsd.edu
+Email: philipxsp@hotmail.com
 GitHub: Philipbear
 Description: generate candidate formula space for a metabolic feature; mass search and bottom-up MS/MS interrogation
 """

@@ -47,7 +47,7 @@ Now we use a learning-to-rank model to rank the formula candidates.
 - Bug fix for candidate formula generation (pre-ranking).
 
 0.3.4 (2024-01-29)
-- Update function 'load_mgf': 'FEATURE_ID' now is added as a new identifier for metabolite features.
+- Update function `load_mgf`: 'FEATURE_ID' now is added as a new identifier for metabolite features.
 
 0.3.5 / 0.3.6 (2024-01-29)
 - Bug fix for MS/MS preprocessing.
@@ -58,3 +58,6 @@ Now we use a learning-to-rank model to rank the formula candidates.
 0.3.8 (2024-10-14)
 - Update mgf loader. Add more field names for adduct loading.
 
+0.3.9 (2025-01-03)
+- Include 'halogen' argument in `mass_to_formula` and `mz_to_formula` functions.
+- Minor updates on text output.
