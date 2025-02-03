@@ -61,3 +61,6 @@ Now we use a learning-to-rank model to rank the formula candidates.
 0.3.9 (2025-01-03)
 - Include 'halogen' argument in `mass_to_formula` and `mz_to_formula` functions.
 - Minor updates on text output.
+
+0.3.10 (2025-02-02)
+-  Include 'dbe_cutoff' argument in `mass_to_formula` and `mz_to_formula` functions.

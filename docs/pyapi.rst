@@ -112,14 +112,15 @@ Example Usage:
    all_subform_arr = enumerate_subform_arr([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
    print(all_subform_arr)
 
-.. function:: mass_to_formula (mass: float, mass_tol: float, ppm: bool, halogen: bool)
+.. function:: mass_to_formula (mass: float, mass_tol: float, ppm: bool, halogen: bool, dbe_cutoff: float)
 
    Convert a monoisotopic mass (neutral) to formula, return list of :class:`msbuddy.utils.FormulaResult`. This function relies on the global dependencies within the :class:`msbuddy.Msbuddy`. It works by database searching. Formula results are sorted by the absolute mass error.
 
    :param mass: float. Target mass, should be <1500 Da.
-   :param mass_tol: float. The mass tolerance for searching.
-   :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
-   :param halogen: bool. If True, the halogen elements (F, Cl, Br, I) are considered.
+   :param mass_tol: float. The mass tolerance for searching. Default is 10 ppm.
+   :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da. Default is True.
+   :param halogen: bool. If True, the halogen elements (F, Cl, Br, I) are considered. Default is False.
+   :param dbe_cutoff: float. The DBE cutoff for filtering out formula results. Default is 0.0.
    :returns: A list of :class:`msbuddy.utils.FormulaResult` objects.
 
 Example Usage:
@@ -132,22 +133,23 @@ Example Usage:
    engine = Msbuddy()
 
    # convert mass to formula
-   formula_list = engine.mass_to_formula(300.0000, 10, True, True)
+   formula_list = engine.mass_to_formula(300.0000, 10, True, True, 0.0)
 
    # print results
    for f in formula_list:
       print(f.formula, f.mass_error, f.mass_error_ppm)
 
 
-.. function:: mz_to_formula (mz: float, adduct: str, mz_tol: float, ppm: bool, halogen: bool)
+.. function:: mz_to_formula (mz: float, adduct: str, mz_tol: float, ppm: bool, halogen: bool, dbe_cutoff: float)
 
    Convert a m/z value to formula, return list of :class:`msbuddy.utils.FormulaResult`. This function relies on the global dependencies within the :class:`msbuddy.Msbuddy`. It works by database searching. Formula results are sorted by the absolute mass error.
 
    :param mz: float. Target m/z value, should be <1500.
    :param adduct: str. Precursor type string, e.g. "[M+H]+", "[M-H]-".
-   :param mz_tol: float. The m/z tolerance for searching.
-   :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da.
-   :param halogen: bool. If True, the halogen elements (F, Cl, Br, I) are considered.
+   :param mz_tol: float. The m/z tolerance for searching. Default is 10 ppm.
+   :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da. Default is True.
+   :param halogen: bool. If True, the halogen elements (F, Cl, Br, I) are considered. Default is False.
+   :param dbe_cutoff: float. The DBE cutoff for filtering out formula results. Default is 0.0.
    :returns: A list of :class:`msbuddy.utils.FormulaResult` objects.
 
 Example Usage:
@@ -160,7 +162,7 @@ Example Usage:
    engine = Msbuddy()
 
    # convert mz to formula
-   formula_list = engine.mz_to_formula(300.0000, "[M+H]+", 10, True, True)
+   formula_list = engine.mz_to_formula(300.0000, "[M+H]+", 10, True, True, 0.0)
 
    # print results
    for f in formula_list:
