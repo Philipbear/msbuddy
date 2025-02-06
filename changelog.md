@@ -64,3 +64,7 @@ Now we use a learning-to-rank model to rank the formula candidates.
 
 0.3.10 (2025-02-02)
 -  Include 'dbe_cutoff' argument in `mass_to_formula` and `mz_to_formula` functions.
+
+0.3.11 (2025-02-05)
+-  Include 'integer_dbe' argument in `mass_to_formula` and `mz_to_formula` functions.
+-  In `mass_to_formula` and `mz_to_formula` functions, only output formulas that pass SENIOR rules.

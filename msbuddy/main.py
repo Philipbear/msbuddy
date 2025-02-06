@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from msbuddy.base import MetaFeature, Adduct, check_adduct
+from msbuddy.base import MetaFeature, Adduct, check_adduct, senior_rules
 from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.export import write_batch_results_cmd
 from msbuddy.load import init_db, load_usi, load_mgf
@@ -420,7 +420,8 @@ class Msbuddy:
         return result_summary_list
 
     def mass_to_formula(self, mass: float, mass_tol: float = 10., ppm: bool = True,
-                        halogen: bool = False, dbe_cutoff: float = 0.0) -> List[FormulaResult]:
+                        halogen: bool = False, dbe_cutoff: float = 0.0,
+                        integer_dbe: bool = True) -> List[FormulaResult]:
         """
         convert mass to formula, return list of formula strings
         :param mass: target mass, should be <1500 Da
@@ -428,10 +429,17 @@ class Msbuddy:
         :param ppm: whether mass_tol is in ppm
         :param halogen: whether to include halogen atoms
         :param dbe_cutoff: double bond equivalent cutoff
+        :param integer_dbe: whether to return only integer DBE
         :return: list of FormulaResult objects
         """
         formulas = query_neutral_mass(mass, mass_tol, ppm, halogen, shared_data_dict)
-        out = [FormulaResult(form_arr_to_str(f.array), f.mass, mass) for f in formulas if f.dbe >= dbe_cutoff]
+
+        if integer_dbe:
+            out = [FormulaResult(form_arr_to_str(f.array), f.mass, mass) for f in formulas
+                   if f.dbe >= dbe_cutoff and f.dbe % 1 == 0 and senior_rules(f.array)]
+        else:
+            out = [FormulaResult(form_arr_to_str(f.array), f.mass, mass) for f in formulas
+                   if f.dbe >= dbe_cutoff and senior_rules(f.array)]
 
         # sort by absolute mass error, ascending
         out.sort(key=lambda x: abs(x.mass_error))
@@ -440,7 +448,7 @@ class Msbuddy:
 
     def mz_to_formula(self, mz: float, adduct: str = '[M+H]+',
                       mz_tol: float = 10., ppm: bool = True, halogen: bool = False,
-                      dbe_cutoff: float = 0.0) -> List[FormulaResult]:
+                      dbe_cutoff: float = 0.0, integer_dbe: bool = True) -> List[FormulaResult]:
         """
         convert mz to formula, return list of formula strings
         :param mz: target mz, should be <1500 Da
@@ -449,6 +457,7 @@ class Msbuddy:
         :param ppm: whether mz_tol is in ppm
         :param halogen: whether to include halogen atoms
         :param dbe_cutoff: double bond equivalent cutoff
+        :param integer_dbe: whether to return only integer DBE
         :return: list of FormulaResult objects
         """
         valid_adduct, pos_mode = check_adduct(adduct)
@@ -464,9 +473,16 @@ class Msbuddy:
             formulas, _ = query_precursor_mass(mz, ion, mz_tol, ppm, 0, shared_data_dict)
 
         ion_int = 1 if pos_mode else -1
-        out = [FormulaResult(form_arr_to_str(f.array),
-                             (f.mass * ion.m + ion.net_formula.mass - ion_int * 0.00054858) / abs(ion.charge),
-                             mz) for f in formulas if f.dbe >= dbe_cutoff]
+
+        if integer_dbe:
+            out = [FormulaResult(form_arr_to_str(f.array),
+                                 (f.mass * ion.m + ion.net_formula.mass - ion_int * 0.00054858) / abs(ion.charge),
+                                 mz) for f in formulas if f.dbe >= dbe_cutoff and f.dbe % 1 == 0 and senior_rules(f.array)]
+        else:
+            out = [FormulaResult(form_arr_to_str(f.array),
+                                 (f.mass * ion.m + ion.net_formula.mass - ion_int * 0.00054858) / abs(ion.charge),
+                                 mz) for f in formulas if f.dbe >= dbe_cutoff and senior_rules(f.array)]
+
         # sort by absolute mass error, ascending
         out.sort(key=lambda x: abs(x.mass_error))
         return out

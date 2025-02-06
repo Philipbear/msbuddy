@@ -91,6 +91,19 @@ def calc_formula_mass(array, charge, isotope):
     return mass
 
 
+@njit
+def senior_rules(form_arr: np.array) -> bool:
+    """
+    Filter formulas by SENIOR rules.
+    :param form_arr: 1D array
+    :return: bool
+    """
+    senior_1_1_arr = 6 * form_arr[11] + 5 * form_arr[10] + 4 * form_arr[0] + 3 * form_arr[7] + 2 * form_arr[9] + \
+                     form_arr[1] + form_arr[4] + form_arr[3] + form_arr[2] + form_arr[5] + form_arr[8] + form_arr[6]
+    senior_2_arr = np.sum(form_arr)
+    return senior_1_1_arr >= 2 * (senior_2_arr - 1)
+
+
 class Spectrum:
     def __init__(self, mz_array: np.array, int_array: np.array):
         """
