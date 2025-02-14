@@ -75,6 +75,26 @@ def init_db() -> dict:
     global_dict['basic_db_mass'], global_dict['basic_db_formula'], global_dict['basic_db_idx'] = basic_db
     global_dict['halogen_db_mass'], global_dict['halogen_db_formula'], global_dict['halogen_db_idx'] = halogen_db
 
+    return global_dict
+
+
+def init_ml_models(global_dict) -> dict:
+    """
+    init ml models if not exists
+    :return: global_dict
+    """
+
+    # check if ml models exist
+    if 'model_ms1_ms2' in global_dict:
+        return global_dict
+
+    # get root path
+    root_path = Path(__file__).parent
+
+    # create data folder if not exists
+    data_path = root_path / 'data'
+    data_path.mkdir(parents=True, exist_ok=True)
+
     # load ml
     ml_name = 'ml_' + current_model_version + '.joblib'
     (global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[

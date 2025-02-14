@@ -26,7 +26,7 @@ from tqdm import tqdm
 from msbuddy.base import MetaFeature, Adduct, check_adduct, senior_rules
 from msbuddy.cand import gen_candidate_formula, assign_subformula_cand_form
 from msbuddy.export import write_batch_results_cmd
-from msbuddy.load import init_db, load_usi, load_mgf
+from msbuddy.load import init_db, init_ml_models, load_usi, load_mgf
 from msbuddy.ml import predict_formula_probability, calc_fdr
 from msbuddy.query import query_neutral_mass, query_precursor_mass
 from msbuddy.utils import form_arr_to_str, FormulaResult
@@ -185,8 +185,7 @@ class Msbuddy:
 
     def __init__(self, config: Union[MsbuddyConfig, None] = None):
 
-        # tqdm.write("msbuddy: molecular formula annotation for MS-based small molecule analysis.")
-        # tqdm.write("Developed and maintained by Shipei Xing.")
+        tqdm.write("msbuddy: molecular formula annotation for MS-based small molecule analysis.")
 
         if config is None:
             self.config = MsbuddyConfig()  # default configuration
@@ -318,6 +317,9 @@ class Msbuddy:
         -> subformula annotation -> ml model B -> FDR calculation
         :return: None. Update self.data
         """
+        global shared_data_dict  # Declare it as a global variable
+        shared_data_dict = init_ml_models(shared_data_dict)  # ml models initialization
+
         n_batch = self._annotate_formula_prepare()
 
         # loop over batches
@@ -334,6 +336,9 @@ class Msbuddy:
         :param write_details: whether to write out detailed results
         :return: None
         """
+        global shared_data_dict  # Declare it as a global variable
+        shared_data_dict = init_ml_models(shared_data_dict)  # ml models initialization
+
         n_batch = self._annotate_formula_prepare()
         output_path.mkdir(parents=True, exist_ok=True)
 
