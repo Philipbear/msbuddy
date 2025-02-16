@@ -3,7 +3,7 @@ from .base import Formula, Spectrum, Adduct, MetaFeature
 from .main import Msbuddy, MsbuddyConfig
 from .utils import read_formula, form_arr_to_str, enumerate_subform_arr
 
-__version__ = "0.3.9"
+__version__ = "0.3.12"
 __author__ = "Shipei Xing"
 __email__ = "philipxsp@hotmail.com"
 __author_email__ = "philipxsp@hotmail.com"
