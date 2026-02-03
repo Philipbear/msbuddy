@@ -244,8 +244,8 @@ def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
     :return: MetaFeature object
     """
     # get spectrum from USI
-    url = 'https://metabolomics-usi.gnps2.org/json/?usi1=' + usi
-    response = get(url)
+    url = 'https://api.metabolomics-usi.gnps2.org/json/?usi1=' + usi
+    response = get(url, timeout=10)
     json_data = loads(response.text)
 
     # check if the USI is valid
@@ -259,9 +259,13 @@ def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
     # valid: dict_keys(['n_peaks', 'peaks', 'precursor_charge', 'precursor_mz', 'splash'])
     # ion mode
     charge = json_data['precursor_charge']
-    if charge == 0 and adduct is not None:
-        pos_mode = str(adduct)[-1] != '-'  # use adduct if charge is 0
-        charge = 1 if pos_mode else -1
+    if charge == 0:
+        if adduct is not None:
+            pos_mode = str(adduct)[-1] != '-'  # use adduct if charge is 0
+            charge = 1 if pos_mode else -1
+        else:
+            charge = 1  # default to +1
+            logging.warning('Charge is 0 and adduct is not provided. Default charge +1 is used.')
 
     ms2_mz = np.array(json_data['peaks'])[:, 0]
     ms2_int = np.array(json_data['peaks'])[:, 1]
@@ -327,7 +331,12 @@ def load_usi(usi_list: Union[str, List[str]],
 
 
 if __name__ == '__main__':
-    init_db()
+    
+    mf = _load_usi('mzspec:TINYMASS:01KG1DBJTAEHQGZRPNZPHF8EYN:scan:1')
+    print(mf)
+    
+    # init_db()
+    #############
     # compile all these databases
     # import joblib
     # basic_db_mass = j_load('../db_prep/basic_db_mass.joblib')

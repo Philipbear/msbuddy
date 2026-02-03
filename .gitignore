@@ -170,3 +170,7 @@ cython_debug/
 
 .pypirc
 package_update.md
+.DS*
+.idea/
+figures/
+logo/

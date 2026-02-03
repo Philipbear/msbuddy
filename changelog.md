@@ -71,3 +71,6 @@ Now we use a learning-to-rank model to rank the formula candidates.
 
 0.3.12 (2025-02-13)
 -  `lightgbm` is not required if only using `mass_to_formula` and `mz_to_formula` functions.
+
+0.3.13, 0.3.14 (2026-01-27)
+- Update USI loading function.
