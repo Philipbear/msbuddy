@@ -110,13 +110,13 @@ def enumerate_subformula(pre_charged_arr: np.array) -> np.array:
     for i in range(n):
         count = pre_charged_arr[i]
         repeatSize = tempSize
-        tempSize *= (count + 1)
+        tempSize *= count + 1
 
         pattern = np.arange(count + 1)
 
         repeated_pattern = np.empty(repeatSize * len(pattern), dtype=np.int16)
         for j in range(len(pattern)):
-            repeated_pattern[j * repeatSize: (j + 1) * repeatSize] = pattern[j]
+            repeated_pattern[j * repeatSize : (j + 1) * repeatSize] = pattern[j]
 
         full_repeats = total_subform_cnt // len(repeated_pattern)
 
@@ -130,10 +130,20 @@ def enumerate_subformula(pre_charged_arr: np.array) -> np.array:
 
 # for numba
 alphabet_np = np.array(
-    [ord(char) for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"] for char in word],
-    dtype=np.int16)
-word_lengths = np.array([len(word) for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]],
-                        dtype=np.int16)
+    [
+        ord(char)
+        for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
+        for char in word
+    ],
+    dtype=np.int16,
+)
+word_lengths = np.array(
+    [
+        len(word)
+        for word in ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
+    ],
+    dtype=np.int16,
+)
 
 
 @njit
@@ -164,7 +174,7 @@ def _ascii_to_str(ascii_arr) -> str:
     :param ascii_arr: ASCII array
     :return: string
     """
-    return ''.join(chr(i) for i in ascii_arr)
+    return "".join(chr(i) for i in ascii_arr)
 
 
 def form_arr_to_str(form_arr) -> str:
@@ -205,9 +215,9 @@ def read_formula_str(x: str) -> dict:
     :return: formula dictionary
     """
     # if x contains '.', read two parts
-    if '.' in x:
-        x1 = x.split('.')[0]
-        x2 = x.split('.')[1]
+    if "." in x:
+        x1 = x.split(".")[0]
+        x2 = x.split(".")[1]
         form1 = _read_formula_str(x1)  # this is a dict
         form2 = _read_formula_str(x2)
         # merge two dicts, add values with same keys

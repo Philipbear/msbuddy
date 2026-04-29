@@ -1,16 +1,18 @@
 # test msbuddy
 # ver 0.3.0
 
+
 def test_main():
     from msbuddy import Msbuddy, MsbuddyConfig
+
     # instantiate a MsbuddyConfig object
-    msb_config = MsbuddyConfig(ms_instr='orbitrap', halogen=False)
+    msb_config = MsbuddyConfig(ms_instr="orbitrap", halogen=False)
 
     # instantiate a Msbuddy object
     msb_engine = Msbuddy(msb_config)
 
     # you can load multiple USIs at once
-    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
+    msb_engine.load_mgf("./demo/input_file.mgf")
 
     # annotate molecular formula
     msb_engine.annotate_formula()
@@ -63,13 +65,18 @@ def test_mass_formula():
 def test_subformula():
     from msbuddy import assign_subformula
 
-    subformla_list = assign_subformula([107.05, 149.02, 209.04, 221.04, 230.96],
-                                       precursor_formula="C15H16O5", adduct="[M+H]+",
-                                       ms2_tol=0.02, ppm=False, dbe_cutoff=-1.0)
+    subformla_list = assign_subformula(
+        [107.05, 149.02, 209.04, 221.04, 230.96],
+        precursor_formula="C15H16O5",
+        adduct="[M+H]+",
+        ms2_tol=0.02,
+        ppm=False,
+        dbe_cutoff=-1.0,
+    )
     print(len(subformla_list))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_main()
     test_formula()
     test_mass_formula()

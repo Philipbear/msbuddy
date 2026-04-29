@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "msbuddy"
+version = "0.3.14"
+description = "Molecular formula annotation for MS-based small molecule analysis."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "Apache-2.0"
+authors = [
+    { name = "Shipei Xing", email = "philipxsp@hotmail.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "brain-isotopic-distribution",
+    "numpy",
+    "numba",
+    "requests",
+    "joblib",
+    "gdown",
+    "chemparse",
+    "scipy",
+    "tqdm",
+    "pandas",
+    "lightgbm>=4.6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Philipbear/msbuddy"
+"Bug Tracker" = "https://github.com/Philipbear/msbuddy/issues"
+Documentation = "https://msbuddy.readthedocs.io/en/latest/"
+
+[project.scripts]
+msbuddy = "msbuddy.main_cmd:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["msbuddy"]

@@ -29,8 +29,23 @@ logging.basicConfig(level=logging.WARNING)
 
 class Formula:
     alphabet = ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
-    mass_arr = np.array([12.000000, 1.007825, 78.918336, 34.968853, 18.998403, 126.904473, 38.963707, 14.003074,
-                         22.989769, 15.994915, 30.973762, 31.972071], dtype=np.float32)
+    mass_arr = np.array(
+        [
+            12.000000,
+            1.007825,
+            78.918336,
+            34.968853,
+            18.998403,
+            126.904473,
+            38.963707,
+            14.003074,
+            22.989769,
+            15.994915,
+            30.973762,
+            31.972071,
+        ],
+        dtype=np.float32,
+    )
 
     # array: np.array(int)
     # charge: int
@@ -38,11 +53,13 @@ class Formula:
     # dbe: float
     # isotope: int # M+0, M+1
 
-    def __init__(self,
-                 array: np.array,
-                 charge: int,
-                 mass: Union[float, None] = None,
-                 isotope: int = 0):
+    def __init__(
+        self,
+        array: np.array,
+        charge: int,
+        mass: Union[float, None] = None,
+        isotope: int = 0,
+    ):
         self.array = np.int16(array)
         self.charge = charge
         self.dbe = calc_formula_dbe(array)
@@ -60,7 +77,7 @@ class Formula:
 
     def __str__(self) -> str:
         if not self:
-            return 'Null'
+            return "Null"
         return form_arr_to_str(self.array)
 
 
@@ -72,7 +89,12 @@ def calc_formula_dbe(arr):
     """
     # ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
     # DBE: C + 1 - (H + F + Cl + Br + I + Na + K)/2 + (N + P)/2
-    dbe = arr[0] + 1 - (arr[1] + arr[4] + arr[3] + arr[2] + arr[5] + arr[8] + arr[6]) / 2 + (arr[7] + arr[10]) / 2
+    dbe = (
+        arr[0]
+        + 1
+        - (arr[1] + arr[4] + arr[3] + arr[2] + arr[5] + arr[8] + arr[6]) / 2
+        + (arr[7] + arr[10]) / 2
+    )
     return dbe
 
 
@@ -82,12 +104,30 @@ def calc_formula_mass(array, charge, isotope):
     calculate monoisotopic mass of a formula, charge adjusted
     :return: mass
     """
-    ele_mass_arr = np.array([12.000000, 1.007825, 78.918336, 34.968853, 18.998403, 126.904473, 38.963707, 14.003074,
-                             22.989769, 15.994915, 30.973762, 31.972071], dtype=np.float32)
+    ele_mass_arr = np.array(
+        [
+            12.000000,
+            1.007825,
+            78.918336,
+            34.968853,
+            18.998403,
+            126.904473,
+            38.963707,
+            14.003074,
+            22.989769,
+            15.994915,
+            30.973762,
+            31.972071,
+        ],
+        dtype=np.float32,
+    )
     if charge == 0:
         mass = float(np.sum(array * ele_mass_arr) + isotope * mass_i)
     else:
-        mass = float((np.sum(array * ele_mass_arr) - charge * mass_e + isotope * mass_i) / abs(charge))
+        mass = float(
+            (np.sum(array * ele_mass_arr) - charge * mass_e + isotope * mass_i)
+            / abs(charge)
+        )
     return mass
 
 
@@ -98,8 +138,20 @@ def senior_rules(form_arr: np.array) -> bool:
     :param form_arr: 1D array
     :return: bool
     """
-    senior_1_1_arr = 6 * form_arr[11] + 5 * form_arr[10] + 4 * form_arr[0] + 3 * form_arr[7] + 2 * form_arr[9] + \
-                     form_arr[1] + form_arr[4] + form_arr[3] + form_arr[2] + form_arr[5] + form_arr[8] + form_arr[6]
+    senior_1_1_arr = (
+        6 * form_arr[11]
+        + 5 * form_arr[10]
+        + 4 * form_arr[0]
+        + 3 * form_arr[7]
+        + 2 * form_arr[9]
+        + form_arr[1]
+        + form_arr[4]
+        + form_arr[3]
+        + form_arr[2]
+        + form_arr[5]
+        + form_arr[8]
+        + form_arr[6]
+    )
     senior_2_arr = np.sum(form_arr)
     return senior_1_1_arr >= 2 * (senior_2_arr - 1)
 
@@ -147,10 +199,9 @@ class Adduct:
     # for example, [M+H-H2O]+ has loss formula H2O; [M+Na]+ has no loss formula;
     # [M - 2H2O - Cl] - has loss formula H4O2Cl
 
-    def __init__(self,
-                 string: Union[str, None],
-                 pos_mode: bool,
-                 report_invalid: bool = False):
+    def __init__(
+        self, string: Union[str, None], pos_mode: bool, report_invalid: bool = False
+    ):
         """
         :param string: adduct string, e.g. [M+H]+
         :param pos_mode: True for positive mode, False for negative mode
@@ -183,24 +234,44 @@ class Adduct:
         check whether the adduct string is valid
         :return: True for valid, False for invalid
         """
-        if self.string.count(']') == 1 and self.string.count('[') == 1 and 'M' in self.string:
-            if ("+" in self.string[len(self.string) - 1] and self.pos_mode) \
-                    or ("-" in self.string[len(self.string) - 1] and not self.pos_mode):
+        if (
+            self.string.count("]") == 1
+            and self.string.count("[") == 1
+            and "M" in self.string
+        ):
+            if ("+" in self.string[len(self.string) - 1] and self.pos_mode) or (
+                "-" in self.string[len(self.string) - 1] and not self.pos_mode
+            ):
                 return True
         return False
 
     # return true for valid characters in the string (except the common abbr.)
     def _check_valid_character(self) -> bool:
-        valid_elements = {"-", "+", "C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"}
+        valid_elements = {
+            "-",
+            "+",
+            "C",
+            "H",
+            "Br",
+            "Cl",
+            "F",
+            "I",
+            "K",
+            "N",
+            "Na",
+            "O",
+            "P",
+            "S",
+        }
 
-        m_index = self.string.index('M')
-        right_index = self.string.index(']')
-        segment = self.string[m_index + 1: right_index]
+        m_index = self.string.index("M")
+        right_index = self.string.index("]")
+        segment = self.string[m_index + 1 : right_index]
 
         i = 0
         while i < len(segment):
             # Check for two-character elements
-            if i < len(segment) - 1 and segment[i:i + 2] in valid_elements:
+            if i < len(segment) - 1 and segment[i : i + 2] in valid_elements:
                 i += 2
             # Check for one-character elements and digits
             elif segment[i] in valid_elements or segment[i].isdigit():
@@ -215,73 +286,120 @@ class Adduct:
             raise ValueError("Adduct cannot be parsed: " + string)
         else:
             if self.pos_mode:
-                logging.warning("Adduct cannot be parsed: " + string + ", set to [M+H]+")
+                logging.warning(
+                    "Adduct cannot be parsed: " + string + ", set to [M+H]+"
+                )
                 self.string = "[M+H]+"
                 self.charge = +1
                 self.loss_formula = None
-                self.net_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
+                self.net_formula = Formula(
+                    array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0
+                )
             else:
-                logging.warning("Adduct cannot be parsed: " + string + ", set to [M-H]-")
+                logging.warning(
+                    "Adduct cannot be parsed: " + string + ", set to [M-H]-"
+                )
                 self.string = "[M-H]-"
                 self.charge = -1
-                self.loss_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
-                self.net_formula = Formula(array=[0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
+                self.loss_formula = Formula(
+                    array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0
+                )
+                self.net_formula = Formula(
+                    array=[0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0
+                )
             self.m = 1
 
     def _check_common(self) -> bool:
-        if self.pos_mode and self.string in ['[M+H]+', '[M+NH4]+', '[M+Na]+', '[M+K]+', '[M+H-H2O]+', '[M-H2O+H]+']:
+        if self.pos_mode and self.string in [
+            "[M+H]+",
+            "[M+NH4]+",
+            "[M+Na]+",
+            "[M+K]+",
+            "[M+H-H2O]+",
+            "[M-H2O+H]+",
+        ]:
             self.charge = +1
             self.m = 1
-            if self.string == '[M+H]+':
+            if self.string == "[M+H]+":
                 self.loss_formula = None
-                self.net_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
-            elif self.string == '[M+NH4]+':
+                self.net_formula = Formula(
+                    array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0
+                )
+            elif self.string == "[M+NH4]+":
                 self.loss_formula = None
-                self.net_formula = Formula(array=[0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], charge=0)
-            elif self.string == '[M+Na]+':
+                self.net_formula = Formula(
+                    array=[0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], charge=0
+                )
+            elif self.string == "[M+Na]+":
                 self.loss_formula = None
-                self.net_formula = Formula(array=[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], charge=0)
-            elif self.string == '[M+K]+':
+                self.net_formula = Formula(
+                    array=[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], charge=0
+                )
+            elif self.string == "[M+K]+":
                 self.loss_formula = None
-                self.net_formula = Formula(array=[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], charge=0)
+                self.net_formula = Formula(
+                    array=[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], charge=0
+                )
             else:
-                self.loss_formula = Formula(array=[0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], charge=0)
-                self.net_formula = Formula(array=[0, -1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0], charge=0)
+                self.loss_formula = Formula(
+                    array=[0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], charge=0
+                )
+                self.net_formula = Formula(
+                    array=[0, -1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0], charge=0
+                )
             return True
-        elif (not self.pos_mode) and self.string in ['[M-H]-', '[M+Cl]-', '[M+Br]-', '[M-H2O-H]-', '[M-H-H2O]-']:
+        elif (not self.pos_mode) and self.string in [
+            "[M-H]-",
+            "[M+Cl]-",
+            "[M+Br]-",
+            "[M-H2O-H]-",
+            "[M-H-H2O]-",
+        ]:
             self.charge = -1
             self.m = 1
-            if self.string == '[M-H]-':
-                self.loss_formula = Formula(array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
-                self.net_formula = Formula(array=[0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
-            elif self.string == '[M+Cl]-':
+            if self.string == "[M-H]-":
+                self.loss_formula = Formula(
+                    array=[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0
+                )
+                self.net_formula = Formula(
+                    array=[0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0
+                )
+            elif self.string == "[M+Cl]-":
                 self.loss_formula = None
-                self.net_formula = Formula(array=[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
-            elif self.string == '[M+Br]-':
+                self.net_formula = Formula(
+                    array=[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0], charge=0
+                )
+            elif self.string == "[M+Br]-":
                 self.loss_formula = None
-                self.net_formula = Formula(array=[0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0)
+                self.net_formula = Formula(
+                    array=[0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], charge=0
+                )
             else:
-                self.loss_formula = Formula(array=[0, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], charge=0)
-                self.net_formula = Formula(array=[0, -3, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0], charge=0)
+                self.loss_formula = Formula(
+                    array=[0, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], charge=0
+                )
+                self.net_formula = Formula(
+                    array=[0, -3, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0], charge=0
+                )
             return True
         return False
 
     def _calc_charge(self):
         if self.pos_mode:
-            _substr = self.string.split(']')[1].replace('+', '')
-            if _substr == '':
+            _substr = self.string.split("]")[1].replace("+", "")
+            if _substr == "":
                 self.charge = +1
             else:
                 self.charge = int(_substr)
         else:
-            _substr = self.string.split(']')[1].replace('-', '')
-            if _substr == '':
+            _substr = self.string.split("]")[1].replace("-", "")
+            if _substr == "":
                 self.charge = -1
             else:
                 self.charge = -int(_substr)
 
     def _calc_m(self):
-        idx = self.string.index('M')
+        idx = self.string.index("M")
         _substr = self.string[idx - 1]
         if _substr.isnumeric():
             self.m = int(_substr)
@@ -308,13 +426,13 @@ class Adduct:
         i = 1
         add_index = []
         loss_index = []
-        add = ''
-        loss = ''
-        repeat_add = ''
-        repeat_loss = ''
+        add = ""
+        loss = ""
+        repeat_add = ""
+        repeat_loss = ""
 
         # get the starting index of add and loss elements
-        for element in self.string[1: len(self.string) - 2]:
+        for element in self.string[1 : len(self.string) - 2]:
             if element == "+":
                 add_index.append(i)
             elif element == "-":
@@ -327,42 +445,42 @@ class Adduct:
         while len(add_index) != 0 and len(loss_index) != 0:
             if loss_index[0] < add_index[0]:
                 if len(loss_index) == 1:
-                    loss = loss + self.string[loss_index[0]:add_index[0]]
+                    loss = loss + self.string[loss_index[0] : add_index[0]]
                 else:
                     if loss_index[1] > add_index[0]:
-                        loss = loss + self.string[loss_index[0]:add_index[0]]
+                        loss = loss + self.string[loss_index[0] : add_index[0]]
                     else:
-                        loss = loss + self.string[loss_index[0]:loss_index[1]]
+                        loss = loss + self.string[loss_index[0] : loss_index[1]]
                 loss_index.remove(loss_index[0])
             else:
                 if len(add_index) == 1:
-                    add = add + self.string[add_index[0]:loss_index[0]]
+                    add = add + self.string[add_index[0] : loss_index[0]]
                 else:
                     if add_index[1] < loss_index[0]:
-                        add = add + self.string[add_index[0]:add_index[1]]
+                        add = add + self.string[add_index[0] : add_index[1]]
                     else:
-                        add = add + self.string[add_index[0]:loss_index[0]]
+                        add = add + self.string[add_index[0] : loss_index[0]]
                 add_index.remove(add_index[0])
         if len(add_index) == 0 and len(loss_index) == 0:
             self._invalid(self.string)
             return
         elif len(add_index) == 0:
-            right_index = self.string.index(']')
-            loss = loss + self.string[loss_index[0]: right_index]
+            right_index = self.string.index("]")
+            loss = loss + self.string[loss_index[0] : right_index]
         else:
-            right_index = self.string.index(']')
-            add = add + self.string[add_index[0]: right_index]
+            right_index = self.string.index("]")
+            add = add + self.string[add_index[0] : right_index]
 
         # deal with situation like "2H2O"
         for index, element in enumerate(loss):
             if element == "-":
-                if loss[len(loss) - 1] == '-' or loss[index + 1] == '-':
+                if loss[len(loss) - 1] == "-" or loss[index + 1] == "-":
                     self._invalid(self.string)
                     return
                 elif loss[index + 1].isnumeric():
-                    repeat_element = ''
+                    repeat_element = ""
                     repeat_time = int(loss[index + 1])
-                    for e in loss[index + 2:]:
+                    for e in loss[index + 2 :]:
                         if e != "-":
                             repeat_element = repeat_element + e
                         else:
@@ -370,22 +488,22 @@ class Adduct:
                     if repeat_time > 2:
                         repeat_element = repeat_element * (repeat_time - 1)
                     list1 = list(loss)
-                    list1[index + 1] = ' '
-                    loss = (''.join(list1))
+                    list1[index + 1] = " "
+                    loss = "".join(list1)
                     repeat_loss = repeat_loss + repeat_element
         if len(repeat_loss) != 0:
-            loss = loss + '-' + repeat_loss
+            loss = loss + "-" + repeat_loss
         loss = loss.replace(" ", "")
 
         for index2, element2 in enumerate(add):
-            if element2 == '+':
-                if add[len(add) - 1] == '+' or add[index2 + 1] == '+':
+            if element2 == "+":
+                if add[len(add) - 1] == "+" or add[index2 + 1] == "+":
                     self._invalid(self.string)
                     return
                 elif add[index2 + 1].isnumeric():
-                    repeat_element2 = ''
+                    repeat_element2 = ""
                     repeat_time2 = int(add[index2 + 1])
-                    for e2 in add[index2 + 2:]:
+                    for e2 in add[index2 + 2 :]:
                         if e2 != "+":
                             repeat_element2 = repeat_element2 + e2
                         else:
@@ -393,11 +511,11 @@ class Adduct:
                     if repeat_time2 > 2:
                         repeat_element2 = repeat_element2 * (repeat_time2 - 1)
                     list2 = list(add)
-                    list2[index2 + 1] = ''
-                    add = (''.join(list2))
+                    list2[index2 + 1] = ""
+                    add = "".join(list2)
                     repeat_add = repeat_add + repeat_element2
         if len(repeat_add) != 0:
-            add = add + '+' + repeat_add
+            add = add + "+" + repeat_add
         add = add.replace(" ", "")
 
         loss_array = read_formula(loss.replace("-", ""))
@@ -417,14 +535,18 @@ def check_adduct(adduct_str: str) -> Tuple[bool, bool]:
     # check whether the adduct string is valid
     adduct_str = adduct_str.replace(" ", "")
     # check '[' and ']' and 'M'
-    if adduct_str.count(']') != 1 or adduct_str.count('[') != 1 or 'M' not in adduct_str:
+    if (
+        adduct_str.count("]") != 1
+        or adduct_str.count("[") != 1
+        or "M" not in adduct_str
+    ):
         return False, False
     # check sign after ']'
-    if adduct_str[len(adduct_str) - 1] not in ['+', '-']:
+    if adduct_str[len(adduct_str) - 1] not in ["+", "-"]:
         return False, False
 
     # ion mode
-    pos_mode = True if adduct_str[len(adduct_str) - 1] == '+' else False
+    pos_mode = True if adduct_str[len(adduct_str) - 1] == "+" else False
     return True, pos_mode
 
 
@@ -438,13 +560,22 @@ class ProcessedMS1:
     :attr int_array: np.array
     """
 
-    def __init__(self, mz: float, raw_spec: Spectrum, charge: int,
-                 mz_tol: float, ppm: bool,
-                 isotope_bin_mztol: float, max_isotope_cnt: int):
+    def __init__(
+        self,
+        mz: float,
+        raw_spec: Spectrum,
+        charge: int,
+        mz_tol: float,
+        ppm: bool,
+        isotope_bin_mztol: float,
+        max_isotope_cnt: int,
+    ):
         if raw_spec:
             self.mz_tol = mz_tol
             self.ppm = ppm
-            self._find_ms1_isotope(mz, raw_spec, charge, isotope_bin_mztol, max_isotope_cnt)
+            self._find_ms1_isotope(
+                mz, raw_spec, charge, isotope_bin_mztol, max_isotope_cnt
+            )
         else:
             self.idx_array = np.array([], dtype=int)
             self.mz_array = np.array([], dtype=np.float32)
@@ -459,8 +590,14 @@ class ProcessedMS1:
     def __len__(self):
         return self.mz_array.size
 
-    def _find_ms1_isotope(self, mz: float, raw_spec: Spectrum, charge: int,
-                          isotope_bin_mztol: float, max_isotope_cnt: int):
+    def _find_ms1_isotope(
+        self,
+        mz: float,
+        raw_spec: Spectrum,
+        charge: int,
+        isotope_bin_mztol: float,
+        max_isotope_cnt: int,
+    ):
         """
         find the MS1 isotope pattern from MS1 raw spectrum, record all peaks (could have multiple peaks in one bin)
         :param mz: precursor mz
@@ -487,7 +624,9 @@ class ProcessedMS1:
         self.int_array = np.array([raw_spec.int_array[idx]])
 
         # find other isotope peaks
-        idx_arr = _find_iso_peaks(mz, raw_spec.mz_array, charge, isotope_bin_mztol, max_isotope_cnt)
+        idx_arr = _find_iso_peaks(
+            mz, raw_spec.mz_array, charge, isotope_bin_mztol, max_isotope_cnt
+        )
 
         self.idx_array = np.concatenate((self.idx_array, idx_arr))
         self.mz_array = np.concatenate((self.mz_array, raw_spec.mz_array[idx_arr]))
@@ -513,8 +652,13 @@ def _find_m0(mz: float, mz_array: np.array, mz_diff: float) -> Tuple[bool, int]:
     return m0_found, idx
 
 
-def _find_iso_peaks(mz: float, mz_arr: np.array, charge: int,
-                    isotope_bin_mztol: float, max_isotope_cnt: int) -> np.array:
+def _find_iso_peaks(
+    mz: float,
+    mz_arr: np.array,
+    charge: int,
+    isotope_bin_mztol: float,
+    max_isotope_cnt: int,
+) -> np.array:
     """
     find ms1 isotope M1, M2, ... peaks (for class ProcessedMS1)
     :param mz: float
@@ -548,10 +692,15 @@ class ProcessedMS2:
     :attr int_array: np.array
     """
 
-    def __init__(self, mz: float, raw_spec: Spectrum,
-                 mz_tol: float, ppm: bool,
-                 rel_int_denoise_cutoff: float,
-                 top_n_per_50_da: int):
+    def __init__(
+        self,
+        mz: float,
+        raw_spec: Spectrum,
+        mz_tol: float,
+        ppm: bool,
+        rel_int_denoise_cutoff: float,
+        top_n_per_50_da: int,
+    ):
         if raw_spec:
             self.mz_tol = mz_tol
             self.ppm = ppm
@@ -570,8 +719,13 @@ class ProcessedMS2:
     def __len__(self):
         return len(self.mz_array)
 
-    def _preprocess(self, mz: float, raw_spec: Spectrum,
-                    rel_int_denoise_cutoff: float, top_n_per_50_da: int):
+    def _preprocess(
+        self,
+        mz: float,
+        raw_spec: Spectrum,
+        rel_int_denoise_cutoff: float,
+        top_n_per_50_da: int,
+    ):
         """
         preprocess MS2 spectrum, denoise (optional), de-precursor
         :param mz: precursor mz
@@ -647,20 +801,22 @@ class ProcessedMS2:
         if top_n_per_50_da <= 1:
             return
 
-        bool_arr = ms2_denoise(mz_arr=self.mz_array, int_arr=self.int_array, top_n=top_n_per_50_da)
+        bool_arr = ms2_denoise(
+            mz_arr=self.mz_array, int_arr=self.int_array, top_n=top_n_per_50_da
+        )
         self.idx_array = self.idx_array[bool_arr]
         self.mz_array = self.mz_array[bool_arr]
         self.int_array = self.int_array[bool_arr]
 
-    def normalize_intensity(self, method: str = 'sum'):
+    def normalize_intensity(self, method: str = "sum"):
         """
         normalize intensity
         :param method: 'sum' or 'max'
         :return: fill self.int_array
         """
-        if method == 'sum':
+        if method == "sum":
             self.int_array = self.int_array / np.sum(self.int_array)
-        elif method == 'max':
+        elif method == "max":
             self.int_array = self.int_array / np.max(self.int_array)
 
 
@@ -697,15 +853,20 @@ class MS2Explanation:
     MS2Explanation class, used for storing MS2 explanation.
     """
 
-    def __init__(self, idx_array: np.array,
-                 explanation_list: List[Union[Formula, None]]):
+    def __init__(
+        self, idx_array: np.array, explanation_list: List[Union[Formula, None]]
+    ):
         self.idx_array = idx_array  # indices of peaks in MS2 spectrum
-        self.explanation_list = explanation_list  # List[Formula], isotope peaks are included
+        self.explanation_list = (
+            explanation_list  # List[Formula], isotope peaks are included
+        )
 
     def __str__(self):
         out_str = ""
         for i in range(len(self.idx_array)):
-            out_str += "idx: {}, formula: {}\n".format(self.idx_array[i], str(self.explanation_list[i]))
+            out_str += "idx: {}, formula: {}\n".format(
+                self.idx_array[i], str(self.explanation_list[i])
+            )
         return out_str
 
     def __len__(self):
@@ -721,31 +882,43 @@ class CandidateFormula:
     precursor formula in CandidateFormula is a neutral formula
     """
 
-    def __init__(self, formula: Formula,
-                 charged_formula: Union[Formula, None] = None,
-                 mz_error: Union[float, None] = None,
-                 exp_ms2_sum_int: Union[float, None] = None,
-                 ms2_raw_explanation: Union[MS2Explanation, None] = None,
-                 db_existed: bool = False,
-                 optimal_formula: bool = False,
-                 ms2_refined_explanation: Union[MS2Explanation, None] = None):
+    def __init__(
+        self,
+        formula: Formula,
+        charged_formula: Union[Formula, None] = None,
+        mz_error: Union[float, None] = None,
+        exp_ms2_sum_int: Union[float, None] = None,
+        ms2_raw_explanation: Union[MS2Explanation, None] = None,
+        db_existed: bool = False,
+        optimal_formula: bool = False,
+        ms2_refined_explanation: Union[MS2Explanation, None] = None,
+    ):
         self.formula = formula  # neutral formula
         self.charged_formula = charged_formula  # charged formula
         self.mz_error = mz_error  # mz error in ppm or Da, depending on config
         self.estimated_prob = None  # estimated probability (ML score, not normalized)
-        self.normed_estimated_prob = None  # normalized estimated probability considering all candidate formulas
+        self.normed_estimated_prob = (
+            None  # normalized estimated probability considering all candidate formulas
+        )
         self.estimated_fdr = None  # estimated FDR
         self.formula_feature_array = None  # formula feature array
         self.ms1_isotope_similarity = None
         self.exp_ms2_sum_int = exp_ms2_sum_int  # sum of MS2 intensity of peaks explained (during bottom-up search)
-        self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during subformula assignment
+        self.ms2_raw_explanation = (
+            ms2_raw_explanation  # ms2 explanation during subformula assignment
+        )
         self.db_existed = db_existed  # whether this formula is in the formula database
         # self.optimal_formula = optimal_formula
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
 
     def __str__(self):
-        cf_str = form_arr_to_str(self.formula.array) + \
-                 "  est_prob: " + str(self.estimated_prob) + "  est_fdr: " + str(self.estimated_fdr)
+        cf_str = (
+            form_arr_to_str(self.formula.array)
+            + "  est_prob: "
+            + str(self.estimated_prob)
+            + "  est_fdr: "
+            + str(self.estimated_fdr)
+        )
         if self.ms2_raw_explanation:
             cf_str += " ms2_raw_exp: " + str(len(self.ms2_raw_explanation))
 
@@ -757,14 +930,16 @@ class MetaFeature:
     MetaFeature class, used for storing a metabolic feature.
     """
 
-    def __init__(self,
-                 identifier: Union[str, int],
-                 mz: float,
-                 charge: int,
-                 rt: Union[float, None] = None,  # retention time in seconds
-                 adduct: Union[str, None] = None,
-                 ms1: Union[Spectrum, None] = None,
-                 ms2: Union[Spectrum, None] = None):
+    def __init__(
+        self,
+        identifier: Union[str, int],
+        mz: float,
+        charge: int,
+        rt: Union[float, None] = None,  # retention time in seconds
+        adduct: Union[str, None] = None,
+        ms1: Union[Spectrum, None] = None,
+        ms2: Union[Spectrum, None] = None,
+    ):
         """
         Instantiate a new MetaFeature object.
         :param identifier: identifier (str or int)
@@ -798,10 +973,16 @@ class MetaFeature:
             mf_str += "  cf count: 0"
         return mf_str
 
-    def data_preprocess(self, ppm: bool, ms1_tol: float, ms2_tol: float,
-                        isotope_bin_mztol: float, max_isotope_cnt: int,
-                        rel_int_denoise_cutoff: float,
-                        top_n_per_50_da: int):
+    def data_preprocess(
+        self,
+        ppm: bool,
+        ms1_tol: float,
+        ms2_tol: float,
+        isotope_bin_mztol: float,
+        max_isotope_cnt: int,
+        rel_int_denoise_cutoff: float,
+        top_n_per_50_da: int,
+    ):
         """
         Data preprocessing.
         :param ppm: whether to use ppm as m/z tolerance
@@ -814,31 +995,62 @@ class MetaFeature:
         :return: fill in ms1_processed and ms2_processed for each metaFeature
         """
         if self.ms1_raw:
-            self.ms1_processed = ProcessedMS1(self.mz, self.ms1_raw,
-                                              self.adduct.charge,
-                                              ms1_tol, ppm, isotope_bin_mztol, max_isotope_cnt)
+            self.ms1_processed = ProcessedMS1(
+                self.mz,
+                self.ms1_raw,
+                self.adduct.charge,
+                ms1_tol,
+                ppm,
+                isotope_bin_mztol,
+                max_isotope_cnt,
+            )
         if self.ms2_raw:
-            self.ms2_processed = ProcessedMS2(self.mz, self.ms2_raw,
-                                              ms2_tol, ppm, rel_int_denoise_cutoff, top_n_per_50_da)
+            self.ms2_processed = ProcessedMS2(
+                self.mz,
+                self.ms2_raw,
+                ms2_tol,
+                ppm,
+                rel_int_denoise_cutoff,
+                top_n_per_50_da,
+            )
 
     def summarize_result(self) -> dict:
         """
         Summarize the annotation result for a MetaFeature.
         :return: dict
         """
-        result = {'identifier': self.identifier, 'mz': self.mz, 'rt': self.rt, 'adduct': self.adduct.string,
-                  'formula_rank_1': None, 'estimated_fdr': None, 'formula_rank_2': None, 'formula_rank_3': None,
-                  'formula_rank_4': None, 'formula_rank_5': None}
+        result = {
+            "identifier": self.identifier,
+            "mz": self.mz,
+            "rt": self.rt,
+            "adduct": self.adduct.string,
+            "formula_rank_1": None,
+            "estimated_fdr": None,
+            "formula_rank_2": None,
+            "formula_rank_3": None,
+            "formula_rank_4": None,
+            "formula_rank_5": None,
+        }
 
         if self.candidate_formula_list:
-            result['formula_rank_1'] = form_arr_to_str(self.candidate_formula_list[0].formula.array)
-            result['estimated_fdr'] = self.candidate_formula_list[0].estimated_fdr
+            result["formula_rank_1"] = form_arr_to_str(
+                self.candidate_formula_list[0].formula.array
+            )
+            result["estimated_fdr"] = self.candidate_formula_list[0].estimated_fdr
             if len(self.candidate_formula_list) > 1:
-                result['formula_rank_2'] = form_arr_to_str(self.candidate_formula_list[1].formula.array)
+                result["formula_rank_2"] = form_arr_to_str(
+                    self.candidate_formula_list[1].formula.array
+                )
             if len(self.candidate_formula_list) > 2:
-                result['formula_rank_3'] = form_arr_to_str(self.candidate_formula_list[2].formula.array)
+                result["formula_rank_3"] = form_arr_to_str(
+                    self.candidate_formula_list[2].formula.array
+                )
             if len(self.candidate_formula_list) > 3:
-                result['formula_rank_4'] = form_arr_to_str(self.candidate_formula_list[3].formula.array)
+                result["formula_rank_4"] = form_arr_to_str(
+                    self.candidate_formula_list[3].formula.array
+                )
             if len(self.candidate_formula_list) > 4:
-                result['formula_rank_5'] = form_arr_to_str(self.candidate_formula_list[4].formula.array)
+                result["formula_rank_5"] = form_arr_to_str(
+                    self.candidate_formula_list[4].formula.array
+                )
         return result

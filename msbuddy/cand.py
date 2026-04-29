@@ -19,10 +19,28 @@ import numpy as np
 from brainpy import isotopic_variants
 from numba import njit
 
-from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature, check_adduct, Adduct
+from msbuddy.base import (
+    Formula,
+    CandidateFormula,
+    MS2Explanation,
+    MetaFeature,
+    check_adduct,
+    Adduct,
+)
 from msbuddy.ml import _calc_log_p_norm
-from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
-from msbuddy.utils import form_arr_to_str, enumerate_subformula, read_formula, SubformulaResult, FormulaResult
+from msbuddy.query import (
+    check_common_frag,
+    check_common_nl,
+    query_precursor_mass,
+    query_fragnl_mass,
+)
+from msbuddy.utils import (
+    form_arr_to_str,
+    enumerate_subformula,
+    read_formula,
+    SubformulaResult,
+    FormulaResult,
+)
 
 
 class FragExplanation:
@@ -69,8 +87,10 @@ class FragExplanation:
         # 2. select the closest to the raw MS2 m/z
 
         # either common frag or common nl is True
-        common_bool = [check_common_frag(frag, gd) or check_common_nl(nl, gd) for frag, nl in
-                       zip(self.frag_list, self.nl_list)]
+        common_bool = [
+            check_common_frag(frag, gd) or check_common_nl(nl, gd)
+            for frag, nl in zip(self.frag_list, self.nl_list)
+        ]
         # if only one common frag/nl, select it
         if sum(common_bool) == 1:
             idx = common_bool.index(True)
@@ -80,14 +100,29 @@ class FragExplanation:
         # if multiple common frag/nl, select the mz closest one
         elif sum(common_bool) > 1:
             # get the mass-closest one
-            idx = np.argmin(np.abs(raw_ms2_mz_arr[self.idx] - np.array([f.mass for i, f in enumerate(self.frag_list)
-                                                                        if common_bool[i]])))
-            self.optim_frag = [f for i, f in enumerate(self.frag_list) if common_bool[i]][idx]
-            self.optim_nl = [f for i, f in enumerate(self.nl_list) if common_bool[i]][idx]
+            idx = np.argmin(
+                np.abs(
+                    raw_ms2_mz_arr[self.idx]
+                    - np.array(
+                        [f.mass for i, f in enumerate(self.frag_list) if common_bool[i]]
+                    )
+                )
+            )
+            self.optim_frag = [
+                f for i, f in enumerate(self.frag_list) if common_bool[i]
+            ][idx]
+            self.optim_nl = [f for i, f in enumerate(self.nl_list) if common_bool[i]][
+                idx
+            ]
             return
         # if no common frag/nl, select the closest one
         else:
-            idx = np.argmin(np.abs(raw_ms2_mz_arr[self.idx] - np.array([f.mass for f in self.frag_list])))
+            idx = np.argmin(
+                np.abs(
+                    raw_ms2_mz_arr[self.idx]
+                    - np.array([f.mass for f in self.frag_list])
+                )
+            )
             self.optim_frag = self.frag_list[idx]
             self.optim_nl = self.nl_list[idx]
             return
@@ -104,7 +139,9 @@ class FragExplanation:
             return
 
         # if multiple explanations, select the closest to the raw MS2 m/z
-        idx = _find_closest_mass_idx(raw_ms2_mz_arr[self.idx], np.array([f.mass for f in self.frag_list]))
+        idx = _find_closest_mass_idx(
+            raw_ms2_mz_arr[self.idx], np.array([f.mass for f in self.frag_list])
+        )
         # idx = np.argmin(np.abs(raw_ms2_mz_arr[self.idx] - np.array([f.mass for f in self.frag_list])))
         self.optim_frag = self.frag_list[idx]
         self.optim_nl = self.nl_list[idx]
@@ -117,24 +154,33 @@ class CandidateSpace:
     It contains a precursor candidate and a list of FragExplanations.
     """
 
-    def __init__(self, pre_neutral_array: np.array, pre_charged_array: np.array,
-                 pre_neutral_form_str: Union[str, None] = None,
-                 exp_frag_sum_int: Union[float, None] = None,
-                 exp_frag_idx_ls: Union[List[int], None] = None,
-                 frag_exp_ls: Union[List[FragExplanation], None] = None):
+    def __init__(
+        self,
+        pre_neutral_array: np.array,
+        pre_charged_array: np.array,
+        pre_neutral_form_str: Union[str, None] = None,
+        exp_frag_sum_int: Union[float, None] = None,
+        exp_frag_idx_ls: Union[List[int], None] = None,
+        frag_exp_ls: Union[List[FragExplanation], None] = None,
+    ):
         self.pre_neutral_array = np.int16(pre_neutral_array)  # precursor neutral array
-        self.pre_charged_array = np.int16(pre_charged_array)  # used for ms2 global optim.
+        self.pre_charged_array = np.int16(
+            pre_charged_array
+        )  # used for ms2 global optim.
         self.pre_neutral_form_str = pre_neutral_form_str
         self.exp_frag_sum_int = exp_frag_sum_int  # during candidate space generation
         self.exp_frag_idx_ls = exp_frag_idx_ls  # during candidate space generation
         self.neutral_mass = float(np.sum(pre_neutral_array * Formula.mass_arr))
-        self.frag_exp_list = frag_exp_ls  # during subformula assignment, List[FragExplanation]
+        self.frag_exp_list = (
+            frag_exp_ls  # during subformula assignment, List[FragExplanation]
+        )
 
     def add_frag_exp(self, frag_exp: FragExplanation):
         self.frag_exp_list.append(frag_exp)
 
-    def refine_explanation(self, meta_feature: MetaFeature,
-                           ms2_iso_tol: float) -> CandidateFormula:
+    def refine_explanation(
+        self, meta_feature: MetaFeature, ms2_iso_tol: float
+    ) -> CandidateFormula:
         """
         Refine the MS2 explanation by selecting the most reasonable explanation.
         Explain other fragments as isotope peaks.
@@ -164,13 +210,18 @@ class CandidateSpace:
             if next_exp_idx not in ms2_processed.idx_array:
                 continue
             # if the next peak is close enough, add it as an isotope peak
-            if (ms2_raw.mz_array[next_exp_idx] - ms2_raw.mz_array[exp_idx] - 1.003355) <= ms2_iso_tol and \
-                    ms2_raw.int_array[next_exp_idx] <= ms2_raw.int_array[exp_idx]:
+            if (
+                ms2_raw.mz_array[next_exp_idx] - ms2_raw.mz_array[exp_idx] - 1.003355
+            ) <= ms2_iso_tol and ms2_raw.int_array[next_exp_idx] <= ms2_raw.int_array[
+                exp_idx
+            ]:
                 # if the next peak is close enough, add it as an isotope peak
                 this_frag = self.frag_exp_list[m].optim_frag
                 this_nl = self.frag_exp_list[m].optim_nl
                 # add a new FragExplanation
-                new_frag = Formula(this_frag.array, this_frag.charge, this_frag.mass + 1.003355, 1)
+                new_frag = Formula(
+                    this_frag.array, this_frag.charge, this_frag.mass + 1.003355, 1
+                )
                 # for iso peak, the neutral loss is actually the same as the previous one (M+0)
                 # but we denote it as '-1' isotope peak, so that frag mass + nl mass is still precursor mass
                 new_nl = Formula(this_nl.array, 0, this_nl.mass - 1.003355, -1)
@@ -183,17 +234,29 @@ class CandidateSpace:
 
         # convert into a CandidateFormula
         # construct MS2Explanation first
-        ms2_raw_exp = MS2Explanation(idx_array=np.array([f.idx for f in self.frag_exp_list], dtype=np.int16),
-                                     explanation_list=[f.optim_frag for f in self.frag_exp_list])
+        ms2_raw_exp = MS2Explanation(
+            idx_array=np.array([f.idx for f in self.frag_exp_list], dtype=np.int16),
+            explanation_list=[f.optim_frag for f in self.frag_exp_list],
+        )
 
-        return CandidateFormula(formula=Formula(self.pre_neutral_array, 0, self.neutral_mass),
-                                charged_formula=Formula(self.pre_charged_array, meta_feature.adduct.charge),
-                                ms2_raw_explanation=ms2_raw_exp)
+        return CandidateFormula(
+            formula=Formula(self.pre_neutral_array, 0, self.neutral_mass),
+            charged_formula=Formula(self.pre_charged_array, meta_feature.adduct.charge),
+            ms2_raw_explanation=ms2_raw_exp,
+        )
 
 
-def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
-                          db_mode: int, ele_lower_limit: np.array, ele_upper_limit: np.array,
-                          max_isotope_cnt: int, gd: dict) -> MetaFeature:
+def gen_candidate_formula(
+    mf: MetaFeature,
+    ppm: bool,
+    ms1_tol: float,
+    ms2_tol: float,
+    db_mode: int,
+    ele_lower_limit: np.array,
+    ele_upper_limit: np.array,
+    max_isotope_cnt: int,
+    gd: dict,
+) -> MetaFeature:
     """
     Generate candidate formulas for a metabolic feature.
     :param mf: MetaFeature object
@@ -210,21 +273,27 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
 
     # if MS2 data missing or non-singly charged species, query precursor mass directly
     if not mf.ms2_processed or abs(mf.adduct.charge) > 1:
-        cf_list, _ = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol,
-                                                    ele_lower_limit, ele_upper_limit, db_mode, gd)
+        cf_list, _ = _gen_candidate_formula_from_mz(
+            mf, ppm, ms1_tol, ele_lower_limit, ele_upper_limit, db_mode, gd
+        )
 
     else:
         # if MS2 data available, generate candidate space with MS2 data
-        ms2_cand_form_ls, ms2_cand_form_str_ls = _gen_candidate_formula_from_ms2(mf, ppm, ms1_tol, ms2_tol,
-                                                                                 ele_lower_limit,
-                                                                                 ele_upper_limit, db_mode, gd)
+        ms2_cand_form_ls, ms2_cand_form_str_ls = _gen_candidate_formula_from_ms2(
+            mf, ppm, ms1_tol, ms2_tol, ele_lower_limit, ele_upper_limit, db_mode, gd
+        )
 
         # query precursor mass, for fill in db_existed
-        ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol, ele_lower_limit,
-                                                                                ele_upper_limit, db_mode, gd)
+        ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(
+            mf, ppm, ms1_tol, ele_lower_limit, ele_upper_limit, db_mode, gd
+        )
 
-        cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
-                                        ms1_cand_form_str_ls, ms2_cand_form_str_ls)
+        cf_list = _merge_cand_form_list(
+            ms1_cand_form_ls,
+            ms2_cand_form_ls,
+            ms1_cand_form_str_ls,
+            ms2_cand_form_str_ls,
+        )
 
         # if len(mf.ms2_processed) <= 5:
         #     # merge candidate formulas from ms1 and ms2
@@ -242,17 +311,23 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     ms1_iso_available = mf.ms1_processed and len(mf.ms1_processed) > 1
     if ms1_iso_available:
         for k, cf in enumerate(cf_list):
-            cf_list[k].ms1_isotope_similarity = _calc_ms1_iso_sim(cf, mf, max_isotope_cnt)
+            cf_list[k].ms1_isotope_similarity = _calc_ms1_iso_sim(
+                cf, mf, max_isotope_cnt
+            )
 
     ms2_available = mf.ms2_processed
 
     # retain top candidate formulas
-    mf.candidate_formula_list = _retain_top_cand_form(cf_list, ms1_tol, ms1_iso_available, ms2_available, 350)
+    mf.candidate_formula_list = _retain_top_cand_form(
+        cf_list, ms1_tol, ms1_iso_available, ms2_available, 350
+    )
 
     return mf
 
 
-def _calc_mz_error(cf_list: List[CandidateFormula], precursor_mz: float, ppm: bool) -> List[CandidateFormula]:
+def _calc_mz_error(
+    cf_list: List[CandidateFormula], precursor_mz: float, ppm: bool
+) -> List[CandidateFormula]:
     """
     Calculate mz error for each candidate formula.
     :param cf_list: list of candidate formulas
@@ -262,7 +337,9 @@ def _calc_mz_error(cf_list: List[CandidateFormula], precursor_mz: float, ppm: bo
     """
     if ppm:
         for k, cf in enumerate(cf_list):
-            cf_list[k].mz_error = (cf.charged_formula.mass - precursor_mz) / precursor_mz * 1e6
+            cf_list[k].mz_error = (
+                (cf.charged_formula.mass - precursor_mz) / precursor_mz * 1e6
+            )
     else:
         for k, cf in enumerate(cf_list):
             cf_list[k].mz_error = cf.charged_formula.mass - precursor_mz
@@ -314,7 +391,9 @@ def calc_isotope_similarity(int_arr_x, int_arr_y, iso_num: int) -> float:
     if len(int_arr_y) > min_len:  # experimental isotope pattern
         int_arr_y = int_arr_y[:min_len]
     if len(int_arr_y) < min_len:
-        int_arr_y = np.append(int_arr_y, np.zeros(min_len - len(int_arr_y), dtype=np.float32))
+        int_arr_y = np.append(
+            int_arr_y, np.zeros(min_len - len(int_arr_y), dtype=np.float32)
+        )
 
     # normalize
     int_arr_x = int_arr_x / np.sum(int_arr_x, dtype=np.float32)
@@ -328,7 +407,9 @@ def calc_isotope_similarity(int_arr_x, int_arr_y, iso_num: int) -> float:
 
 
 @njit
-def _element_check(form_array: np.array, lower_limit: np.array, upper_limit: np.array) -> bool:
+def _element_check(
+    form_array: np.array, lower_limit: np.array, upper_limit: np.array
+) -> bool:
     """
     check whether a formula satisfies the element restriction
     :param form_array: 12-dim array
@@ -353,10 +434,32 @@ def _senior_rules(form: np.array) -> bool:
     # int senior_1_2 = p + n + h + f + cl + br + i + na + k
     # int senior_2 = c + h + n + o + p + f + cl + br + i + s + na + k
 
-    senior_1_1 = (6 * form[11] + 5 * form[10] + 4 * form[0] + 3 * form[7] + 2 * form[9] + form[1] + form[4] +
-                  form[3] + form[2] + form[5] + form[8] + form[6])
+    senior_1_1 = (
+        6 * form[11]
+        + 5 * form[10]
+        + 4 * form[0]
+        + 3 * form[7]
+        + 2 * form[9]
+        + form[1]
+        + form[4]
+        + form[3]
+        + form[2]
+        + form[5]
+        + form[8]
+        + form[6]
+    )
     senior_1_1 = np.float32(senior_1_1)
-    senior_1_2 = form[10] + form[7] + form[1] + form[4] + form[3] + form[2] + form[5] + form[8] + form[6]
+    senior_1_2 = (
+        form[10]
+        + form[7]
+        + form[1]
+        + form[4]
+        + form[3]
+        + form[2]
+        + form[5]
+        + form[8]
+        + form[6]
+    )
     senior_1_2 = np.float32(senior_1_2)
 
     # The sum of valences or the total number of atoms having odd valences is even
@@ -392,8 +495,12 @@ def _dbe_check(form: np.array) -> bool:
     :param form: 12-dim array
     :return: True if satisfies, False otherwise
     """
-    dbe = form[0] + 1 - (form[1] + form[4] + form[3] + form[2] + form[5] + form[8] +
-                         form[6]) / 2.0 + (form[7] + form[10]) / 2.0
+    dbe = (
+        form[0]
+        + 1
+        - (form[1] + form[4] + form[3] + form[2] + form[5] + form[8] + form[6]) / 2.0
+        + (form[7] + form[10]) / 2.0
+    )
     if dbe < 0:
         return False
     return True
@@ -422,19 +529,27 @@ def _calc_ms1_iso_sim(cand_form, meta_feature, max_isotope_cnt) -> float:
     :return: ms1 isotope similarity
     """
     # calculate theoretical isotope pattern
-    theo_isotope_pattern = calc_isotope_pattern(cand_form.charged_formula, max_isotope_cnt)
+    theo_isotope_pattern = calc_isotope_pattern(
+        cand_form.charged_formula, max_isotope_cnt
+    )
 
     # calculate ms1 isotope similarity
-    ms1_isotope_sim = calc_isotope_similarity(meta_feature.ms1_processed.int_array, theo_isotope_pattern,
-                                              max_isotope_cnt)
+    ms1_isotope_sim = calc_isotope_similarity(
+        meta_feature.ms1_processed.int_array, theo_isotope_pattern, max_isotope_cnt
+    )
 
     return ms1_isotope_sim
 
 
-def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
-                                   ppm: bool, ms1_tol: float,
-                                   lower_limit: np.array, upper_limit: np.array,
-                                   db_mode: int, gd: dict) -> Tuple[List[CandidateFormula], List[str]]:
+def _gen_candidate_formula_from_mz(
+    meta_feature: MetaFeature,
+    ppm: bool,
+    ms1_tol: float,
+    lower_limit: np.array,
+    upper_limit: np.array,
+    db_mode: int,
+    gd: dict,
+) -> Tuple[List[CandidateFormula], List[str]]:
     """
     Generate candidate formulas for a metabolic feature with precursor mz only
     :param meta_feature: MetaFeature object
@@ -447,27 +562,47 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     :return: list of candidate formulas (CandidateFormula), list of candidate formula strings
     """
     # query precursor mz
-    neutral_formulas, charged_formulas = query_precursor_mass(meta_feature.mz, meta_feature.adduct,
-                                                              ms1_tol, ppm, db_mode, gd)
+    neutral_formulas, charged_formulas = query_precursor_mass(
+        meta_feature.mz, meta_feature.adduct, ms1_tol, ppm, db_mode, gd
+    )
     # filter out formulas that exceed element limits
     neutral_forms, charged_forms = [], []
     for m, f in enumerate(neutral_formulas):
-        if _element_check(f.array, lower_limit, upper_limit) and _senior_rules(f.array) and _o_p_check(f.array) \
-                and _dbe_check(f.array) and _adduct_loss_check(f.array, meta_feature.adduct.loss_formula):
+        if (
+            _element_check(f.array, lower_limit, upper_limit)
+            and _senior_rules(f.array)
+            and _o_p_check(f.array)
+            and _dbe_check(f.array)
+            and _adduct_loss_check(f.array, meta_feature.adduct.loss_formula)
+        ):
             neutral_forms.append(f)
             charged_forms.append(charged_formulas[m])
 
     # convert neutral formulas into CandidateFormula objects
-    cand_form_list = [CandidateFormula(formula=form, charged_formula=charged_form, exp_ms2_sum_int=0.0,
-                                       db_existed=True) for form, charged_form in zip(neutral_forms, charged_forms)]
+    cand_form_list = [
+        CandidateFormula(
+            formula=form,
+            charged_formula=charged_form,
+            exp_ms2_sum_int=0.0,
+            db_existed=True,
+        )
+        for form, charged_form in zip(neutral_forms, charged_forms)
+    ]
     cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in cand_form_list]
 
     return cand_form_list, cand_form_str_list
 
 
-def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
-                                    lower_limit: np.array, upper_limit: np.array,
-                                    db_mode: int, gd) -> Tuple[List[CandidateFormula], List[str]]:
+def _gen_candidate_formula_from_ms2(
+    mf: MetaFeature,
+    ppm: bool,
+    ms1_tol: float,
+    ms2_tol: float,
+    lower_limit: np.array,
+    upper_limit: np.array,
+    db_mode: int,
+    gd,
+) -> Tuple[List[CandidateFormula], List[str]]:
     """
     Generate candidate formulas for a metabolic feature with MS2 data, then apply element limits
     :param mf: MetaFeature object
@@ -482,7 +617,7 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
     """
 
     # normalize MS2 intensity
-    mf.ms2_processed.normalize_intensity(method='sum')
+    mf.ms2_processed.normalize_intensity(method="sum")
 
     # check whether Na and K are contained in the adduct
     na_bool = True if mf.adduct.net_formula.array[8] > 0 else False
@@ -500,8 +635,17 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
         nl_mz = mf.mz - frag_mz
 
         # query mass in formula database
-        frag_form_list, nl_form_list = _query_frag_nl_pair(frag_mz, nl_mz, mf.adduct.pos_mode, na_bool, k_bool,
-                                                           ms2_tol, ppm, db_mode, gd)
+        frag_form_list, nl_form_list = _query_frag_nl_pair(
+            frag_mz,
+            nl_mz,
+            mf.adduct.pos_mode,
+            na_bool,
+            k_bool,
+            ms2_tol,
+            ppm,
+            db_mode,
+            gd,
+        )
         if frag_form_list is None or nl_form_list is None:
             continue
 
@@ -513,7 +657,11 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
         for frag in frag_form_list:
             for nl in nl_form_list:
                 # DBE check, sum of DBE should be a non-integer
-                if (frag.dbe + nl.dbe) % 1 == 0 or (frag.dbe + nl.dbe) < 0 or frag.dbe < 0:
+                if (
+                    (frag.dbe + nl.dbe) % 1 == 0
+                    or (frag.dbe + nl.dbe) < 0
+                    or frag.dbe < 0
+                ):
                     continue
                 # sum mass check
                 if abs(frag.mass + nl.mass - mf.mz) > ms1_abs_tol:
@@ -521,7 +669,9 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
 
                 # generate precursor formula & check adduct M
                 # NOTE: pre_form_arr is in neutral form
-                pre_form_arr = (frag.array + nl.array - mf.adduct.net_formula.array) / mf.adduct.m
+                pre_form_arr = (
+                    frag.array + nl.array - mf.adduct.net_formula.array
+                ) / mf.adduct.m
                 valid_pre_form = _valid_precursor_array(pre_form_arr)
                 if not valid_pre_form:
                     continue
@@ -529,34 +679,59 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
                 pre_form_arr = np.int16(pre_form_arr)
 
                 # add to candidate space list
-                candidate_space_list, existing_cand_str_list = _add_to_candidate_space_list(candidate_space_list,
-                                                                                            existing_cand_str_list,
-                                                                                            pre_form_arr.astype(int),
-                                                                                            frag.array, nl.array,
-                                                                                            frag_int, i)
+                candidate_space_list, existing_cand_str_list = (
+                    _add_to_candidate_space_list(
+                        candidate_space_list,
+                        existing_cand_str_list,
+                        pre_form_arr.astype(int),
+                        frag.array,
+                        nl.array,
+                        frag_int,
+                        i,
+                    )
+                )
 
     # element limit check, SENIOR rules, O/P check, DBE check
-    candidate_list = [cs for cs in candidate_space_list
-                      if _element_check(cs.pre_neutral_array, lower_limit, upper_limit)
-                      and _senior_rules(cs.pre_neutral_array) and _o_p_check(cs.pre_neutral_array)
-                      and _dbe_check(cs.pre_neutral_array)
-                      and _adduct_loss_check(cs.pre_neutral_array, mf.adduct.loss_formula)]
+    candidate_list = [
+        cs
+        for cs in candidate_space_list
+        if _element_check(cs.pre_neutral_array, lower_limit, upper_limit)
+        and _senior_rules(cs.pre_neutral_array)
+        and _o_p_check(cs.pre_neutral_array)
+        and _dbe_check(cs.pre_neutral_array)
+        and _adduct_loss_check(cs.pre_neutral_array, mf.adduct.loss_formula)
+    ]
 
     # remove candidate space variable to save memory
     del candidate_space_list
 
     # generate CandidateFormula object
-    candidate_formula_list = [CandidateFormula(formula=Formula(cs.pre_neutral_array, 0, cs.neutral_mass),
-                                               charged_formula=Formula(cs.pre_charged_array, mf.adduct.charge),
-                                               exp_ms2_sum_int=cs.exp_frag_sum_int) for cs in candidate_list]
-    cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in candidate_formula_list]
+    candidate_formula_list = [
+        CandidateFormula(
+            formula=Formula(cs.pre_neutral_array, 0, cs.neutral_mass),
+            charged_formula=Formula(cs.pre_charged_array, mf.adduct.charge),
+            exp_ms2_sum_int=cs.exp_frag_sum_int,
+        )
+        for cs in candidate_list
+    ]
+    cand_form_str_list = [
+        form_arr_to_str(cf.formula.array) for cf in candidate_formula_list
+    ]
 
     return candidate_formula_list, cand_form_str_list
 
 
-def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: bool, k_bool: bool,
-                        ms2_tol: float, ppm: bool,
-                        db_mode: int, gd) -> Tuple[Union[List[Formula], None], Union[List[Formula], None]]:
+def _query_frag_nl_pair(
+    frag_mz: float,
+    nl_mz: float,
+    pos_mode: bool,
+    na_bool: bool,
+    k_bool: bool,
+    ms2_tol: float,
+    ppm: bool,
+    db_mode: int,
+    gd,
+) -> Tuple[Union[List[Formula], None], Union[List[Formula], None]]:
     """
     query fragment and neutral loss formulas from database
     :param frag_mz: fragment m/z
@@ -572,28 +747,38 @@ def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: b
     """
     if nl_mz < frag_mz:
         # search neutral loss first, for faster search
-        nl_form_list = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
-                                         ms2_tol, ppm, db_mode, gd)
+        nl_form_list = query_fragnl_mass(
+            nl_mz, False, pos_mode, na_bool, k_bool, ms2_tol, ppm, db_mode, gd
+        )
         if nl_form_list:
-            frag_form_list = query_fragnl_mass(frag_mz, True, pos_mode,
-                                               na_bool, k_bool, ms2_tol, ppm, db_mode, gd)
+            frag_form_list = query_fragnl_mass(
+                frag_mz, True, pos_mode, na_bool, k_bool, ms2_tol, ppm, db_mode, gd
+            )
         else:
             return None, None
     else:
-        frag_form_list = query_fragnl_mass(frag_mz, True, pos_mode, na_bool, k_bool,
-                                           ms2_tol, ppm, db_mode, gd)
+        frag_form_list = query_fragnl_mass(
+            frag_mz, True, pos_mode, na_bool, k_bool, ms2_tol, ppm, db_mode, gd
+        )
         if frag_form_list:
-            nl_form_list = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
-                                             ms2_tol, ppm, db_mode, gd)
+            nl_form_list = query_fragnl_mass(
+                nl_mz, False, pos_mode, na_bool, k_bool, ms2_tol, ppm, db_mode, gd
+            )
         else:
             return None, None
 
     return frag_form_list, nl_form_list
 
 
-def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], existing_cand_str_list: List[str],
-                                 pre_form_arr: np.array, frag_arr: np.array, nl_arr: np.array,
-                                 fragment_intensity: float, frag_idx: int) -> Tuple[List[CandidateSpace], List[str]]:
+def _add_to_candidate_space_list(
+    candidate_space_list: List[CandidateSpace],
+    existing_cand_str_list: List[str],
+    pre_form_arr: np.array,
+    frag_arr: np.array,
+    nl_arr: np.array,
+    fragment_intensity: float,
+    frag_idx: int,
+) -> Tuple[List[CandidateSpace], List[str]]:
     """
     add a new candidate formula to the candidate space list
     :param candidate_space_list: candidate space list
@@ -610,10 +795,15 @@ def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], exi
     candidate_exist = True if this_pre_str in existing_cand_str_list else False
     # this precursor formula has not been added to the candidate space list
     if not candidate_exist:
-        candidate_space_list.append(CandidateSpace(pre_form_arr, frag_arr + nl_arr,
-                                                   pre_neutral_form_str=this_pre_str,
-                                                   exp_frag_sum_int=fragment_intensity,
-                                                   exp_frag_idx_ls=[frag_idx]))
+        candidate_space_list.append(
+            CandidateSpace(
+                pre_form_arr,
+                frag_arr + nl_arr,
+                pre_neutral_form_str=this_pre_str,
+                exp_frag_sum_int=fragment_intensity,
+                exp_frag_idx_ls=[frag_idx],
+            )
+        )
         existing_cand_str_list.append(this_pre_str)
     else:
         # find the index of the existing candidate space
@@ -643,8 +833,12 @@ def _valid_precursor_array(pre_arr: np.array) -> bool:
     return True
 
 
-def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula], ms2_cand_list: List[CandidateFormula],
-                          ms1_cand_str_list: List[str], ms2_cand_str_list: List[str]) -> List[CandidateFormula]:
+def _merge_cand_form_list(
+    ms1_cand_list: List[CandidateFormula],
+    ms2_cand_list: List[CandidateFormula],
+    ms1_cand_str_list: List[str],
+    ms2_cand_str_list: List[str],
+) -> List[CandidateFormula]:
     """
     Merge MS1 and MS2 candidate formula lists.
     Map MS2 candidate formulas to MS1 candidate formulas (db_existed=True)
@@ -667,8 +861,12 @@ def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     return out_list
 
 
-def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: List[CandidateFormula],
-                          ms1_cand_str_list: List[str], ms2_cand_str_list: List[str]) -> List[CandidateFormula]:
+def _fill_in_db_existence(
+    ms1_cand_list: List[CandidateFormula],
+    ms2_cand_list: List[CandidateFormula],
+    ms1_cand_str_list: List[str],
+    ms2_cand_str_list: List[str],
+) -> List[CandidateFormula]:
     """
     Fill in DB existence for MS2 candidate formulas.
     :param ms1_cand_list: candidate formula list from MS1 mz search
@@ -689,8 +887,13 @@ def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     return ms2_cand_list
 
 
-def _retain_top_cand_form(cf_list: List[CandidateFormula], ms1_tol: float, ms1_iso_available: bool,
-                          ms2_available: bool, top_n: int) -> List[CandidateFormula]:
+def _retain_top_cand_form(
+    cf_list: List[CandidateFormula],
+    ms1_tol: float,
+    ms1_iso_available: bool,
+    ms2_available: bool,
+    top_n: int,
+) -> List[CandidateFormula]:
     """
     Retain top candidate formulas by explained MS2 intensity, then by mz difference.
     :param cf_list: candidate formula list
@@ -705,13 +908,25 @@ def _retain_top_cand_form(cf_list: List[CandidateFormula], ms1_tol: float, ms1_i
     else:
         if ms1_iso_available:
             # sort candidate list by logp mz difference * 0.05 + ms1_iso_sim
-            cf_list = sorted(cf_list, key=lambda x: (_calc_log_p_norm(x.mz_error, ms1_tol / 3) * 0.05 +
-                                                     x.ms1_isotope_similarity), reverse=True)
+            cf_list = sorted(
+                cf_list,
+                key=lambda x: (
+                    _calc_log_p_norm(x.mz_error, ms1_tol / 3) * 0.05
+                    + x.ms1_isotope_similarity
+                ),
+                reverse=True,
+            )
         else:
             if ms2_available:
                 # sort candidate list by mz_error_log_p + 4 * exp_frag_int_pnt
-                cf_list = sorted(cf_list, key=lambda x: (_calc_log_p_norm(x.mz_error, ms1_tol / 3) + 4 * x.exp_ms2_sum_int),
-                                 reverse=True)
+                cf_list = sorted(
+                    cf_list,
+                    key=lambda x: (
+                        _calc_log_p_norm(x.mz_error, ms1_tol / 3)
+                        + 4 * x.exp_ms2_sum_int
+                    ),
+                    reverse=True,
+                )
             else:
                 # sort candidate list by abs mz_error, ascending
                 cf_list = sorted(cf_list, key=lambda x: abs(x.mz_error), reverse=False)
@@ -730,7 +945,9 @@ def _form_array_equal(arr1: np.array, arr2: np.array) -> bool:
     return True if np.equal(arr1, arr2).all() else False
 
 
-def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float) -> MetaFeature:
+def assign_subformula_cand_form(
+    mf: MetaFeature, ppm: bool, ms2_tol: float
+) -> MetaFeature:
     """
     Assign subformula to all candidate formulas in a MetaFeature object.
     :param mf: MetaFeature object
@@ -746,8 +963,9 @@ def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float) -> M
         # mono mass
         mass_arr = _calc_subform_mass(subform_arr, mf.adduct.charge)
         # assign ms2 explanation
-        mf.candidate_formula_list[k] = _assign_ms2_explanation(mf, cf, cf.charged_formula.array, subform_arr, mass_arr,
-                                                               ppm, ms2_tol)
+        mf.candidate_formula_list[k] = _assign_ms2_explanation(
+            mf, cf, cf.charged_formula.array, subform_arr, mass_arr, ppm, ms2_tol
+        )
 
     return mf
 
@@ -761,11 +979,28 @@ def _calc_subform_mass(subform_arr: np.array, adduct_charge: int) -> np.array:
     :return: 1D array, mass of each subformula
     """
     mass_arr = np.empty(subform_arr.shape[0], dtype=np.float32)
-    ele_mass_arr = np.array([12.000000, 1.007825, 78.918336, 34.968853, 18.998403, 126.904473, 38.963707, 14.003074,
-                             22.989769, 15.994915, 30.973762, 31.972071], dtype=np.float32)
+    ele_mass_arr = np.array(
+        [
+            12.000000,
+            1.007825,
+            78.918336,
+            34.968853,
+            18.998403,
+            126.904473,
+            38.963707,
+            14.003074,
+            22.989769,
+            15.994915,
+            30.973762,
+            31.972071,
+        ],
+        dtype=np.float32,
+    )
     for i in range(subform_arr.shape[0]):
         # element wise multiplication
-        mass_arr[i] = np.sum(subform_arr[i, :] * ele_mass_arr, dtype=np.float32) - np.float32(adduct_charge * 0.0005486)
+        mass_arr[i] = np.sum(
+            subform_arr[i, :] * ele_mass_arr, dtype=np.float32
+        ) - np.float32(adduct_charge * 0.0005486)
     return mass_arr
 
 
@@ -776,9 +1011,21 @@ def _dbe_subform_filter(subform_arr: np.array, cutoff: float) -> np.array:
     :param subform_arr: 2D array, each row is a subformula array
     :return: boolean array
     """
-    dbe_arr = subform_arr[:, 0] + 1 - (subform_arr[:, 1] + subform_arr[:, 4] + subform_arr[:, 3] + subform_arr[:, 2]
-                                       + subform_arr[:, 5] + subform_arr[:, 8] + subform_arr[:, 6]) / 2 + \
-              (subform_arr[:, 7] + subform_arr[:, 10]) / 2
+    dbe_arr = (
+        subform_arr[:, 0]
+        + 1
+        - (
+            subform_arr[:, 1]
+            + subform_arr[:, 4]
+            + subform_arr[:, 3]
+            + subform_arr[:, 2]
+            + subform_arr[:, 5]
+            + subform_arr[:, 8]
+            + subform_arr[:, 6]
+        )
+        / 2
+        + (subform_arr[:, 7] + subform_arr[:, 10]) / 2
+    )
     dbe_bool_arr = dbe_arr >= cutoff
     return dbe_bool_arr
 
@@ -790,11 +1037,22 @@ def _senior_subform_filter(subform_arr: np.array) -> np.array:
     :param subform_arr: 2D array, each row is a subformula array
     :return: boolean array
     """
-    senior_1_1_arr = 6 * subform_arr[:, 11] + 5 * subform_arr[:, 10] + 4 * subform_arr[:, 0] + \
-                     3 * subform_arr[:, 7] + 2 * subform_arr[:, 9] + subform_arr[:, 1] + subform_arr[:, 4] + \
-                     subform_arr[:, 3] + subform_arr[:, 2] + subform_arr[:, 5] + subform_arr[:, 8] + subform_arr[:, 6]
+    senior_1_1_arr = (
+        6 * subform_arr[:, 11]
+        + 5 * subform_arr[:, 10]
+        + 4 * subform_arr[:, 0]
+        + 3 * subform_arr[:, 7]
+        + 2 * subform_arr[:, 9]
+        + subform_arr[:, 1]
+        + subform_arr[:, 4]
+        + subform_arr[:, 3]
+        + subform_arr[:, 2]
+        + subform_arr[:, 5]
+        + subform_arr[:, 8]
+        + subform_arr[:, 6]
+    )
     senior_2_arr = np.sum(subform_arr, axis=1)
-    senior_bool_arr = (senior_1_1_arr >= 2 * (senior_2_arr - 1))
+    senior_bool_arr = senior_1_1_arr >= 2 * (senior_2_arr - 1)
 
     return senior_bool_arr
 
@@ -810,22 +1068,39 @@ def _valid_subform_check(subform_arr: np.array, pre_charged_arr: np.array) -> np
     frag_atom_sum = np.sum(subform_arr, axis=1)
     loss_form_arr = pre_charged_arr - subform_arr
     loss_atom_sum = np.sum(loss_form_arr, axis=1)
-    invalid_bool_arr = (frag_atom_sum == subform_arr[:, 0]) | (frag_atom_sum == subform_arr[:, 7]) | \
-                       (frag_atom_sum == subform_arr[:, 10]) | (loss_atom_sum == loss_form_arr[:, 0]) | \
-                       (loss_atom_sum == loss_form_arr[:, 7]) | (loss_atom_sum == loss_form_arr[:, 10])
+    invalid_bool_arr = (
+        (frag_atom_sum == subform_arr[:, 0])
+        | (frag_atom_sum == subform_arr[:, 7])
+        | (frag_atom_sum == subform_arr[:, 10])
+        | (loss_atom_sum == loss_form_arr[:, 0])
+        | (loss_atom_sum == loss_form_arr[:, 7])
+        | (loss_atom_sum == loss_form_arr[:, 10])
+    )
 
     # O >= 2*P if P > 0
-    invalid_o_p_frag_bool_arr = (subform_arr[:, 9] < 2 * subform_arr[:, 10]) & (subform_arr[:, 10] > 0)
-    invalid_o_p_loss_bool_arr = (loss_form_arr[:, 9] < 2 * loss_form_arr[:, 10]) & (loss_form_arr[:, 10] > 0)
+    invalid_o_p_frag_bool_arr = (subform_arr[:, 9] < 2 * subform_arr[:, 10]) & (
+        subform_arr[:, 10] > 0
+    )
+    invalid_o_p_loss_bool_arr = (loss_form_arr[:, 9] < 2 * loss_form_arr[:, 10]) & (
+        loss_form_arr[:, 10] > 0
+    )
 
-    invalid_bool_arr = invalid_bool_arr | invalid_o_p_frag_bool_arr | invalid_o_p_loss_bool_arr
+    invalid_bool_arr = (
+        invalid_bool_arr | invalid_o_p_frag_bool_arr | invalid_o_p_loss_bool_arr
+    )
 
     return ~invalid_bool_arr
 
 
-def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_arr: np.array,
-                            subform_arr: np.array, mass_arr: np.array,
-                            ppm: bool, ms2_tol: float) -> CandidateFormula:
+def _assign_ms2_explanation(
+    mf: MetaFeature,
+    cf: CandidateFormula,
+    pre_charged_arr: np.array,
+    subform_arr: np.array,
+    mass_arr: np.array,
+    ppm: bool,
+    ms2_tol: float,
+) -> CandidateFormula:
     """
     Assign MS2 explanation to a candidate formula.
     :param mf: MetaFeature object
@@ -841,8 +1116,12 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     ion_mode_int = 1 if mf.adduct.pos_mode else -1
     for i in range(len(mf.ms2_processed.mz_array)):
         # retrieve all indices of mass within tolerance
-        this_ms2_tol = ms2_tol if not ppm else ms2_tol * mf.ms2_processed.mz_array[i] * 1e-6
-        idx_list = np.where(abs(mf.ms2_processed.mz_array[i] - mass_arr) <= this_ms2_tol)[0]
+        this_ms2_tol = (
+            ms2_tol if not ppm else ms2_tol * mf.ms2_processed.mz_array[i] * 1e-6
+        )
+        idx_list = np.where(
+            abs(mf.ms2_processed.mz_array[i] - mass_arr) <= this_ms2_tol
+        )[0]
 
         if len(idx_list) == 0:
             continue
@@ -869,18 +1148,24 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
         if this_subform_arr.shape[0] == 0:
             continue
 
-        frag_exp = FragExplanation(mf.ms2_processed.idx_array[i],
-                                   Formula(this_subform_arr[0, :], ion_mode_int, this_mass[0]),
-                                   Formula(pre_charged_arr - this_subform_arr[0, :], 0))
+        frag_exp = FragExplanation(
+            mf.ms2_processed.idx_array[i],
+            Formula(this_subform_arr[0, :], ion_mode_int, this_mass[0]),
+            Formula(pre_charged_arr - this_subform_arr[0, :], 0),
+        )
         # add all subformulas
         if len(this_mass) > 1:
             for j in range(1, len(this_mass)):
-                frag_exp.add_frag_nl(Formula(this_subform_arr[j, :], ion_mode_int, this_mass[j]),
-                                     Formula(pre_charged_arr - this_subform_arr[j, :], 0))
+                frag_exp.add_frag_nl(
+                    Formula(this_subform_arr[j, :], ion_mode_int, this_mass[j]),
+                    Formula(pre_charged_arr - this_subform_arr[j, :], 0),
+                )
 
         if candidate_space is None:
             # create CandidateSpace object
-            candidate_space = CandidateSpace(cf.formula.array, pre_charged_arr, frag_exp_ls=[frag_exp])
+            candidate_space = CandidateSpace(
+                cf.formula.array, pre_charged_arr, frag_exp_ls=[frag_exp]
+            )
         else:
             candidate_space.add_frag_exp(frag_exp)
 
@@ -900,9 +1185,14 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     return candidate_form
 
 
-def assign_subformula(ms2_mz: List, precursor_formula: str, adduct: str,
-                      ms2_tol: float = 10, ppm: bool = True,
-                      dbe_cutoff: float = 0.0) -> Union[List[SubformulaResult], None]:
+def assign_subformula(
+    ms2_mz: List,
+    precursor_formula: str,
+    adduct: str,
+    ms2_tol: float = 10,
+    ppm: bool = True,
+    dbe_cutoff: float = 0.0,
+) -> Union[List[SubformulaResult], None]:
     """
     Assign subformulas to a given MS2 spectrum with a given precursor formula and adduct. Radical ions are considered.
     :param ms2_mz: MS2 m/z list

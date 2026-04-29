@@ -13,6 +13,7 @@ GitHub: Philipbear
 Description: machine learning functions: feature generation, prediction, etc.
              False discovery rate (FDR) estimation
 """
+
 import math
 import sys
 import warnings
@@ -25,7 +26,7 @@ from tqdm import tqdm
 from msbuddy.query import common_nl_from_array, check_formula_existence
 
 # ignore warnings
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 
 def _gen_arr_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
@@ -61,11 +62,21 @@ def _gen_form_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     :return: numpy array of ML features
     """
     # calculate ML features
-    ele_sum_1_arr = all_cf_arr[:, 2] + all_cf_arr[:, 3] + all_cf_arr[:, 4] + all_cf_arr[:, 5] + \
-                    all_cf_arr[:, 6] + all_cf_arr[:, 8]
+    ele_sum_1_arr = (
+        all_cf_arr[:, 2]
+        + all_cf_arr[:, 3]
+        + all_cf_arr[:, 4]
+        + all_cf_arr[:, 5]
+        + all_cf_arr[:, 6]
+        + all_cf_arr[:, 8]
+    )
     ele_sum_2_arr = ele_sum_1_arr + all_cf_arr[:, 10] + all_cf_arr[:, 11]
-    chon_arr = np.clip(ele_sum_2_arr, 0, 1)  # whether other eles other than C, H, O, N exist
-    chonps_arr = np.clip(ele_sum_1_arr, 0, 1)  # whether other eles other than C, H, O, N, P, S exist
+    chon_arr = np.clip(
+        ele_sum_2_arr, 0, 1
+    )  # whether other eles other than C, H, O, N exist
+    chonps_arr = np.clip(
+        ele_sum_1_arr, 0, 1
+    )  # whether other eles other than C, H, O, N, P, S exist
 
     hal_arr = np.sum(all_cf_arr[:, 2:6], axis=1)  # sum of halogen atoms
     ta_arr = np.sum(all_cf_arr, axis=1)  # total number of atoms
@@ -73,11 +84,24 @@ def _gen_form_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     cl_exist_arr = np.clip(all_cf_arr[:, 3], 0, 1)  # whether Cl exists
     br_exist_arr = np.clip(all_cf_arr[:, 2], 0, 1)  # whether Br exists
     i_exist_arr = np.clip(all_cf_arr[:, 5], 0, 1)  # whether I exists
-    hal_ele_type_arr = f_exist_arr + cl_exist_arr + br_exist_arr + i_exist_arr  # number of halogen elements
-    hal_two = np.clip(hal_ele_type_arr - 1, 0, 1)  # whether more than one halogen element exists
-    hal_three = np.clip(hal_ele_type_arr - 2, 0, 1)  # whether more than two halogen elements exist
-    senior_1_1_arr = (6 * all_cf_arr[:, 11] + 5 * all_cf_arr[:, 10] + 4 * all_cf_arr[:, 0] + 3 * all_cf_arr[:, 7] +
-                      2 * all_cf_arr[:, 9] + all_cf_arr[:, 1] + hal_arr)
+    hal_ele_type_arr = (
+        f_exist_arr + cl_exist_arr + br_exist_arr + i_exist_arr
+    )  # number of halogen elements
+    hal_two = np.clip(
+        hal_ele_type_arr - 1, 0, 1
+    )  # whether more than one halogen element exists
+    hal_three = np.clip(
+        hal_ele_type_arr - 2, 0, 1
+    )  # whether more than two halogen elements exist
+    senior_1_1_arr = (
+        6 * all_cf_arr[:, 11]
+        + 5 * all_cf_arr[:, 10]
+        + 4 * all_cf_arr[:, 0]
+        + 3 * all_cf_arr[:, 7]
+        + 2 * all_cf_arr[:, 9]
+        + all_cf_arr[:, 1]
+        + hal_arr
+    )
     senior_1_2_arr = all_cf_arr[:, 7] + all_cf_arr[:, 10] + all_cf_arr[:, 1] + hal_arr
 
     # halogen to H ratio, fill 0 if H = 0
@@ -100,30 +124,63 @@ def _gen_form_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
         chno = all_cf_arr[i, 0] + all_cf_arr[i, 1] + all_cf_arr[i, 7] + all_cf_arr[i, 9]
         # if C > 0
         if all_cf_arr[i, 0] > 0:
-            out[i, :] = [1 - chon_arr[i], 1 - chonps_arr[i],
-                         all_cf_arr[i, 0] / ta, all_cf_arr[i, 1] / ta,
-                         all_cf_arr[i, 7] / ta,
-                         all_cf_arr[i, 9] / ta, all_cf_arr[i, 10] / ta,
-                         all_cf_arr[i, 11] / ta, chno / ta,
-                         hal_arr[i] / ta, senior_1_1_arr[i], senior_1_2_arr[i], 2 * ta - 1, dbe_arr[i],
-                         np.sqrt(dbe_arr[i] / mass_arr[i]), dbe_arr[i] / np.power(mass_arr[i] / 100, 2 / 3),
-                         all_cf_arr[i, 1] / all_cf_arr[i, 0],
-                         all_cf_arr[i, 7] / all_cf_arr[i, 0],
-                         all_cf_arr[i, 9] / all_cf_arr[i, 0],
-                         all_cf_arr[i, 10] / all_cf_arr[i, 0],
-                         all_cf_arr[i, 11] / all_cf_arr[i, 0],
-                         hal_arr[i] / all_cf_arr[i, 0],
-                         hal_h_arr[i], o_p_arr[i], hal_two[i], hal_three[i]]
+            out[i, :] = [
+                1 - chon_arr[i],
+                1 - chonps_arr[i],
+                all_cf_arr[i, 0] / ta,
+                all_cf_arr[i, 1] / ta,
+                all_cf_arr[i, 7] / ta,
+                all_cf_arr[i, 9] / ta,
+                all_cf_arr[i, 10] / ta,
+                all_cf_arr[i, 11] / ta,
+                chno / ta,
+                hal_arr[i] / ta,
+                senior_1_1_arr[i],
+                senior_1_2_arr[i],
+                2 * ta - 1,
+                dbe_arr[i],
+                np.sqrt(dbe_arr[i] / mass_arr[i]),
+                dbe_arr[i] / np.power(mass_arr[i] / 100, 2 / 3),
+                all_cf_arr[i, 1] / all_cf_arr[i, 0],
+                all_cf_arr[i, 7] / all_cf_arr[i, 0],
+                all_cf_arr[i, 9] / all_cf_arr[i, 0],
+                all_cf_arr[i, 10] / all_cf_arr[i, 0],
+                all_cf_arr[i, 11] / all_cf_arr[i, 0],
+                hal_arr[i] / all_cf_arr[i, 0],
+                hal_h_arr[i],
+                o_p_arr[i],
+                hal_two[i],
+                hal_three[i],
+            ]
         else:
-            out[i, :] = [1 - chon_arr[i], 1 - chonps_arr[i],
-                         all_cf_arr[i, 0] / ta, all_cf_arr[i, 1] / ta,
-                         all_cf_arr[i, 7] / ta,
-                         all_cf_arr[i, 9] / ta, all_cf_arr[i, 10] / ta,
-                         all_cf_arr[i, 11] / ta, chno / ta,
-                         hal_arr[i] / ta, senior_1_1_arr[i], senior_1_2_arr[i], 2 * ta - 1, dbe_arr[i],
-                         np.sqrt(dbe_arr[i] / mass_arr[i]), dbe_arr[i] / np.power(mass_arr[i] / 100, 2 / 3),
-                         0, 0, 0, 0, 0, 0,
-                         hal_h_arr[i], o_p_arr[i], hal_two[i], hal_three[i]]
+            out[i, :] = [
+                1 - chon_arr[i],
+                1 - chonps_arr[i],
+                all_cf_arr[i, 0] / ta,
+                all_cf_arr[i, 1] / ta,
+                all_cf_arr[i, 7] / ta,
+                all_cf_arr[i, 9] / ta,
+                all_cf_arr[i, 10] / ta,
+                all_cf_arr[i, 11] / ta,
+                chno / ta,
+                hal_arr[i] / ta,
+                senior_1_1_arr[i],
+                senior_1_2_arr[i],
+                2 * ta - 1,
+                dbe_arr[i],
+                np.sqrt(dbe_arr[i] / mass_arr[i]),
+                dbe_arr[i] / np.power(mass_arr[i] / 100, 2 / 3),
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                hal_h_arr[i],
+                o_p_arr[i],
+                hal_two[i],
+                hal_three[i],
+            ]
 
     return out
 
@@ -146,7 +203,9 @@ def _fill_form_feature_arr_in_batch_data(batch_data, feature_arr) -> None:
     return
 
 
-def gen_ml_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
+def gen_ml_feature(
+    meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float, gd
+) -> np.array:
     """
     generate ML features for all metabolic features
     :param meta_feature_list: List of MetaFeature objects
@@ -181,7 +240,9 @@ def gen_ml_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float,
     return total_X_arr
 
 
-def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
+def gen_ml_feature_single(
+    meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float, gd
+) -> np.array:
     """
     generate ML features for a single candidate formula
     :param meta_feature: MetaFeature object
@@ -197,32 +258,56 @@ def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms
 
     # mz error in ppm
     theo_mass = cand_form.charged_formula.mass / abs(this_adduct.charge)
-    mz_error = (meta_feature.mz - theo_mass) / theo_mass * 1e6 if ppm else meta_feature.mz - theo_mass
+    mz_error = (
+        (meta_feature.mz - theo_mass) / theo_mass * 1e6
+        if ppm
+        else meta_feature.mz - theo_mass
+    )
     mz_error_log_p = _calc_log_p_norm(mz_error, ms1_tol / 3)
 
     # precursor charged formula
     pre_charged_arr = cand_form.charged_formula.array
     pre_dbe = cand_form.charged_formula.dbe
-    pre_h2c = pre_charged_arr[1] / pre_charged_arr[0] if pre_charged_arr[0] > 0 else 0  # no carbon, assign 0
+    pre_h2c = (
+        pre_charged_arr[1] / pre_charged_arr[0] if pre_charged_arr[0] > 0 else 0
+    )  # no carbon, assign 0
 
     # MS1 isotope similarity
-    ms1_iso_sim = cand_form.ms1_isotope_similarity if cand_form.ms1_isotope_similarity else 0
+    ms1_iso_sim = (
+        cand_form.ms1_isotope_similarity if cand_form.ms1_isotope_similarity else 0
+    )
 
     # MS/MS-related features
-    ms2_feature_arr = _gen_ms2_feature(meta_feature, cand_form, pre_dbe, pre_h2c, ppm, ms2_tol, gd)
+    ms2_feature_arr = _gen_ms2_feature(
+        meta_feature, cand_form, pre_dbe, pre_h2c, ppm, ms2_tol, gd
+    )
 
     # pos mode bool
     pos_mode = 1 if this_adduct.charge > 0 else 0
 
     # generate output array
-    out = np.concatenate((np.array([ms1_iso_sim]), np.array([mz_error_log_p]), np.array([pos_mode]),  # 3
-                          cand_form.formula_feature_array, ms2_feature_arr))  # 26 + 24
+    out = np.concatenate(
+        (
+            np.array([ms1_iso_sim]),
+            np.array([mz_error_log_p]),
+            np.array([pos_mode]),  # 3
+            cand_form.formula_feature_array,
+            ms2_feature_arr,
+        )
+    )  # 26 + 24
 
     return out
 
 
-def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
-                     ppm: bool, ms2_tol: float, gd) -> np.array:
+def _gen_ms2_feature(
+    meta_feature,
+    cand_form,
+    pre_dbe: float,
+    pre_h2c: float,
+    ppm: bool,
+    ms2_tol: float,
+    gd,
+) -> np.array:
     """
     generate MS/MS-related features for a single candidate formula
     :param meta_feature: MetaFeature object
@@ -253,19 +338,27 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
         # explained fragment ion intensity percentage
         exp_frag_int_pct = np.sum(exp_int_arr) / np.sum(valid_int_arr)
 
-        frag_form_list = ms2_explanation.explanation_list  # list of fragment formulas, Formula objects
+        frag_form_list = (
+            ms2_explanation.explanation_list
+        )  # list of fragment formulas, Formula objects
 
         pos_mode = meta_feature.adduct.pos_mode
 
         # check db existence of all explained fragments and neutral losses
-        frag_db_existed, frag_common = np.array([], dtype=bool), np.array([], dtype=bool)
+        frag_db_existed, frag_common = (
+            np.array([], dtype=bool),
+            np.array([], dtype=bool),
+        )
         nl_db_existed, nl_common = np.array([], dtype=bool), np.array([], dtype=bool)
         for f in frag_form_list:
-            frag_db_bool, frag_common_bool = check_formula_existence(f.array, pos_mode, True, gd)
+            frag_db_bool, frag_common_bool = check_formula_existence(
+                f.array, pos_mode, True, gd
+            )
             frag_db_existed = np.append(frag_db_existed, frag_db_bool)
             frag_common = np.append(frag_common, frag_common_bool)
-            nl_db_bool, nl_common_bool = check_formula_existence(cand_form.charged_formula.array - f.array,
-                                                                 pos_mode, False, gd)
+            nl_db_bool, nl_common_bool = check_formula_existence(
+                cand_form.charged_formula.array - f.array, pos_mode, False, gd
+            )
             nl_db_existed = np.append(nl_db_existed, nl_db_bool)
             nl_common = np.append(nl_common, nl_common_bool)
 
@@ -279,9 +372,13 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
         exp_db_fragnl_cnt_pct = np.sum(fragnl_db_existed) / len(valid_idx_arr)
 
         # explained and db existed fragment/nl ion intensity percentage
-        exp_db_frag_int_pct = np.sum(exp_int_arr[frag_db_existed]) / np.sum(valid_int_arr)
+        exp_db_frag_int_pct = np.sum(exp_int_arr[frag_db_existed]) / np.sum(
+            valid_int_arr
+        )
         exp_db_nl_int_pct = np.sum(exp_int_arr[nl_db_existed]) / np.sum(valid_int_arr)
-        exp_db_fragnl_int_pct = np.sum(exp_int_arr[fragnl_db_existed]) / np.sum(valid_int_arr)
+        exp_db_fragnl_int_pct = np.sum(exp_int_arr[fragnl_db_existed]) / np.sum(
+            valid_int_arr
+        )
 
         # common fragment/nl ion count percentage
         exp_common_frag_cnt_pct = np.sum(frag_common) / len(valid_idx_arr)
@@ -289,48 +386,109 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
         exp_common_fragnl_cnt_pct = np.sum(fragnl_common) / len(valid_idx_arr)
 
         # common fragment/nl ion intensity percentage
-        exp_common_frag_int_pct = np.sum(exp_int_arr[frag_common]) / np.sum(valid_int_arr)
+        exp_common_frag_int_pct = np.sum(exp_int_arr[frag_common]) / np.sum(
+            valid_int_arr
+        )
         exp_common_nl_int_pct = np.sum(exp_int_arr[nl_common]) / np.sum(valid_int_arr)
-        exp_common_fragnl_int_pct = np.sum(exp_int_arr[fragnl_common]) / np.sum(valid_int_arr)
+        exp_common_fragnl_int_pct = np.sum(exp_int_arr[fragnl_common]) / np.sum(
+            valid_int_arr
+        )
 
         # subformula count: how many frags are subformula of other frags
-        subform_score, subform_common_loss_score = _calc_subformula_score(frag_form_list, gd)
+        subform_score, subform_common_loss_score = _calc_subformula_score(
+            frag_form_list, gd
+        )
 
         # radical ion count percentage (out of all explained fragment ions)
-        radical_cnt_pct = np.sum([1 for frag_form in frag_form_list if frag_form.dbe % 1 == 0]) / len(frag_form_list)
+        radical_cnt_pct = np.sum(
+            [1 for frag_form in frag_form_list if frag_form.dbe % 1 == 0]
+        ) / len(frag_form_list)
 
         # normalized explained intensity array
         normed_exp_int_arr = exp_int_arr / np.sum(exp_int_arr)
 
         # weighted average of fragment DBEs
-        frag_dbe_wavg = np.sum(np.array([frag_form.dbe for frag_form in frag_form_list]) * normed_exp_int_arr)
+        frag_dbe_wavg = np.sum(
+            np.array([frag_form.dbe for frag_form in frag_form_list])
+            * normed_exp_int_arr
+        )
 
         # weighted average of fragment H/C ratios
-        frag_h2c_wavg = np.sum(np.array([frag_form.array[1] / frag_form.array[0] if frag_form.array[0] > 0 else pre_h2c
-                                         for frag_form in frag_form_list]) * normed_exp_int_arr)
+        frag_h2c_wavg = np.sum(
+            np.array(
+                [
+                    frag_form.array[1] / frag_form.array[0]
+                    if frag_form.array[0] > 0
+                    else pre_h2c
+                    for frag_form in frag_form_list
+                ]
+            )
+            * normed_exp_int_arr
+        )
 
         # weighted average of fragment m/z ppm errors
         if ppm:
-            frag_mz_err_wavg = np.sum(np.array([_calc_log_p_norm((frag_form.mass - mz) / frag_form.mass * 1e6,
-                                                                 ms2_tol / 3)
-                                                for frag_form, mz in
-                                                zip(frag_form_list, exp_mz_arr)]) * normed_exp_int_arr)
+            frag_mz_err_wavg = np.sum(
+                np.array(
+                    [
+                        _calc_log_p_norm(
+                            (frag_form.mass - mz) / frag_form.mass * 1e6, ms2_tol / 3
+                        )
+                        for frag_form, mz in zip(frag_form_list, exp_mz_arr)
+                    ]
+                )
+                * normed_exp_int_arr
+            )
         else:
-            frag_mz_err_wavg = np.sum(np.array([_calc_log_p_norm(frag_form.mass - mz, ms2_tol / 3)
-                                                for frag_form, mz in
-                                                zip(frag_form_list, exp_mz_arr)]) * normed_exp_int_arr)
+            frag_mz_err_wavg = np.sum(
+                np.array(
+                    [
+                        _calc_log_p_norm(frag_form.mass - mz, ms2_tol / 3)
+                        for frag_form, mz in zip(frag_form_list, exp_mz_arr)
+                    ]
+                )
+                * normed_exp_int_arr
+            )
 
         # weighted average of fragment-nl DBE difference
-        frag_nl_dbe_diff_wavg = np.sum(np.array([frag_form.dbe - (pre_dbe - frag_form.dbe + 1)
-                                                 for frag_form in frag_form_list]) * normed_exp_int_arr)
+        frag_nl_dbe_diff_wavg = np.sum(
+            np.array(
+                [
+                    frag_form.dbe - (pre_dbe - frag_form.dbe + 1)
+                    for frag_form in frag_form_list
+                ]
+            )
+            * normed_exp_int_arr
+        )
 
-        out_arr = np.array([exp_frag_cnt_pct, exp_frag_int_pct, exp_db_frag_cnt_pct, exp_db_nl_cnt_pct,
-                            exp_db_fragnl_cnt_pct, exp_db_frag_int_pct, exp_db_nl_int_pct, exp_db_fragnl_int_pct,
-                            exp_common_frag_cnt_pct, exp_common_nl_cnt_pct, exp_common_fragnl_cnt_pct,
-                            exp_common_frag_int_pct, exp_common_nl_int_pct, exp_common_fragnl_int_pct,
-                            subform_score, subform_common_loss_score,
-                            radical_cnt_pct, frag_dbe_wavg, frag_h2c_wavg, frag_mz_err_wavg, frag_nl_dbe_diff_wavg,
-                            len(valid_idx_arr), math.sqrt(exp_frag_cnt_pct), math.sqrt(exp_frag_int_pct)])
+        out_arr = np.array(
+            [
+                exp_frag_cnt_pct,
+                exp_frag_int_pct,
+                exp_db_frag_cnt_pct,
+                exp_db_nl_cnt_pct,
+                exp_db_fragnl_cnt_pct,
+                exp_db_frag_int_pct,
+                exp_db_nl_int_pct,
+                exp_db_fragnl_int_pct,
+                exp_common_frag_cnt_pct,
+                exp_common_nl_cnt_pct,
+                exp_common_fragnl_cnt_pct,
+                exp_common_frag_int_pct,
+                exp_common_nl_int_pct,
+                exp_common_fragnl_int_pct,
+                subform_score,
+                subform_common_loss_score,
+                radical_cnt_pct,
+                frag_dbe_wavg,
+                frag_h2c_wavg,
+                frag_mz_err_wavg,
+                frag_nl_dbe_diff_wavg,
+                len(valid_idx_arr),
+                math.sqrt(exp_frag_cnt_pct),
+                math.sqrt(exp_frag_int_pct),
+            ]
+        )
     else:
         out_arr = np.array([0] * 24)
 
@@ -360,11 +518,15 @@ def _calc_subformula_score(frag_form_arr, gd) -> (float, float):
         return 0, 0
 
     # subformula check & subformula common loss check
-    subform_cnt, subform_common_loss_cnt = _subformula_check(all_frag_arr, gd['common_loss_db'])
+    subform_cnt, subform_common_loss_cnt = _subformula_check(
+        all_frag_arr, gd["common_loss_db"]
+    )
 
     # generate scores, normalized by the number of all possible combinations
     subform_score = 2 * subform_cnt / (exp_frag_cnt * (exp_frag_cnt - 1))
-    subform_common_loss_score = 2 * subform_common_loss_cnt / (exp_frag_cnt * (exp_frag_cnt - 1))
+    subform_common_loss_score = (
+        2 * subform_common_loss_cnt / (exp_frag_cnt * (exp_frag_cnt - 1))
+    )
 
     return subform_score, subform_common_loss_score
 
@@ -384,7 +546,11 @@ def _subformula_check(all_frag_arr: np.array, nl_db: np.array):
         for j in range(i + 1, len(all_frag_arr)):
             delta_arr = all_frag_arr[j] - all_frag_arr[i]
             # check if subformula; check only C > 0, N > 0
-            if np.all(delta_arr >= 0) and np.sum(delta_arr[1:]) > 0 and (np.sum(delta_arr) - delta_arr[7]) > 0:
+            if (
+                np.all(delta_arr >= 0)
+                and np.sum(delta_arr[1:]) > 0
+                and (np.sum(delta_arr) - delta_arr[7]) > 0
+            ):
                 subform_cnt += 1
                 # check if there is common loss
                 if common_nl_from_array(delta_arr, nl_db):
@@ -419,7 +585,9 @@ def _calc_log_p_norm_helper(arr_norm_p) -> np.array:
     return log_p
 
 
-def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
+def _predict_ml(
+    meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2_tol: float, gd
+) -> np.array:
     """
     ml prediction
     :param meta_feature_list: List of MetaFeature objects
@@ -438,15 +606,15 @@ def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2
 
     # load model
     if group_no == 0:
-        model = gd['model_ms1_ms2']
+        model = gd["model_ms1_ms2"]
     elif group_no == 1:
-        model = gd['model_ms1_noms2']
+        model = gd["model_ms1_noms2"]
         X_arr = X_arr[:, :-24]  # remove MS2-related features
     elif group_no == 2:
-        model = gd['model_noms1_ms2']
+        model = gd["model_noms1_ms2"]
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
     else:
-        model = gd['model_noms1_noms2']
+        model = gd["model_noms1_noms2"]
         X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
         X_arr = X_arr[:, :-24]  # remove MS2-related features
 
@@ -455,7 +623,9 @@ def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2
     return score_arr
 
 
-def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx: int, config, gd):
+def predict_formula_probability(
+    buddy_data, batch_start_idx: int, batch_end_idx: int, config, gd
+):
     """
     predict formula probability
     :param buddy_data: buddy data
@@ -509,9 +679,13 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
         if not group_dict[i]:
             continue
         # predict formula probability
-        prob_arr = _predict_ml([batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
+        prob_arr = _predict_ml(
+            [batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd
+        )
         # Platt calibration
-        prob_arr = _platt_calibrated_probability(prob_arr, gd['platt_a_' + str(i)], gd['platt_b_' + str(i)])
+        prob_arr = _platt_calibrated_probability(
+            prob_arr, gd["platt_a_" + str(i)], gd["platt_b_" + str(i)]
+        )
         # add prediction results to candidate formula objects in the list
         cnt = 0
         for j in group_dict[i]:
@@ -547,14 +721,23 @@ def calc_fdr(buddy_data, batch_start_idx: int, batch_end_idx: int):
     batch_data = buddy_data[batch_start_idx:batch_end_idx]
 
     # sort candidate formula list for each metabolic feature
-    for meta_feature in tqdm(batch_data, desc="FDR calculation: ", file=sys.stdout, colour="green"):
+    for meta_feature in tqdm(
+        batch_data, desc="FDR calculation: ", file=sys.stdout, colour="green"
+    ):
         if not meta_feature.candidate_formula_list:
             continue
         # sort candidate formula list by estimated probability, in descending order
-        meta_feature.candidate_formula_list.sort(key=lambda x: x.estimated_prob, reverse=True)
+        meta_feature.candidate_formula_list.sort(
+            key=lambda x: x.estimated_prob, reverse=True
+        )
 
         # sum of estimated probabilities
-        prob_sum = np.sum([cand_form.estimated_prob for cand_form in meta_feature.candidate_formula_list])
+        prob_sum = np.sum(
+            [
+                cand_form.estimated_prob
+                for cand_form in meta_feature.candidate_formula_list
+            ]
+        )
 
         # calculate normed estimated prob and FDR considering all candidate formulas
         sum_normed_estimated_prob = 0
