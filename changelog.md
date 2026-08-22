@@ -74,3 +74,6 @@ Now we use a learning-to-rank model to rank the formula candidates.
 
 0.3.13, 0.3.14 (2026-01-27)
 - Update USI loading function.
+
+0.3.15 (2026-08-22)
+- Bug fix for cmd line version.
