@@ -79,7 +79,7 @@ def main():
     # create a MsbuddyConfig object
     msb_config = MsbuddyConfig(
         ms_instr=args.ms_instr,
-        ppm=~args.use_Da,
+        ppm=not args.use_Da,
         ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
         parallel=args.parallel, n_cpu=args.n_cpu,
         timeout_secs=args.timeout_secs, batch_size=args.batch_size,
