@@ -22,7 +22,7 @@ from msbuddy.main import Msbuddy, MsbuddyConfig
 
 
 def main():
-    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.3.14)")
+    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.3.15)")
     parser.add_argument('-mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('-usi', type=str, help='A single USI string.')
     parser.add_argument('-csv', type=str,
@@ -79,7 +79,7 @@ def main():
     # create a MsbuddyConfig object
     msb_config = MsbuddyConfig(
         ms_instr=args.ms_instr,
-        ppm=~args.use_Da,
+        ppm=not args.use_Da,
         ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
         parallel=args.parallel, n_cpu=args.n_cpu,
         timeout_secs=args.timeout_secs, batch_size=args.batch_size,
