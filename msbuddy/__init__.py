@@ -1,6 +1,7 @@
 from .cand import assign_subformula
 from .base import Formula, Spectrum, Adduct, MetaFeature
 from .main import Msbuddy, MsbuddyConfig
+from .load import download_data, get_data_files
 from .utils import read_formula, form_arr_to_str, enumerate_subform_arr
 
 __version__ = "0.3.15"
