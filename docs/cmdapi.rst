@@ -49,6 +49,16 @@ For USI string, the output folder is required.
     In all cases, ``-ms`` option is strongly recommended ('qtof', 'orbitrap' or 'fticr').
 
 
+Option naming
+~~~~~~~~~~~~~
+
+Every option also accepts a conventional double-dash form, so ``--mgf`` and ``-mgf`` are equivalent, as are ``--n-cpu`` and ``-n_cpu``.
+
+Descriptive names use hyphens in the double-dash form (``--ms-instr``, ``--batch-size``, ``--top-n-per-50-da``), while genuine one-character shortcuts stay single-dash (``-o``, ``-d``, ``-p``, ``-t``).
+
+Every spelling shown above continues to work unchanged; the double-dash forms are additions, not replacements.
+
+
 Please check out the ``--help`` (or ``-h``) option to see all the available options:
 
 .. code-block:: bash

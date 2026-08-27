@@ -13,7 +13,9 @@ GitHub: Philipbear
 Description: load databases and data files
 """
 
+import errno
 import logging
+import os
 from json import loads as loads
 from pathlib import Path
 from typing import List, Union
@@ -30,47 +32,196 @@ logging.basicConfig(level=logging.INFO)
 current_db_version = 'v0.2.4'
 current_model_version = 'v0.3.0'
 
+DATA_FILES = {
+    'common_db': {
+        'filename': 'common_db_' + current_db_version + '.joblib',
+        'url': (
+            'https://github.com/Philipbear/msbuddy/releases/download/'
+            'msbuddy_data_v0.2.4/common_db_v0.2.4.joblib'),
+    },
+    'formula_db': {
+        'filename': 'formula_db_' + current_db_version + '.joblib',
+        'url': (
+            'https://github.com/Philipbear/msbuddy/releases/download/'
+            'msbuddy_data_v0.2.4/formula_db_v0.2.4.joblib'),
+    },
+    'ml_model': {
+        'filename': 'ml_' + current_model_version + '.joblib',
+        'url': (
+            'https://github.com/Philipbear/msbuddy/releases/download/'
+            'msbuddy_data_v0.3.0/ml_v0.3.0.joblib'),
+    },
+}
 
-def check_download_joblibload(url: str, path):
+
+def resolve_data_dir(data_dir=None) -> Path:
+    """Resolve the data directory while preserving the original default."""
+    if data_dir is not None:
+        return Path(data_dir).expanduser()
+    return Path(__file__).parent / 'data'
+
+
+def _resolve_data_paths(data_dir=None, data_files=None) -> dict:
+    """Resolve default and user-provided data file names or paths."""
+    data_path = resolve_data_dir(data_dir)
+    overrides = {} if data_files is None else dict(data_files)
+
+    unknown = sorted(set(overrides) - set(DATA_FILES))
+    if unknown:
+        valid = ', '.join(sorted(DATA_FILES))
+        raise ValueError(
+            f"Unknown data_files key(s): {', '.join(unknown)}. "
+            f"Valid keys are: {valid}.")
+
+    paths = {}
+    for name, info in DATA_FILES.items():
+        value = overrides.get(name, info['filename'])
+        if value is None:
+            raise ValueError(f"data_files['{name}'] cannot be None.")
+
+        path = Path(value).expanduser()
+        if not path.is_absolute():
+            path = data_path / path
+        paths[name] = path
+
+    return paths
+
+
+def get_data_files(data_dir=None, data_files=None) -> dict:
     """
-    check if the file exists, if not, download from url, and load
+    Return the paths and download URLs for the files used by msbuddy.
+
+    Values in ``data_files`` may be file names relative to ``data_dir`` or
+    absolute paths. Supported keys are ``common_db``, ``formula_db`` and
+    ``ml_model``. This function does not create directories or download files.
+    """
+    paths = _resolve_data_paths(data_dir, data_files)
+    return {
+        name: {
+            'path': path,
+            'url': DATA_FILES[name]['url'],
+            'exists': path.is_file(),
+        }
+        for name, path in paths.items()
+    }
+
+
+def _permission_error(path: Path) -> PermissionError:
+    return PermissionError(
+        f"msbuddy could not read or write its data file:\n  {path}\n\n"
+        "The default data directory is inside the installed msbuddy package "
+        "for backwards compatibility. A system installation may be owned by "
+        "root. Choose a writable directory using one of these options:\n\n"
+        "Python:\n"
+        "  from msbuddy import Msbuddy, MsbuddyConfig, download_data\n"
+        "  download_data('~/msbuddy-data')\n"
+        "  config = MsbuddyConfig(data_dir='~/msbuddy-data')\n"
+        "  engine = Msbuddy(config)\n\n"
+        "Command line:\n"
+        "  msbuddy --download-data --data-dir ~/msbuddy-data\n"
+        "  msbuddy --mgf input.mgf --data-dir ~/msbuddy-data")
+
+
+def _missing_custom_file_error(path: Path) -> FileNotFoundError:
+    return FileNotFoundError(
+        f"The configured msbuddy data file is missing or incomplete:\n"
+        f"  {path}\n\n"
+        "Provide a compatible file at that path, remove its data_files "
+        "override to use the standard filename and automatic download, or "
+        "call download_data(...) to download the standard release asset to "
+        "the configured path.")
+
+
+def _file_is_ready(path: Path) -> bool:
+    try:
+        return path.is_file() and path.stat().st_size >= 10 ** 3
+    except OSError as exc:
+        if exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
+            raise _permission_error(path) from exc
+        raise
+
+
+def _download_if_missing(url: str, path: Path) -> Path:
+    if _file_is_ready(path):
+        return path
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        download(url, str(path))
+    except OSError as exc:
+        if exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
+            raise _permission_error(path) from exc
+        raise
+
+    if not _file_is_ready(path):
+        if path.parent.exists() and not os.access(path.parent, os.W_OK):
+            raise _permission_error(path)
+        raise RuntimeError(f'Failed to download msbuddy data file: {path}')
+
+    return path
+
+
+def download_data(data_dir=None, data_files=None, include_model=True) -> dict:
+    """
+    Download the standard msbuddy files to the selected local paths.
+
+    Custom file names or paths can be supplied through ``data_files``. If a
+    custom file already exists, it is used as-is. If it is missing, the
+    standard msbuddy release file is downloaded to that path.
+    """
+    files = get_data_files(data_dir, data_files)
+    selected = ['common_db', 'formula_db']
+    if include_model:
+        selected.append('ml_model')
+
+    for name in selected:
+        _download_if_missing(files[name]['url'], files[name]['path'])
+
+    return {name: files[name]['path'] for name in selected}
+
+
+def check_download_joblibload(url: str, path, download_missing=True):
+    """
+    check if the file exists, if not, optionally download from url, and load
     :param url: url to download
     :param path: path to save
+    :param download_missing: whether a missing file may be downloaded
     :return: loaded object
     """
-    if not path.exists() or path.stat().st_size < 10 ** 3:
-        download(url, str(path))
+    path = Path(path)
+    if download_missing:
+        path = _download_if_missing(url, path)
+    elif not _file_is_ready(path):
+        raise _missing_custom_file_error(path)
 
-    return j_load(path)
+    try:
+        return j_load(path)
+    except OSError as exc:
+        if exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
+            raise _permission_error(path) from exc
+        raise
 
 
-def init_db() -> dict:
+def init_db(data_dir=None, data_files=None) -> dict:
     """
     init databases used in the project
     :return: global_dict
     """
-    # get root path
-    root_path = Path(__file__).parent
-
-    # create data folder if not exists
-    data_path = root_path / 'data'
-    data_path.mkdir(parents=True, exist_ok=True)
-
+    files = _resolve_data_paths(data_dir, data_files)
+    custom_files = set(data_files or {})
     global_dict = dict()
 
     # load common_loss_db, common_frag_db
-    db_name = 'common_db_' + current_db_version + '.joblib'
     global_dict['common_loss_db'], global_dict['common_frag_db'] = (
         check_download_joblibload(
-            'https://github.com/Philipbear/msbuddy/releases/download/msbuddy_data_v0.2.4/common_db_v0.2.4.joblib',
-            data_path / db_name))
+            DATA_FILES['common_db']['url'], files['common_db'],
+            download_missing='common_db' not in custom_files))
 
     # formula_db
-    db_name = 'formula_db_' + current_db_version + '.joblib'
     basic_db, halogen_db = (
         check_download_joblibload(
-            'https://github.com/Philipbear/msbuddy/releases/download/msbuddy_data_v0.2.4/formula_db_v0.2.4.joblib',
-            data_path / db_name))
+            DATA_FILES['formula_db']['url'], files['formula_db'],
+            download_missing='formula_db' not in custom_files))
 
     global_dict['basic_db_mass'], global_dict['basic_db_formula'], global_dict['basic_db_idx'] = basic_db
     global_dict['halogen_db_mass'], global_dict['halogen_db_formula'], global_dict['halogen_db_idx'] = halogen_db
@@ -78,7 +229,7 @@ def init_db() -> dict:
     return global_dict
 
 
-def init_ml_models(global_dict) -> dict:
+def init_ml_models(global_dict, data_dir=None, data_files=None) -> dict:
     """
     init ml models if not exists
     :return: global_dict
@@ -88,22 +239,17 @@ def init_ml_models(global_dict) -> dict:
     if 'model_ms1_ms2' in global_dict:
         return global_dict
 
-    # get root path
-    root_path = Path(__file__).parent
-
-    # create data folder if not exists
-    data_path = root_path / 'data'
-    data_path.mkdir(parents=True, exist_ok=True)
+    files = _resolve_data_paths(data_dir, data_files)
+    custom_files = set(data_files or {})
 
     # load ml
-    ml_name = 'ml_' + current_model_version + '.joblib'
     (global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[
         'model_noms1_noms2'], global_dict['platt_a_0'], global_dict['platt_b_0'], global_dict['platt_a_1'],
      global_dict['platt_b_1'], global_dict['platt_a_2'], global_dict['platt_b_2'], global_dict['platt_a_3'],
      global_dict['platt_b_3']) = (
         check_download_joblibload(
-            'https://github.com/Philipbear/msbuddy/releases/download/msbuddy_data_v0.3.0/ml_v0.3.0.joblib',
-            data_path / ml_name))
+            DATA_FILES['ml_model']['url'], files['ml_model'],
+            download_missing='ml_model' not in custom_files))
 
     return global_dict
 
