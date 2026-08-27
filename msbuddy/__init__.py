@@ -4,12 +4,12 @@ from .main import Msbuddy, MsbuddyConfig
 from .load import download_data, get_data_files
 from .utils import read_formula, form_arr_to_str, enumerate_subform_arr
 
-__version__ = "0.3.15"
+__version__ = "0.3.16"
 __author__ = "Shipei Xing"
 __email__ = "philipxsp@hotmail.com"
 __author_email__ = "philipxsp@hotmail.com"
 
-__copyright__ = "Copyright 2024 Shipei Xing"
+__copyright__ = "Copyright 2024-2026 Shipei Xing"
 __license_expression__ = "Apache 2.0"
 
 __url__ = "https://github.com/Philipbear/msbuddy"

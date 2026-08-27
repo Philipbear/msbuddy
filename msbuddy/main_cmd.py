@@ -23,7 +23,7 @@ from msbuddy.load import download_data
 
 
 def main():
-    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.3.15)")
+    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.3.16)")
     # Keep the original single-dash spellings for backwards compatibility.
     # Documented long options use the conventional --kebab-case form.
     parser.add_argument('--mgf', '-mgf', type=str, help='Path to the MGF file.')
