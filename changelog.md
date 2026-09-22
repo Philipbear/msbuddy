@@ -77,3 +77,6 @@ Now we use a learning-to-rank model to rank the formula candidates.
 
 0.3.15 (2026-08-22)
 - Bug fix for cmd line version.
+
+0.3.16 (2026-08-27)
+- Allow configurable data directories and file names.

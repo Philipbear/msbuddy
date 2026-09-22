@@ -64,7 +64,9 @@ class MsbuddyConfig:
                  i_range: Tuple[int, int] = (0, 10),
                  isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4,
                  rel_int_denoise_cutoff: float = 0.01,
-                 top_n_per_50_da: int = 6):
+                 top_n_per_50_da: int = 6,
+                 data_dir=None,
+                 data_files=None):
         """
         :param ms_instr: mass spectrometry instrument, one of "orbitrap, "fticr", "qtof".
         :param ppm: whether ppm is used for m/z tolerance
@@ -89,6 +91,8 @@ class MsbuddyConfig:
         :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern
         :param rel_int_denoise_cutoff: relative intensity cutoff, used for MS2 denoise
         :param top_n_per_50_da: top n peaks to keep in each 50 Da, used for MS2 denoise
+        :param data_dir: directory containing the msbuddy database and model files
+        :param data_files: optional mapping of common_db, formula_db, or ml_model to custom file paths
         """
         if ms_instr is None or ms_instr == "None":
             self.ppm = ppm
@@ -169,6 +173,11 @@ class MsbuddyConfig:
         else:
             self.top_n_per_50_da = int(top_n_per_50_da)
 
+        self.data_dir = (pathlib.Path(data_dir).expanduser()
+                         if data_dir is not None else None)
+        self.data_files = (None if data_files is None
+                           else dict(data_files))
+
 
 class Msbuddy:
     """
@@ -193,14 +202,18 @@ class Msbuddy:
             self.config = config  # customized configuration
 
         global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_db()  # database initialization
+        shared_data_dict = init_db(
+            data_dir=self.config.data_dir,
+            data_files=self.config.data_files)  # database initialization
 
         self.data = None  # List[MetabolicFeature]
 
     def update_config(self, **kwargs):
         self.config = MsbuddyConfig(**kwargs)
         global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_db()  # database initialization
+        shared_data_dict = init_db(
+            data_dir=self.config.data_dir,
+            data_files=self.config.data_files)  # database initialization
 
     def load_usi(self, usi_list: Union[str, List[str]],
                  adduct_list: Union[None, str, List[str]] = None):
@@ -318,7 +331,10 @@ class Msbuddy:
         :return: None. Update self.data
         """
         global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_ml_models(shared_data_dict)  # ml models initialization
+        shared_data_dict = init_ml_models(
+            shared_data_dict,
+            data_dir=self.config.data_dir,
+            data_files=self.config.data_files)  # ml models initialization
 
         n_batch = self._annotate_formula_prepare()
 
@@ -337,7 +353,10 @@ class Msbuddy:
         :return: None
         """
         global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_ml_models(shared_data_dict)  # ml models initialization
+        shared_data_dict = init_ml_models(
+            shared_data_dict,
+            data_dir=self.config.data_dir,
+            data_files=self.config.data_files)  # ml models initialization
 
         n_batch = self._annotate_formula_prepare()
         output_path.mkdir(parents=True, exist_ok=True)
