@@ -43,6 +43,9 @@ def _gen_arr_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
             continue
         # generate ML features for each candidate formula
         for cf in mf.candidate_formula_list:
+            # skip invalid formulas (mass <= 0 or no carbons)
+            if cf.formula.mass <= 0 or cf.formula.array[0] == 0:
+                continue
             # add formula array to all_cand_form_arr
             all_cand_form_arr = np.append(all_cand_form_arr, [cf.formula.array], axis=0)
             dbe_arr = np.append(dbe_arr, cf.formula.dbe)
@@ -141,6 +144,11 @@ def _fill_form_feature_arr_in_batch_data(batch_data, feature_arr) -> None:
             continue
         # fill in ML features for each candidate formula
         for cf in mf.candidate_formula_list:
+            # skip invalid formulas, same as in _gen_arr_from_buddy_data
+            if cf.formula.mass <= 0 or cf.formula.array[0] == 0:
+                # fallback: assign zeros so concatenation won’t break
+                cf.formula_feature_array = np.zeros((26,))
+                continue
             cf.formula_feature_array = feature_arr[cnt, :]
             cnt += 1
     return
