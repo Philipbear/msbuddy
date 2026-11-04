@@ -174,3 +174,5 @@ package_update.md
 .idea/
 figures/
 logo/
+*.joblib
+*.csv
