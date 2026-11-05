@@ -204,6 +204,10 @@ def query_fragnl_mass(mass: float, fragment: bool, pos_mode: bool, na_contain: b
     :param gd: global dependencies dictionary
     :return: list of Formula
     """
+    # Spectrum peaks are float32. Use double precision for scalar mass
+    # arithmetic on both NumPy 1.x and 2.x, including narrow search windows.
+    mass = float(mass)
+
     # calculate mass tolerance
     mass_tol = mass * mz_tol / 1e6 if ppm else mz_tol
 
@@ -396,6 +400,8 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
     if len(all_idx) == 0:
         return forms
 
+    # Explicit float64 scalars keep mass corrections and later fragment/loss
+    # sums precise even when the database stores float32 values (NumPy 2).
     ion_mode_int = 1 if pos_mode else -1
 
     if fragment:
@@ -406,14 +412,14 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
                     arr[8] += 1
                     arr[1] -= 1
                     forms.append(Formula._from_array(arr, charge=ion_mode_int,
-                                         mass=results_mass[idx] - ion_mode_int * 0.00054858 + na_h_delta))
+                                         mass=np.float64(results_mass[idx]) - ion_mode_int * 0.00054858 + na_h_delta))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[8] += 1
                     arr[1] = arr[1] - 1 + ion_mode_int
                     forms.append(Formula._from_array(arr, charge=ion_mode_int,
-                                         mass=results_mass[idx] + ion_mode_int * 1.007276 + na_h_delta))
+                                         mass=np.float64(results_mass[idx]) + ion_mode_int * 1.007276 + na_h_delta))
         elif k_contain:
             if radical:
                 for idx in all_idx:
@@ -421,24 +427,24 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
                     arr[6] += 1
                     arr[1] -= 1
                     forms.append(Formula._from_array(arr, charge=ion_mode_int,
-                                         mass=results_mass[idx] - ion_mode_int * 0.00054858 + k_h_delta))
+                                         mass=np.float64(results_mass[idx]) - ion_mode_int * 0.00054858 + k_h_delta))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[6] += 1
                     arr[1] = arr[1] - 1 + ion_mode_int
                     forms.append(Formula._from_array(arr, charge=ion_mode_int,
-                                         mass=results_mass[idx] + ion_mode_int * 1.007276 + k_h_delta))
+                                         mass=np.float64(results_mass[idx]) + ion_mode_int * 1.007276 + k_h_delta))
         else:
             if radical:
                 for idx in all_idx:
                     forms.append(Formula._from_array(results_formula[idx], charge=ion_mode_int,
-                                         mass=results_mass[idx] - ion_mode_int * 0.00054858))
+                                         mass=np.float64(results_mass[idx]) - ion_mode_int * 0.00054858))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[1] += ion_mode_int
-                    forms.append(Formula._from_array(arr, charge=ion_mode_int, mass=results_mass[idx] + ion_mode_int * 1.007276))
+                    forms.append(Formula._from_array(arr, charge=ion_mode_int, mass=np.float64(results_mass[idx]) + ion_mode_int * 1.007276))
     else:  # neutral loss
         if na_contain:
             if radical:
@@ -447,13 +453,13 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
                     arr[8] += 1
                     arr[1] = arr[1] - 1 + ion_mode_int
                     forms.append(Formula._from_array(arr, charge=0,
-                                         mass=results_mass[idx] + ion_mode_int * 1.007825 + na_h_delta))
+                                         mass=np.float64(results_mass[idx]) + ion_mode_int * 1.007825 + na_h_delta))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[8] += 1
                     arr[1] -= 1
-                    forms.append(Formula._from_array(arr, charge=0, mass=results_mass[idx] + na_h_delta))
+                    forms.append(Formula._from_array(arr, charge=0, mass=np.float64(results_mass[idx]) + na_h_delta))
         elif k_contain:
             if radical:
                 for idx in all_idx:
@@ -461,19 +467,19 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
                     arr[6] += 1
                     arr[1] = arr[1] - 1 + ion_mode_int
                     forms.append(Formula._from_array(arr, charge=0,
-                                         mass=results_mass[idx] + ion_mode_int * 1.007825 + k_h_delta))
+                                         mass=np.float64(results_mass[idx]) + ion_mode_int * 1.007825 + k_h_delta))
             else:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[6] += 1
                     arr[1] -= 1
-                    forms.append(Formula._from_array(arr, charge=0, mass=results_mass[idx] + k_h_delta))
+                    forms.append(Formula._from_array(arr, charge=0, mass=np.float64(results_mass[idx]) + k_h_delta))
         else:
             if radical:
                 for idx in all_idx:
                     arr = results_formula[idx].copy()
                     arr[1] += ion_mode_int
-                    forms.append(Formula._from_array(arr, charge=0, mass=results_mass[idx] + ion_mode_int * 1.007825))
+                    forms.append(Formula._from_array(arr, charge=0, mass=np.float64(results_mass[idx]) + ion_mode_int * 1.007825))
             else:
                 for idx in all_idx:
                     forms.append(Formula._from_array(results_formula[idx], charge=0, mass=results_mass[idx]))

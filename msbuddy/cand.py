@@ -515,7 +515,9 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
     candidate_space_by_formula = {}
     for i in range(len(mf.ms2_processed.mz_array)):
         # fragment ion m/z
-        frag_mz = mf.ms2_processed.mz_array[i]
+        # Preserve precursor-minus-fragment precision with NumPy 2 scalar
+        # promotion rules as well as NumPy 1.x.
+        frag_mz = float(mf.ms2_processed.mz_array[i])
         # neutral loss m/z
         nl_mz = mf.mz - frag_mz
 

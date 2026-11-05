@@ -87,6 +87,7 @@ Now we use a learning-to-rank model to rank the formula candidates.
 - Reject unsupported elements in formulas, adducts, and element ranges.
 - Improve loading and annotation performance, and add regression tests and benchmarks.
 - Fix handling of empty spectra, USIs, MGF metadata, and multiply charged precursors.
+- Preserve fragment-search mass precision across NumPy 1.x and 2.x.
 - MGF spectra without polarity information now warn and default to positive mode.
 - Move most package metadata to pyproject.toml and use one version number throughout.
 - Update the maintainer contact address.

@@ -6,7 +6,7 @@ import numpy as np
 
 from msbuddy.base import Adduct, Formula
 from msbuddy.main import Msbuddy
-from msbuddy.query import query_neutral_mass, query_precursor_mass
+from msbuddy.query import query_fragnl_mass, query_neutral_mass, query_precursor_mass
 from msbuddy.utils import read_formula
 
 
@@ -24,6 +24,33 @@ def database(masses):
 
 
 class MassQueryTests(unittest.TestCase):
+    def test_float32_fragment_input_preserves_narrow_search_windows(self):
+        peak = np.float32(137.01239)
+        neutral = float(peak) - 1.007276
+        gd = database([neutral])
+        for mass in (peak, float(peak)):
+            with self.subTest(mass_type=type(mass).__name__):
+                matches = query_fragnl_mass(mass, True, True, False, False,
+                                           1e-7, False, 0, gd)
+                self.assertEqual(len(matches), 1)
+                self.assertAlmostEqual(matches[0].mass, float(peak), places=12)
+
+    def test_float32_database_retains_precise_fragment_mass_corrections(self):
+        gd = database([100.0])
+        gd['basic_db_mass'] = gd['basic_db_mass'].astype(np.float32)
+        for positive in (True, False):
+            charge = 1 if positive else -1
+            for sodium, potassium, shift in ((False, False, 0.0),
+                                             (True, False, 22.989769 - 1.007825),
+                                             (False, True, 38.963707 - 1.007825)):
+                expected = 100.0 + charge * 1.007276 + shift
+                with self.subTest(positive=positive, sodium=sodium, potassium=potassium):
+                    matches = query_fragnl_mass(expected, True, positive, sodium, potassium,
+                                               1e-7, False, 0, gd)
+                    corrected = [f for f in matches if f.array[8] == sodium and f.array[6] == potassium]
+                    self.assertEqual(len(corrected), 1)
+                    self.assertAlmostEqual(corrected[0].mass, expected, places=12)
+
     def test_exact_and_inclusive_bin_boundaries(self):
         gd = database([99.9, 100.0, 100.1])
         self.assertEqual([f.mass for f in query_neutral_mass(100, 0, False, False, gd)], [100.0])
