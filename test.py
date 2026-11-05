@@ -1,5 +1,4 @@
-# test msbuddy
-# ver 0.3.0
+# Example msbuddy workflows.
 
 def test_main():
     from msbuddy import Msbuddy, MsbuddyConfig
@@ -23,20 +22,16 @@ def test_main():
 
 # test other msbuddy APIs
 def test_formula():
-    from msbuddy import read_formula
+    from itertools import islice
+    from msbuddy import enumerate_subformulas, formula_to_string, read_formula
 
-    formula_array = read_formula("C10H20O5")
-    print(formula_array)
+    composition = read_formula("C10H20O5")
+    print(composition)
 
-    from msbuddy import form_arr_to_str
-
-    formula_str = form_arr_to_str([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
+    formula_str = formula_to_string(composition)
     print(formula_str)
 
-    from msbuddy import enumerate_subform_arr
-
-    all_subform_arr = enumerate_subform_arr([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
-    print(all_subform_arr)
+    print(list(islice(enumerate_subformulas(composition), 5)))
 
 
 def test_mass_formula():

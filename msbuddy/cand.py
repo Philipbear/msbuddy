@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <philipxsp@hotmail.com>
+# Copyright (C) 2024-2026 Shipei Xing <sxing@fudan.edu.cn>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,11 +8,13 @@
 """
 File: cand.py
 Author: Shipei Xing
-Email: philipxsp@hotmail.com
+Email: sxing@fudan.edu.cn
 GitHub: Philipbear
 Description: generate candidate formula space for a metabolic feature; mass search and bottom-up MS/MS interrogation
 """
 
+import logging
+from math import isfinite
 from typing import Union, List, Tuple
 
 import numpy as np
@@ -22,7 +24,8 @@ from numba import njit
 from msbuddy.base import Formula, CandidateFormula, MS2Explanation, MetaFeature, check_adduct, Adduct
 from msbuddy.ml import _calc_log_p_norm
 from msbuddy.query import check_common_frag, check_common_nl, query_precursor_mass, query_fragnl_mass
-from msbuddy.utils import form_arr_to_str, enumerate_subformula, read_formula, SubformulaResult, FormulaResult
+from msbuddy.utils import (form_arr_to_str, enumerate_subformula, read_formula,
+                           _composition_to_array, SubformulaResult, FormulaResult)
 
 
 class FragExplanation:
@@ -170,10 +173,10 @@ class CandidateSpace:
                 this_frag = self.frag_exp_list[m].optim_frag
                 this_nl = self.frag_exp_list[m].optim_nl
                 # add a new FragExplanation
-                new_frag = Formula(this_frag.array, this_frag.charge, this_frag.mass + 1.003355, 1)
+                new_frag = Formula._from_array(this_frag.array, this_frag.charge, this_frag.mass + 1.003355, 1)
                 # for iso peak, the neutral loss is actually the same as the previous one (M+0)
                 # but we denote it as '-1' isotope peak, so that frag mass + nl mass is still precursor mass
-                new_nl = Formula(this_nl.array, 0, this_nl.mass - 1.003355, -1)
+                new_nl = Formula._from_array(this_nl.array, 0, this_nl.mass - 1.003355, -1)
                 new_frag_exp = FragExplanation(next_exp_idx, new_frag, new_nl)
                 new_frag_exp.direct_assign_optim()
                 self.frag_exp_list.append(new_frag_exp)
@@ -186,8 +189,8 @@ class CandidateSpace:
         ms2_raw_exp = MS2Explanation(idx_array=np.array([f.idx for f in self.frag_exp_list], dtype=np.int16),
                                      explanation_list=[f.optim_frag for f in self.frag_exp_list])
 
-        return CandidateFormula(formula=Formula(self.pre_neutral_array, 0, self.neutral_mass),
-                                charged_formula=Formula(self.pre_charged_array, meta_feature.adduct.charge),
+        return CandidateFormula(formula=Formula._from_array(self.pre_neutral_array, 0, self.neutral_mass),
+                                charged_formula=Formula._from_array(self.pre_charged_array, meta_feature.adduct.charge),
                                 ms2_raw_explanation=ms2_raw_exp)
 
 
@@ -234,6 +237,23 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
         #     # fill in db_existed
         #     cf_list = _fill_in_db_existence(ms1_cand_form_ls, ms2_cand_form_ls,
         #                                     ms1_cand_form_str_ls, ms2_cand_form_str_ls)
+
+    # Empty or physically invalid formulas can otherwise cause division by
+    # zero during ranking or fail during subformula/isotope generation.
+    valid_candidates = []
+    for candidate in cf_list:
+        neutral = candidate.formula
+        charged = candidate.charged_formula
+        if (neutral is not None and charged is not None
+                and isfinite(neutral.mass) and neutral.mass > 0
+                and isfinite(charged.mass) and charged.mass > 0
+                and np.any(neutral.array) and not np.any(neutral.array < 0)
+                and np.any(charged.array) and not np.any(charged.array < 0)):
+            valid_candidates.append(candidate)
+    invalid_count = len(cf_list) - len(valid_candidates)
+    if invalid_count:
+        logging.warning('Skipped %s invalid candidate formula(s) for spectrum %s.', invalid_count, mf.identifier)
+    cf_list = valid_candidates
 
     # calculate mz error
     cf_list = _calc_mz_error(cf_list, mf.mz, ppm)
@@ -492,7 +512,7 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
     ms1_abs_tol = ms1_tol if not ppm else ms1_tol * mf.mz * 1e-6
 
     candidate_space_list = []
-    existing_cand_str_list = []
+    candidate_space_by_formula = {}
     for i in range(len(mf.ms2_processed.mz_array)):
         # fragment ion m/z
         frag_mz = mf.ms2_processed.mz_array[i]
@@ -529,11 +549,9 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
                 pre_form_arr = np.int16(pre_form_arr)
 
                 # add to candidate space list
-                candidate_space_list, existing_cand_str_list = _add_to_candidate_space_list(candidate_space_list,
-                                                                                            existing_cand_str_list,
-                                                                                            pre_form_arr.astype(int),
-                                                                                            frag.array, nl.array,
-                                                                                            frag_int, i)
+                _add_to_candidate_space_list(candidate_space_list, candidate_space_by_formula,
+                                             pre_form_arr.astype(int), frag.array, nl.array,
+                                             frag_int, i)
 
     # element limit check, SENIOR rules, O/P check, DBE check
     candidate_list = [cs for cs in candidate_space_list
@@ -546,8 +564,8 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
     del candidate_space_list
 
     # generate CandidateFormula object
-    candidate_formula_list = [CandidateFormula(formula=Formula(cs.pre_neutral_array, 0, cs.neutral_mass),
-                                               charged_formula=Formula(cs.pre_charged_array, mf.adduct.charge),
+    candidate_formula_list = [CandidateFormula(formula=Formula._from_array(cs.pre_neutral_array, 0, cs.neutral_mass),
+                                               charged_formula=Formula._from_array(cs.pre_charged_array, mf.adduct.charge),
                                                exp_ms2_sum_int=cs.exp_frag_sum_int) for cs in candidate_list]
     cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in candidate_formula_list]
 
@@ -591,43 +609,32 @@ def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: b
     return frag_form_list, nl_form_list
 
 
-def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], existing_cand_str_list: List[str],
+def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], candidate_space_by_formula: dict,
                                  pre_form_arr: np.array, frag_arr: np.array, nl_arr: np.array,
-                                 fragment_intensity: float, frag_idx: int) -> Tuple[List[CandidateSpace], List[str]]:
+                                 fragment_intensity: float, frag_idx: int) -> None:
     """
     add a new candidate formula to the candidate space list
     :param candidate_space_list: candidate space list
-    :param existing_cand_str_list: existing candidate formula string list
+    :param candidate_space_by_formula: mapping from formula arrays to candidate spaces
     :param pre_form_arr: precursor formula array
     :param frag_arr: fragment formula array
     :param nl_arr: neutral loss formula array
     :param fragment_intensity: fragment intensity
     :param frag_idx: index of the fragment in ms2_processed
-    :return: updated candidate space list
+    Updates the list and lookup in place.
     """
-    # check whether the precursor formula is already in the candidate space list
-    this_pre_str = form_arr_to_str(pre_form_arr)
-    candidate_exist = True if this_pre_str in existing_cand_str_list else False
-    # this precursor formula has not been added to the candidate space list
-    if not candidate_exist:
-        candidate_space_list.append(CandidateSpace(pre_form_arr, frag_arr + nl_arr,
-                                                   pre_neutral_form_str=this_pre_str,
-                                                   exp_frag_sum_int=fragment_intensity,
-                                                   exp_frag_idx_ls=[frag_idx]))
-        existing_cand_str_list.append(this_pre_str)
-    else:
-        # find the index of the existing candidate space
-        idx = existing_cand_str_list.index(this_pre_str)
-        # if the fragment is already in the exp_frag_idx_ls
-        if frag_idx in candidate_space_list[idx].exp_frag_idx_ls:
-            pass
-        else:
-            # add fragment intensity
-            candidate_space_list[idx].exp_frag_sum_int += fragment_intensity
-            # add fragment idx
-            candidate_space_list[idx].exp_frag_idx_ls.append(frag_idx)
-
-    return candidate_space_list, existing_cand_str_list
+    key = tuple(pre_form_arr)
+    candidate = candidate_space_by_formula.get(key)
+    if candidate is None:
+        candidate = CandidateSpace(pre_form_arr, frag_arr + nl_arr,
+                                   pre_neutral_form_str=form_arr_to_str(pre_form_arr),
+                                   exp_frag_sum_int=fragment_intensity,
+                                   exp_frag_idx_ls=[frag_idx])
+        candidate_space_list.append(candidate)
+        candidate_space_by_formula[key] = candidate
+    elif frag_idx not in candidate.exp_frag_idx_ls:
+        candidate.exp_frag_sum_int += fragment_intensity
+        candidate.exp_frag_idx_ls.append(frag_idx)
 
 
 @njit
@@ -654,17 +661,9 @@ def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     :param ms2_cand_str_list: candidate formula string list from MS2 interrogation
     :return: merged candidate formula list, remove duplicates
     """
-    out_list = ms1_cand_list.copy()
-    for m, cf in enumerate(ms2_cand_list):
-        found = False
-        for n, cf2 in enumerate(ms1_cand_list):
-            if ms1_cand_str_list[n] == ms2_cand_str_list[m]:
-                found = True
-                break
-        if not found:
-            out_list.append(cf)
-
-    return out_list
+    ms1_formulas = set(ms1_cand_str_list)
+    return ms1_cand_list.copy() + [cf for cf, formula in zip(ms2_cand_list, ms2_cand_str_list)
+                                   if formula not in ms1_formulas]
 
 
 def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: List[CandidateFormula],
@@ -677,14 +676,10 @@ def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     :param ms2_cand_str_list: candidate formula string list from MS2 interrogation
     :return: ms2 candidate formula list with db_existed filled in
     """
-    for m, cf in enumerate(ms2_cand_list):
-        found = False
-        for n, cf2 in enumerate(ms1_cand_list):
-            if ms1_cand_str_list[n] == ms2_cand_str_list[m]:
-                found = True
-                break
-        if found:
-            ms2_cand_list[m].db_existed = True
+    ms1_formulas = set(ms1_cand_str_list)
+    for candidate, formula in zip(ms2_cand_list, ms2_cand_str_list):
+        if formula in ms1_formulas:
+            candidate.db_existed = True
 
     return ms2_cand_list
 
@@ -744,7 +739,10 @@ def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float) -> M
         subform_arr = enumerate_subformula(cf.charged_formula.array)
 
         # mono mass
-        mass_arr = _calc_subform_mass(subform_arr, mf.adduct.charge)
+        # Explanations below represent singly charged fragment ions, even when
+        # the precursor carries more than one charge.
+        fragment_charge = 1 if mf.adduct.charge > 0 else -1
+        mass_arr = _calc_subform_mass(subform_arr, fragment_charge)
         # assign ms2 explanation
         mf.candidate_formula_list[k] = _assign_ms2_explanation(mf, cf, cf.charged_formula.array, subform_arr, mass_arr,
                                                                ppm, ms2_tol)
@@ -764,8 +762,12 @@ def _calc_subform_mass(subform_arr: np.array, adduct_charge: int) -> np.array:
     ele_mass_arr = np.array([12.000000, 1.007825, 78.918336, 34.968853, 18.998403, 126.904473, 38.963707, 14.003074,
                              22.989769, 15.994915, 30.973762, 31.972071], dtype=np.float32)
     for i in range(subform_arr.shape[0]):
-        # element wise multiplication
-        mass_arr[i] = np.sum(subform_arr[i, :] * ele_mass_arr, dtype=np.float32) - np.float32(adduct_charge * 0.0005486)
+        # Accumulate in the same float32 order without allocating a temporary
+        # product array for every enumerated subformula.
+        mass = np.float32(0)
+        for j in range(subform_arr.shape[1]):
+            mass += subform_arr[i, j] * ele_mass_arr[j]
+        mass_arr[i] = mass - np.float32(adduct_charge * 0.0005486)
     return mass_arr
 
 
@@ -870,13 +872,13 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
             continue
 
         frag_exp = FragExplanation(mf.ms2_processed.idx_array[i],
-                                   Formula(this_subform_arr[0, :], ion_mode_int, this_mass[0]),
-                                   Formula(pre_charged_arr - this_subform_arr[0, :], 0))
+                                   Formula._from_array(this_subform_arr[0, :], ion_mode_int, this_mass[0]),
+                                   Formula._from_array(pre_charged_arr - this_subform_arr[0, :], 0))
         # add all subformulas
         if len(this_mass) > 1:
             for j in range(1, len(this_mass)):
-                frag_exp.add_frag_nl(Formula(this_subform_arr[j, :], ion_mode_int, this_mass[j]),
-                                     Formula(pre_charged_arr - this_subform_arr[j, :], 0))
+                frag_exp.add_frag_nl(Formula._from_array(this_subform_arr[j, :], ion_mode_int, this_mass[j]),
+                                     Formula._from_array(pre_charged_arr - this_subform_arr[j, :], 0))
 
         if candidate_space is None:
             # create CandidateSpace object
@@ -900,39 +902,40 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     return candidate_form
 
 
-def assign_subformula(ms2_mz: List, precursor_formula: str, adduct: str,
+def assign_subformula(ms2_mz: List, precursor_formula, adduct: str,
                       ms2_tol: float = 10, ppm: bool = True,
-                      dbe_cutoff: float = 0.0) -> Union[List[SubformulaResult], None]:
+                      dbe_cutoff: float = 0.0) -> List[SubformulaResult]:
     """
-    Assign subformulas to a given MS2 spectrum with a given precursor formula and adduct. Radical ions are considered.
+    Assign subformulas to MS2 peaks as singly charged ions. Radical ions are considered.
     :param ms2_mz: MS2 m/z list
-    :param precursor_formula: precursor formula string, uncharged
+    :param precursor_formula: uncharged formula string or element-count mapping
     :param adduct: adduct string, e.g., [M+H]+
     :param ms2_tol: MS2 tolerance
     :param ppm: whether MS2 tolerance is in ppm
     :param dbe_cutoff: float, DBE cutoff
     :return: a list of SubformulaResult objects
     """
-    assert len(ms2_mz) > 0, "MS2 m/z list is empty."
-
-    # convert precursor formula to array
-    form_arr = read_formula(precursor_formula)
-    if form_arr is None:
-        return None
+    composition = read_formula(precursor_formula) if isinstance(precursor_formula, str) else precursor_formula
+    form_arr = _composition_to_array(composition)
 
     # convert adduct to array
     valid_adduct, pos_mode = check_adduct(adduct)
     if not valid_adduct:
         raise ValueError("Invalid adduct string.")
-    ion = Adduct(adduct, pos_mode)
+    ion = Adduct(adduct, pos_mode, report_invalid=True)
     ion_mode_int = 1 if pos_mode else -1
 
     # enumerate all subformulas
-    pre_charged_arr = form_arr * ion.m + ion.net_formula.array
+    pre_charged_arr = form_arr.astype(np.int64) * ion.m + ion.net_formula.array.astype(np.int64)
+    if np.any(pre_charged_arr < 0) or np.any(pre_charged_arr > np.iinfo(np.int16).max):
+        raise ValueError('The adduct produces invalid precursor element counts.')
+    if len(ms2_mz) == 0:
+        return []
+    pre_charged_arr = pre_charged_arr.astype(np.int16)
     subform_arr = enumerate_subformula(pre_charged_arr)
 
     # mono mass
-    mass_arr = _calc_subform_mass(subform_arr, ion.charge)
+    mass_arr = _calc_subform_mass(subform_arr, ion_mode_int)
 
     # assign ms2 explanation
     out_list = []
@@ -971,7 +974,7 @@ def assign_subformula(ms2_mz: List, precursor_formula: str, adduct: str,
         # create SubformulaResult object
         subform_list = []
         for j in range(this_subform_arr.shape[0]):
-            form = Formula(this_subform_arr[j, :], ion_mode_int, this_mass[j])
+            form = Formula._from_array(this_subform_arr[j, :], ion_mode_int, this_mass[j])
             subform_list.append(FormulaResult(form.__str__(), form.mass, mz))
         out_list.append(SubformulaResult(k, subform_list))
 

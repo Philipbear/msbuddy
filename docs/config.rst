@@ -23,8 +23,7 @@ We would recommend considering parallel processing for large datasets (e.g. >100
         # n_cpu=12, # number of CPUs to use
         timeout_secs=600, # timeout for each query in seconds
         batch_size=1000, # number of queries to process in each batch, a larger batch size will use more memory but will be faster
-        c_range=(0, 100), # range of carbon numbers to consider
-        h_range=(0, 150), # range of hydrogen numbers to consider
+        element_ranges={'C': (0, 100), 'H': (0, 150)}, # inclusive atom-count limits
         ... # other parameters
         )
 
@@ -51,6 +50,14 @@ If you do need to use a different mass tolerance, you can set the ``ppm``, ``ms1
 
 
 Note that the ``halogen`` parameter is set to ``False`` by default. If you are working with halogenated compounds, you will need to set this to ``True`` to enable halgoen atoms in molecular formula annotation.
+
+``element_ranges`` maps supported element symbols to inclusive ``(minimum,
+maximum)`` pairs. Unspecified elements retain their defaults. Halogen ranges
+are zero when ``halogen=False``; a nonzero explicit halogen range requires
+``halogen=True``. K and Na have default ranges of ``(0, 0)``. Unsupported
+symbols and invalid or noninteger ranges raise errors.
+The effective ``config.element_ranges`` mapping is read-only; construct a new
+configuration to change the limits.
 
 .. note::
     To enable parallel processing, set ``parallel=True`` and specify the number of CPUs to use with ``n_cpu``. The code has to be run in ``if __name__ == '__main__':`` block.

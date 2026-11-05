@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "msbuddy"
+dynamic = ["version", "license"]
+description = "Molecular formula annotation for MS-based small molecule analysis."
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{name = "Shipei Xing", email = "sxing@fudan.edu.cn"}]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "brain-isotopic-distribution",
+    "numpy",
+    "numba",
+    "requests",
+    "joblib",
+    "gdown",
+    "chemparse",
+    "scipy",
+    "tqdm",
+    "pandas",
+]
+
+[project.urls]
+Homepage = "https://github.com/Philipbear/msbuddy"
+"Bug Tracker" = "https://github.com/Philipbear/msbuddy/issues"
+Documentation = "https://msbuddy.readthedocs.io/en/latest/"
+
+[project.scripts]
+msbuddy = "msbuddy.main_cmd:main"
+
+[tool.setuptools]
+packages = ["msbuddy"]
+include-package-data = false
+# Retain the historical main_cmd.py executable as well as the msbuddy command.
+script-files = ["msbuddy/main_cmd.py"]
+
+[tool.setuptools.dynamic]
+version = {attr = "msbuddy.__version__"}

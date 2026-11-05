@@ -80,3 +80,13 @@ Now we use a learning-to-rank model to rank the formula candidates.
 
 0.3.16 (2026-08-27)
 - Allow configurable data directories and file names.
+
+1.0.0 (2026-11-05)
+- Break compatibility with 0.x formula and configuration APIs: use element-count
+  mappings, the new formula helpers, and ``element_ranges``; ``add_data`` appends.
+- Reject unsupported elements in formulas, adducts, and element ranges.
+- Improve loading and annotation performance, and add regression tests and benchmarks.
+- Fix handling of empty spectra, USIs, MGF metadata, and multiply charged precursors.
+- MGF spectra without polarity information now warn and default to positive mode.
+- Move most package metadata to pyproject.toml and use one version number throughout.
+- Update the maintainer contact address.

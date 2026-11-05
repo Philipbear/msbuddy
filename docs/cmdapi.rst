@@ -24,7 +24,7 @@ Alternatively, you can use the ``-usi`` option for a single USI string (from QTO
 
 or the ``-csv`` option for a csv file containing a list of USI strings:
 
-(one USI per line, USIs in the first column. Optional: adducts in the second column. `template files <https://github.com/Philipbear/msbuddy/tree/main/demo>`_)
+(one USI per line, USIs in the first column. An optional ``usi`` header and an adduct column are supported. `Template files <https://github.com/Philipbear/msbuddy/tree/main/demo>`_)
 
 .. code-block:: bash
 

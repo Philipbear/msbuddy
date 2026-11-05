@@ -37,11 +37,13 @@ Source codes are available at `GitHub <https://github.com/Philipbear/msbuddy>`_.
 
    install
    quickstart
+   migration
    config
    datain
    dataout
    pyapi
    cmdapi
+   development
    contact
 
 Citation
@@ -54,7 +56,7 @@ When using **msbuddy**, please cite:
 Contact
 -------
 
-Shipei Xing: philipxsp@hotmail.com
+Shipei Xing: sxing@fudan.edu.cn
 
 License
 -------

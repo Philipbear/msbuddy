@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024-2026 Shipei Xing <sxing@fudan.edu.cn>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,7 +8,7 @@
 """
 File: main_nextflow.py
 Author: Shipei Xing
-Email: s1xing@health.ucsd.edu
+Email: sxing@fudan.edu.cn
 GitHub: Philipbear
 Description: Main script for msbuddy on Nextflow.
 """
@@ -73,6 +73,17 @@ def main():
 
     n_cpu = args.n_cpu if args.n_cpu <= 8 else 8
 
+    element_ranges = {
+        'C': (args.c_min, args.c_max), 'H': (args.h_min, args.h_max),
+        'N': (args.n_min, args.n_max), 'O': (args.o_min, args.o_max),
+        'P': (args.p_min, args.p_max), 'S': (args.s_min, args.s_max),
+    }
+    if args.halogen:
+        element_ranges.update({
+            'F': (args.f_min, args.f_max), 'Cl': (args.cl_min, args.cl_max),
+            'Br': (args.br_min, args.br_max), 'I': (args.i_min, args.i_max),
+        })
+
     # run msbuddy
     # create a MsbuddyConfig object
     msb_config = MsbuddyConfig(
@@ -83,10 +94,7 @@ def main():
         parallel=True if args.parallel == 1 else False,
         n_cpu=n_cpu,
         timeout_secs=args.timeout_secs, batch_size=args.batch_size,
-        c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
-        o_range=(args.o_min, args.o_max), p_range=(args.p_min, args.p_max), s_range=(args.s_min, args.s_max),
-        f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
-        i_range=(args.i_min, args.i_max),
+        element_ranges=element_ranges,
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
         rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, top_n_per_50_da=args.top_n_per_50_da
     )

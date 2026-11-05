@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <philipxsp@hotmail.com>
+# Copyright (C) 2024-2026 Shipei Xing <sxing@fudan.edu.cn>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,14 +8,13 @@
 """
 File: ml.py
 Author: Shipei Xing
-Email: philipxsp@hotmail.com
+Email: sxing@fudan.edu.cn
 GitHub: Philipbear
 Description: machine learning functions: feature generation, prediction, etc.
              False discovery rate (FDR) estimation
 """
 import math
 import sys
-import warnings
 
 import numpy as np
 from numba import njit
@@ -24,31 +23,20 @@ from tqdm import tqdm
 
 from msbuddy.query import common_nl_from_array, check_formula_existence
 
-# ignore warnings
-warnings.filterwarnings('ignore')
-
-
 def _gen_arr_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
     """
     generate three arrays for ML
     :param buddy_data: List of MetaFeature objects
     :return: all_cand_form_arr, dbe_arr, mass_arr
     """
-    all_cand_form_arr = np.empty((0, 12))  # formula array of all candidate formulas
-    dbe_arr = np.array([])
-    mass_arr = np.array([])
+    formulas = [cf.formula for mf in buddy_data
+                for cf in (mf.candidate_formula_list or [])]
+    if not formulas:
+        return np.empty((0, 12)), np.array([]), np.array([])
 
-    for mf in buddy_data:
-        if not mf.candidate_formula_list:
-            continue
-        # generate ML features for each candidate formula
-        for cf in mf.candidate_formula_list:
-            # add formula array to all_cand_form_arr
-            all_cand_form_arr = np.append(all_cand_form_arr, [cf.formula.array], axis=0)
-            dbe_arr = np.append(dbe_arr, cf.formula.dbe)
-            mass_arr = np.append(mass_arr, cf.formula.mass)
-
-    return all_cand_form_arr, dbe_arr, mass_arr
+    return (np.asarray([formula.array for formula in formulas], dtype=float),
+            np.asarray([formula.dbe for formula in formulas], dtype=float),
+            np.asarray([formula.mass for formula in formulas], dtype=float))
 
 
 @njit
@@ -156,29 +144,9 @@ def gen_ml_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float,
     :param gd: global dependencies
     :return: numpy array of ML features
     """
-    # generate feature array and group size array
-    total_X_arr = np.array([])
-
-    for mf in meta_feature_list:
-        if not mf.candidate_formula_list:
-            continue
-
-        # generate ML features for each candidate formula
-        for cf in mf.candidate_formula_list:
-            # get ML features
-            ml_feature_arr = gen_ml_feature_single(mf, cf, ppm, ms1_tol, ms2_tol, gd)
-
-            # add to feature array
-            if total_X_arr.size == 0:
-                total_X_arr = ml_feature_arr
-            else:
-                total_X_arr = np.vstack((total_X_arr, ml_feature_arr))
-
-    # ensure 2d array
-    if len(total_X_arr.shape) == 1:
-        total_X_arr = np.expand_dims(total_X_arr, axis=0)
-
-    return total_X_arr
+    rows = [gen_ml_feature_single(mf, cf, ppm, ms1_tol, ms2_tol, gd)
+            for mf in meta_feature_list for cf in (mf.candidate_formula_list or [])]
+    return np.vstack(rows) if rows else np.empty((1, 0))
 
 
 def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
@@ -195,8 +163,8 @@ def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms
 
     this_adduct = meta_feature.adduct
 
-    # mz error in ppm
-    theo_mass = cand_form.charged_formula.mass / abs(this_adduct.charge)
+    # A charged formula's mass is already expressed as m/z.
+    theo_mass = cand_form.charged_formula.mass
     mz_error = (meta_feature.mz - theo_mass) / theo_mass * 1e6 if ppm else meta_feature.mz - theo_mass
     mz_error_log_p = _calc_log_p_norm(mz_error, ms1_tol / 3)
 
@@ -258,16 +226,21 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
         pos_mode = meta_feature.adduct.pos_mode
 
         # check db existence of all explained fragments and neutral losses
-        frag_db_existed, frag_common = np.array([], dtype=bool), np.array([], dtype=bool)
-        nl_db_existed, nl_common = np.array([], dtype=bool), np.array([], dtype=bool)
+        frag_db_existed, frag_common = [], []
+        nl_db_existed, nl_common = [], []
         for f in frag_form_list:
             frag_db_bool, frag_common_bool = check_formula_existence(f.array, pos_mode, True, gd)
-            frag_db_existed = np.append(frag_db_existed, frag_db_bool)
-            frag_common = np.append(frag_common, frag_common_bool)
+            frag_db_existed.append(frag_db_bool)
+            frag_common.append(frag_common_bool)
             nl_db_bool, nl_common_bool = check_formula_existence(cand_form.charged_formula.array - f.array,
                                                                  pos_mode, False, gd)
-            nl_db_existed = np.append(nl_db_existed, nl_db_bool)
-            nl_common = np.append(nl_common, nl_common_bool)
+            nl_db_existed.append(nl_db_bool)
+            nl_common.append(nl_common_bool)
+
+        frag_db_existed = np.asarray(frag_db_existed, dtype=bool)
+        frag_common = np.asarray(frag_common, dtype=bool)
+        nl_db_existed = np.asarray(nl_db_existed, dtype=bool)
+        nl_common = np.asarray(nl_common, dtype=bool)
 
         # logical OR of fragment/nl
         fragnl_db_existed = np.logical_or(frag_db_existed, nl_db_existed)
@@ -311,14 +284,12 @@ def _gen_ms2_feature(meta_feature, cand_form, pre_dbe: float, pre_h2c: float,
 
         # weighted average of fragment m/z ppm errors
         if ppm:
-            frag_mz_err_wavg = np.sum(np.array([_calc_log_p_norm((frag_form.mass - mz) / frag_form.mass * 1e6,
-                                                                 ms2_tol / 3)
-                                                for frag_form, mz in
-                                                zip(frag_form_list, exp_mz_arr)]) * normed_exp_int_arr)
+            frag_mz_errors = np.array([(frag_form.mass - mz) / frag_form.mass * 1e6
+                                       for frag_form, mz in zip(frag_form_list, exp_mz_arr)])
         else:
-            frag_mz_err_wavg = np.sum(np.array([_calc_log_p_norm(frag_form.mass - mz, ms2_tol / 3)
-                                                for frag_form, mz in
-                                                zip(frag_form_list, exp_mz_arr)]) * normed_exp_int_arr)
+            frag_mz_errors = np.array([frag_form.mass - mz
+                                       for frag_form, mz in zip(frag_form_list, exp_mz_arr)])
+        frag_mz_err_wavg = np.sum(_calc_log_p_norm_many(frag_mz_errors, ms2_tol / 3) * normed_exp_int_arr)
 
         # weighted average of fragment-nl DBE difference
         frag_nl_dbe_diff_wavg = np.sum(np.array([frag_form.dbe - (pre_dbe - frag_form.dbe + 1)
@@ -402,6 +373,15 @@ def _calc_log_p_norm(arr: np.array, sigma: float) -> np.array:
     """
     arr_norm_p = norm.cdf(arr, loc=0, scale=sigma)
     return _calc_log_p_norm_helper(arr_norm_p)
+
+
+def _calc_log_p_norm_many(values: np.ndarray, sigma: float) -> np.ndarray:
+    """Apply the same scalar score to a batch of errors with one CDF call."""
+    # Scalar float32 inputs are promoted by scipy before division by sigma.
+    # Match that behavior for arrays to keep the model's features unchanged.
+    probabilities = norm.cdf(np.asarray(values, dtype=float), loc=0, scale=sigma)
+    return np.fromiter((_calc_log_p_norm_helper(p) for p in probabilities),
+                       dtype=float, count=len(probabilities))
 
 
 @njit
@@ -493,13 +473,17 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
     for i, meta_feature in enumerate(batch_data):
         if not meta_feature.candidate_formula_list:
             continue
-        if meta_feature.ms1_raw:
-            if meta_feature.ms2_raw:
+        # A raw spectrum can become empty after preprocessing. Use the model
+        # corresponding to the evidence that is actually available.
+        has_ms1 = bool(meta_feature.ms1_processed) and len(meta_feature.ms1_processed) > 1
+        has_ms2 = bool(meta_feature.ms2_processed)
+        if has_ms1:
+            if has_ms2:
                 group_dict[0].append(i)
             else:
                 group_dict[1].append(i)
         else:
-            if meta_feature.ms2_raw:
+            if has_ms2:
                 group_dict[2].append(i)
             else:
                 group_dict[3].append(i)

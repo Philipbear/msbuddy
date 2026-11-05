@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <s1xing@health.ucsd.edu>
+# Copyright (C) 2024-2026 Shipei Xing <sxing@fudan.edu.cn>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,7 +8,7 @@
 """
 File: main.py
 Author: Shipei Xing
-Email: s1xing@health.ucsd.edu
+Email: sxing@fudan.edu.cn
 GitHub: Philipbear
 Description: main class for msbuddy
 """
@@ -16,8 +16,11 @@ Description: main class for msbuddy
 import logging
 import pathlib
 import sys
-from multiprocessing import Pool, cpu_count
-from typing import Tuple, Union, List
+from collections.abc import Mapping
+from multiprocessing import Pool, TimeoutError as PoolTimeoutError, cpu_count
+from numbers import Integral
+from types import MappingProxyType
+from typing import Iterable, Tuple, Union, List
 
 import numpy as np
 import pandas as pd
@@ -29,12 +32,44 @@ from msbuddy.export import write_batch_results_cmd
 from msbuddy.load import init_db, init_ml_models, load_usi, load_mgf
 from msbuddy.ml import predict_formula_probability, calc_fdr
 from msbuddy.query import query_neutral_mass, query_precursor_mass
-from msbuddy.utils import form_arr_to_str, FormulaResult
+from msbuddy.utils import SUPPORTED_ELEMENTS, _validate_elements, form_arr_to_str, FormulaResult
 
 logging.basicConfig(level=logging.WARNING)
 
-# global variable containing shared data
-global shared_data_dict
+# Worker processes receive their own read-only database references.
+shared_data_dict = None
+
+_DEFAULT_ELEMENT_RANGES = {
+    'C': (0, 80), 'H': (0, 150), 'Br': (0, 10), 'Cl': (0, 15),
+    'F': (0, 20), 'I': (0, 10), 'K': (0, 0), 'N': (0, 20),
+    'Na': (0, 0), 'O': (0, 30), 'P': (0, 10), 'S': (0, 15),
+}
+_HALOGENS = ('Br', 'Cl', 'F', 'I')
+
+
+def _normalize_element_ranges(element_ranges, halogen):
+    if element_ranges is None:
+        element_ranges = {}
+    if not isinstance(element_ranges, Mapping):
+        raise TypeError('element_ranges must map element symbols to (minimum, maximum) pairs.')
+    _validate_elements(element_ranges)
+    ranges = dict(_DEFAULT_ELEMENT_RANGES)
+    for element, bounds in element_ranges.items():
+        if not isinstance(bounds, (tuple, list)) or len(bounds) != 2:
+            raise ValueError(f'Range for {element} must be a (minimum, maximum) pair.')
+        lower, upper = bounds
+        if any(isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral)
+               for value in (lower, upper)):
+            raise ValueError(f'Range for {element} must contain integers.')
+        if lower < 0 or upper > np.iinfo(np.int16).max or lower > upper:
+            raise ValueError(f'Range for {element} must satisfy 0 <= minimum <= maximum <= 32767.')
+        if element in _HALOGENS and not halogen and (lower, upper) != (0, 0):
+            raise ValueError(f'Set halogen=True to specify a nonzero {element} range.')
+        ranges[element] = (int(lower), int(upper))
+    if not halogen:
+        for element in _HALOGENS:
+            ranges[element] = (0, 0)
+    return ranges
 
 
 class MsbuddyConfig:
@@ -52,16 +87,7 @@ class MsbuddyConfig:
                  n_cpu: int = -1,
                  timeout_secs: float = 300,
                  batch_size: int = 1000,
-                 c_range: Tuple[int, int] = (0, 80),
-                 h_range: Tuple[int, int] = (0, 150),
-                 n_range: Tuple[int, int] = (0, 20),
-                 o_range: Tuple[int, int] = (0, 30),
-                 p_range: Tuple[int, int] = (0, 10),
-                 s_range: Tuple[int, int] = (0, 15),
-                 f_range: Tuple[int, int] = (0, 20),
-                 cl_range: Tuple[int, int] = (0, 15),
-                 br_range: Tuple[int, int] = (0, 10),
-                 i_range: Tuple[int, int] = (0, 10),
+                 element_ranges: Mapping = None,
                  isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4,
                  rel_int_denoise_cutoff: float = 0.01,
                  top_n_per_50_da: int = 6,
@@ -77,16 +103,8 @@ class MsbuddyConfig:
         :param n_cpu: number of CPU cores used for parallel processing; if -1, all available cores will be used
         :param timeout_secs: timeout in seconds
         :param batch_size: batch size for formula annotation; a larger batch size takes more memory
-        :param c_range: C range
-        :param h_range: H range
-        :param n_range: N range
-        :param o_range: O range
-        :param p_range: P range
-        :param s_range: S range
-        :param f_range: F range
-        :param cl_range: Cl range
-        :param br_range: Br range
-        :param i_range: I range
+        :param element_ranges: mapping of element symbols to inclusive (minimum, maximum) counts;
+            unspecified elements retain their defaults
         :param isotope_bin_mztol: m/z tolerance for isotope bin, used for MS1 isotope pattern
         :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern
         :param rel_int_denoise_cutoff: relative intensity cutoff, used for MS2 denoise
@@ -124,7 +142,8 @@ class MsbuddyConfig:
         if timeout_secs <= 0:
             logging.warning("Timeout is set to 300 seconds.")
             self.timeout_secs = 300
-        self.timeout_secs = timeout_secs
+        else:
+            self.timeout_secs = timeout_secs
         if self.parallel:
             self.timeout_secs += 30  # add 30 seconds for db initialization
 
@@ -134,19 +153,9 @@ class MsbuddyConfig:
         else:
             self.batch_size = int(batch_size)
 
-        self.ele_lower = np.array([c_range[0], h_range[0], br_range[0], cl_range[0], f_range[0], i_range[0],
-                                   0, n_range[0], 0, o_range[0], p_range[0], s_range[0]], dtype=np.int16)
-        self.ele_upper = np.array([c_range[1], h_range[1], br_range[1], cl_range[1], f_range[1], i_range[1],
-                                   0, n_range[1], 0, o_range[1], p_range[1], s_range[1]], dtype=np.int16)
-        if not halogen:
-            self.ele_lower[2:6] = 0
-            self.ele_upper[2:6] = 0
-
-        # check valid range
-        if np.any(self.ele_lower < 0) or np.any(self.ele_upper < 0):
-            raise ValueError("Element range cannot be negative.")
-        if np.any(self.ele_lower > self.ele_upper):
-            raise ValueError("Element lower bound cannot be larger than upper bound.")
+        self._element_ranges = _normalize_element_ranges(element_ranges, halogen)
+        self.ele_lower = np.array([self._element_ranges[element][0] for element in SUPPORTED_ELEMENTS], dtype=np.int16)
+        self.ele_upper = np.array([self._element_ranges[element][1] for element in SUPPORTED_ELEMENTS], dtype=np.int16)
 
         # check valid param set
         if isotope_bin_mztol <= 0:
@@ -178,20 +187,17 @@ class MsbuddyConfig:
         self.data_files = (None if data_files is None
                            else dict(data_files))
 
+    @property
+    def element_ranges(self):
+        """Read-only effective element limits, including defaults."""
+        return MappingProxyType(self._element_ranges)
+
 
 class Msbuddy:
     """
     msbuddy main class
     msbuddy data is List[MetaFeature]; MetaFeature is a class defined in base/MetaFeature.py
     """
-    # singleton pattern
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(Msbuddy, cls).__new__(cls)
-        return cls._instance
-
     def __init__(self, config: Union[MsbuddyConfig, None] = None):
 
         tqdm.write("msbuddy: molecular formula annotation for MS-based small molecule analysis.")
@@ -201,8 +207,7 @@ class Msbuddy:
         else:
             self.config = config  # customized configuration
 
-        global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_db(
+        self._dependencies = init_db(
             data_dir=self.config.data_dir,
             data_files=self.config.data_files)  # database initialization
 
@@ -210,8 +215,7 @@ class Msbuddy:
 
     def update_config(self, **kwargs):
         self.config = MsbuddyConfig(**kwargs)
-        global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_db(
+        self._dependencies = init_db(
             data_dir=self.config.data_dir,
             data_files=self.config.data_files)  # database initialization
 
@@ -222,12 +226,14 @@ class Msbuddy:
     def load_mgf(self, file_path):
         self.data = load_mgf(file_path)
 
-    def add_data(self, data: List[MetaFeature]):
-        """
-        add customized data
-        :param data: metabolic feature list
-        """
-        self.data = data
+    def add_data(self, data: Union[MetaFeature, Iterable[MetaFeature]]) -> None:
+        """Append one MetaFeature or an iterable of features to the loaded data."""
+        features = [data] if isinstance(data, MetaFeature) else list(data)
+        if any(not isinstance(feature, MetaFeature) for feature in features):
+            raise TypeError('data must contain only MetaFeature objects.')
+        if getattr(self, 'data', None) is None:
+            self.data = []
+        self.data.extend(features)
 
     def clear_data(self):
         """
@@ -251,7 +257,7 @@ class Msbuddy:
             :param ps: Buddy parameter set
             :return: MetaFeature object
             """
-            mf = _generate_candidate_formula(meta_feature, ps, shared_data_dict)
+            mf = _generate_candidate_formula(meta_feature, ps, self._dependencies)
             return mf
 
         batch_data = self.data[batch_start_idx:batch_end_idx]
@@ -259,8 +265,13 @@ class Msbuddy:
 
         # data preprocessing and candidate space generation
         if self.config.parallel:
+            # Ranking happens in the parent process. In spawn-based pools,
+            # sending the models to every candidate worker needlessly copies
+            # hundreds of megabytes per worker.
+            worker_data = {key: value for key, value in self._dependencies.items()
+                           if not key.startswith(('model_', 'platt_'))}
             with Pool(processes=int(self.config.n_cpu), initializer=_init_pool,
-                      initargs=(shared_data_dict,)) as pool:
+                      initargs=(worker_data,)) as pool:
                 async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
                                                   (mf, self.config)) for mf in batch_data]
                 # Initialize tqdm progress bar
@@ -271,20 +282,30 @@ class Msbuddy:
                     try:
                         modified_mf = async_result.get(timeout=self.config.timeout_secs)
                         modified_mf_ls.append(modified_mf)
-                    except:
+                    except PoolTimeoutError:
                         mf = batch_data[i]
-                        logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
+                        logging.warning("Timed out processing spectrum %s, mz=%s, rt=%s; skipped.",
+                                        mf.identifier, mf.mz, mf.rt)
+                        mf.candidate_formula_list = []
+                        modified_mf_ls.append(mf)
+                    except Exception:
+                        mf = batch_data[i]
+                        logging.exception("Failed to process spectrum %s, mz=%s, rt=%s; skipped.",
+                                          mf.identifier, mf.mz, mf.rt)
+                        mf.candidate_formula_list = []
                         modified_mf_ls.append(mf)
             pbar.close()  # Close tqdm progress bar
             del async_results
         else:
-            # normal loop, timeout implemented using timeout_decorator
+            # Normal loop; per-spectrum timeouts are available in parallel mode.
             for mf in tqdm(batch_data, file=sys.stdout, colour="green", desc="Candidate space generation"):
                 try:
                     modified_mf = _preprocess_and_gen_cand_nonparallel(mf, self.config)
                     modified_mf_ls.append(modified_mf)
-                except:
-                    logging.warning(f"Timeout for spectrum {mf.identifier}, mz={mf.mz}, rt={mf.rt}, skipped.")
+                except Exception:
+                    logging.exception("Failed to process spectrum %s, mz=%s, rt=%s; skipped.",
+                                      mf.identifier, mf.mz, mf.rt)
+                    mf.candidate_formula_list = []
                     modified_mf_ls.append(mf)
 
         # update data
@@ -330,13 +351,12 @@ class Msbuddy:
         -> subformula annotation -> ml model B -> FDR calculation
         :return: None. Update self.data
         """
-        global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_ml_models(
-            shared_data_dict,
+        n_batch = self._annotate_formula_prepare()
+
+        self._dependencies = init_ml_models(
+            self._dependencies,
             data_dir=self.config.data_dir,
             data_files=self.config.data_files)  # ml models initialization
-
-        n_batch = self._annotate_formula_prepare()
 
         # loop over batches
         for n in range(n_batch):
@@ -352,16 +372,16 @@ class Msbuddy:
         :param write_details: whether to write out detailed results
         :return: None
         """
-        global shared_data_dict  # Declare it as a global variable
-        shared_data_dict = init_ml_models(
-            shared_data_dict,
+        n_batch = self._annotate_formula_prepare()
+
+        self._dependencies = init_ml_models(
+            self._dependencies,
             data_dir=self.config.data_dir,
             data_files=self.config.data_files)  # ml models initialization
 
-        n_batch = self._annotate_formula_prepare()
         output_path.mkdir(parents=True, exist_ok=True)
 
-        result_summary_df_all = pd.DataFrame()
+        result_summary_batches = []
 
         # loop over batches
         for n in range(n_batch):
@@ -369,18 +389,23 @@ class Msbuddy:
             tqdm.write("Writing batch results...")
             result_summary_df = write_batch_results_cmd(self.data, output_path, write_details,
                                                         start_idx, end_idx)
-            result_summary_df_all = pd.concat([result_summary_df_all, result_summary_df], ignore_index=True, axis=0)
+            result_summary_batches.append(result_summary_df)
             # clear computed data to save memory, convert to None of the same size
             self.data[start_idx:end_idx] = [None] * (end_idx - start_idx)
 
         tqdm.write("Writing summary results to tsv file...")
+        result_summary_df_all = pd.concat(result_summary_batches, ignore_index=True, axis=0)
         result_summary_df_all.to_csv(output_path / 'msbuddy_result_summary.tsv', sep="\t", index=False)
+        self.data = None
 
     def _annotate_formula_prepare(self) -> int:
         """
         prepare for formula annotation
         :return: batch number
         """
+        if not self.data:
+            raise ValueError("No data loaded.")
+
         cnt_pre = len(self.data)
         # select MetaFeatures with precursor 1 < mass < 1500
         self.data = [mf for mf in self.data if 1 < mf.mz < 1500]
@@ -422,7 +447,7 @@ class Msbuddy:
         self._assign_subformula_annotation(start_idx, end_idx)
 
         tqdm.write("Candidate formula ranking...")
-        predict_formula_probability(self.data, start_idx, end_idx, self.config, shared_data_dict)
+        predict_formula_probability(self.data, start_idx, end_idx, self.config, self._dependencies)
 
         # FDR calculation
         calc_fdr(self.data, start_idx, end_idx)
@@ -456,7 +481,7 @@ class Msbuddy:
         :param integer_dbe: whether to return only integer DBE
         :return: list of FormulaResult objects
         """
-        formulas = query_neutral_mass(mass, mass_tol, ppm, halogen, shared_data_dict)
+        formulas = query_neutral_mass(mass, mass_tol, ppm, halogen, self._dependencies)
 
         if integer_dbe:
             out = [FormulaResult(form_arr_to_str(f.array), f.mass, mass) for f in formulas
@@ -489,22 +514,20 @@ class Msbuddy:
             raise ValueError("Invalid adduct string.")
 
         # query
-        ion = Adduct(adduct, pos_mode)
+        ion = Adduct(adduct, pos_mode, report_invalid=True)
 
         if halogen:
-            formulas, _ = query_precursor_mass(mz, ion, mz_tol, ppm, 1, shared_data_dict)
+            formulas, _ = query_precursor_mass(mz, ion, mz_tol, ppm, 1, self._dependencies)
         else:
-            formulas, _ = query_precursor_mass(mz, ion, mz_tol, ppm, 0, shared_data_dict)
-
-        ion_int = 1 if pos_mode else -1
+            formulas, _ = query_precursor_mass(mz, ion, mz_tol, ppm, 0, self._dependencies)
 
         if integer_dbe:
             out = [FormulaResult(form_arr_to_str(f.array),
-                                 (f.mass * ion.m + ion.net_formula.mass - ion_int * 0.00054858) / abs(ion.charge),
+                                 (f.mass * ion.m + ion.net_formula.mass - ion.charge * 0.00054858) / abs(ion.charge),
                                  mz) for f in formulas if f.dbe >= dbe_cutoff and f.dbe % 1 == 0 and senior_rules(f.array)]
         else:
             out = [FormulaResult(form_arr_to_str(f.array),
-                                 (f.mass * ion.m + ion.net_formula.mass - ion_int * 0.00054858) / abs(ion.charge),
+                                 (f.mass * ion.m + ion.net_formula.mass - ion.charge * 0.00054858) / abs(ion.charge),
                                  mz) for f in formulas if f.dbe >= dbe_cutoff and senior_rules(f.array)]
 
         # sort by absolute mass error, ascending

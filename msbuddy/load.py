@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <philipxsp@hotmail.com>
+# Copyright (C) 2024-2026 Shipei Xing <sxing@fudan.edu.cn>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,7 +8,7 @@
 """
 File: load.py
 Author: Shipei Xing
-Email: philipxsp@hotmail.com
+Email: sxing@fudan.edu.cn
 GitHub: Philipbear
 Description: load databases and data files
 """
@@ -25,7 +25,8 @@ from gdown import download as download
 from joblib import load as j_load
 from requests import get
 
-from msbuddy.base import MetaFeature, Spectrum
+from msbuddy.base import MetaFeature, Spectrum, _validate_adduct_elements
+from msbuddy.utils import UnsupportedElementError
 
 logging.basicConfig(level=logging.INFO)
 
@@ -261,18 +262,20 @@ def load_mgf(file_path) -> List[MetaFeature]:
     :return: list of MetaFeature
     """
     with open(file_path, 'r') as file:
-        # create meta_feature_list
+        # Keep insertion order in the result while finding matching MS1/MS2
+        # entries without scanning all previously loaded features.
         meta_feature_list = []
+        features_by_identifier = {}
         cnt = 0
         for line in file:
             # empty line
             _line = line.strip()  # remove leading and trailing whitespace
-            if not _line:
+            if not _line or _line[0] in '#;!/':
                 continue
-            elif line.startswith('BEGIN IONS'):
+            elif _line.startswith('BEGIN IONS'):
                 # initialize a new spectrum entry
-                mz_arr = np.array([])
-                int_arr = np.array([])
+                mz_arr = []
+                int_arr = []
                 precursor_mz = None
                 identifier = None
                 charge = None
@@ -280,12 +283,20 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 ms2_spec = True
                 rt = None
                 adduct_str = None
-            elif line.startswith('END IONS'):
+            elif _line.startswith('END IONS'):
                 # create a new MetaFeature
                 if precursor_mz is None:
                     raise ValueError('No precursor mz found.')
                 if identifier is None:
                     identifier = cnt
+                if pos_mode is None and adduct_str:
+                    if adduct_str.endswith('+'):
+                        pos_mode = True
+                    elif adduct_str.endswith('-'):
+                        pos_mode = False
+                if pos_mode is None:
+                    pos_mode = True
+                    logging.warning('No ionization mode found for spectrum %s; assuming positive mode.', identifier)
                 if charge is None:
                     charge = 1 if pos_mode else -1
                 elif charge == 0:
@@ -293,23 +304,13 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 else:
                     charge = abs(charge) if pos_mode else -abs(charge)
 
-                # # if no peaks found, skip
-                # if mz_arr.size == 0:
-                #     continue
-
-                # create MetaFeature object if the same identifier does not exist
-                mf_idx = None
-                for idx, mf in enumerate(meta_feature_list):
-                    if mf.identifier == identifier:
-                        mf_idx = idx
-                        break
-
                 # if the same identifier exists, add to the existing MetaFeature
-                if mf_idx is not None:
-                    if ms2_spec and meta_feature_list[mf_idx].ms2_raw is None:
-                        meta_feature_list[mf_idx].ms2_raw = Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None
-                    elif ms2_spec is False and meta_feature_list[mf_idx].ms1_raw is None:
-                        meta_feature_list[mf_idx].ms1_raw = Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None
+                existing = features_by_identifier.get(identifier)
+                if existing is not None:
+                    if ms2_spec and existing.ms2_raw is None:
+                        existing.ms2_raw = Spectrum(mz_arr, int_arr) if mz_arr else None
+                    elif ms2_spec is False and existing.ms1_raw is None:
+                        existing.ms1_raw = Spectrum(mz_arr, int_arr) if mz_arr else None
                     continue
                 # if the same identifier does not exist, create a new MetaFeature
                 else:
@@ -318,16 +319,17 @@ def load_mgf(file_path) -> List[MetaFeature]:
                                          charge=charge,
                                          rt=rt,
                                          adduct=adduct_str,
-                                         ms2=Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None,
+                                         ms2=Spectrum(mz_arr, int_arr) if mz_arr else None,
                                          identifier=identifier)
                     else:
                         mf = MetaFeature(mz=precursor_mz,
                                          charge=charge,
                                          rt=rt,
                                          adduct=adduct_str,
-                                         ms1=Spectrum(mz_arr, int_arr) if mz_arr.size > 0 else None,
+                                         ms1=Spectrum(mz_arr, int_arr) if mz_arr else None,
                                          identifier=identifier)
                     meta_feature_list.append(mf)
+                    features_by_identifier[identifier] = mf
                     cnt += 1
                 continue
             else:
@@ -338,7 +340,8 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     key, value = key.strip(), value.strip()
                     # if key (into all upper case) is 'PEPMASS', it is precursor mz
                     if key.upper() in ['PEPMASS', 'PRECURSOR_MZ', 'PRECURSORMZ']:
-                        precursor_mz = float(value)
+                        # MGF PEPMASS may contain an optional precursor intensity.
+                        precursor_mz = float(value.split()[0])
                     # identifier
                     elif key.upper() in ['TITLE', 'FEATURE_ID', 'SPECTRUMID', 'SPECTRUM_ID']:
                         identifier = value.strip()
@@ -348,12 +351,15 @@ def load_mgf(file_path) -> List[MetaFeature]:
                             pos_mode = False
                             value = value.replace('-', '')
                             charge = -int(value)
-                        else:
+                        elif '+' in value:
                             pos_mode = True
                             value = value.replace('+', '')
                             charge = int(value)
+                        else:
+                            charge = int(value)
                     # if key is 'ION', it is adduct type
                     elif key.upper() in ['ION', 'IONTYPE', 'ION_TYPE', 'ADDUCT', 'ADDUCTTYPE', 'ADDUCT_TYPE']:
+                        _validate_adduct_elements(value)
                         adduct_str = value
                     # if key is 'IONMODE', it is ion mode
                     elif key.upper() in ['IONMODE', 'ION_MODE']:
@@ -371,10 +377,13 @@ def load_mgf(file_path) -> List[MetaFeature]:
                     elif key.upper() == 'RTINMINUTES' and value != '':
                         rt = float(value) * 60
                 else:
-                    # if no '=', it is a spectrum pair, split by '\t' or ' '
-                    this_mz, this_int = _line.split()
-                    mz_arr = np.append(mz_arr, float(this_mz))
-                    int_arr = np.append(int_arr, float(this_int))
+                    # Some MGF files include a third peak charge or annotation.
+                    parts = _line.split()
+                    if len(parts) < 2:
+                        raise ValueError(f'Invalid MGF peak line: {_line}')
+                    this_mz, this_int = parts[:2]
+                    mz_arr.append(float(this_mz))
+                    int_arr.append(float(this_int))
 
     return meta_feature_list
 
@@ -404,8 +413,8 @@ def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
 
     # valid: dict_keys(['n_peaks', 'peaks', 'precursor_charge', 'precursor_mz', 'splash'])
     # ion mode
-    charge = json_data['precursor_charge']
-    if charge == 0:
+    charge = json_data.get('precursor_charge')
+    if charge is None or charge == 0:
         if adduct is not None:
             pos_mode = str(adduct)[-1] != '-'  # use adduct if charge is 0
             charge = 1 if pos_mode else -1
@@ -413,13 +422,22 @@ def _load_usi(usi: str, adduct: Union[str, None] = None) -> MetaFeature:
             charge = 1  # default to +1
             logging.warning('Charge is 0 and adduct is not provided. Default charge +1 is used.')
 
-    ms2_mz = np.array(json_data['peaks'])[:, 0]
-    ms2_int = np.array(json_data['peaks'])[:, 1]
+    peaks = json_data.get('peaks')
+    ms2 = None
+    if peaks is not None and len(peaks) > 0:
+        peaks = np.asarray(peaks, dtype=float)
+        if peaks.ndim != 2 or peaks.shape[1] < 2:
+            raise ValueError('USI peaks must contain m/z and intensity pairs.')
+        ms2 = Spectrum(peaks[:, 0], peaks[:, 1])
 
-    data = MetaFeature(mz=json_data['precursor_mz'],
+    precursor_mz = float(json_data['precursor_mz'])
+    if not np.isfinite(precursor_mz) or precursor_mz <= 0:
+        raise ValueError('USI precursor m/z must be a positive finite number.')
+
+    data = MetaFeature(mz=precursor_mz,
                        charge=charge,
                        adduct=adduct,
-                       ms2=Spectrum(ms2_mz, ms2_int),
+                       ms2=ms2,
                        identifier=usi)
     return data
 
@@ -441,16 +459,24 @@ def load_usi(usi_list: Union[str, List[str]],
 
     data_list = []
 
-    # if usi_list is a single string, convert it to a list
+    # Normalize inputs before aligning adducts and removing duplicate USIs.
     if isinstance(usi_list, str):
         usi_list = [usi_list]
-        if adduct_list is not None:
-            adduct_list = [adduct_str.strip() for adduct_str in adduct_list]
+    else:
+        usi_list = list(usi_list)
 
     if adduct_list is None:
         adduct_list = [None] * len(usi_list)
-    elif len(adduct_list) != len(usi_list):
-        logging.warning('adduct_list and usi_list must have the same length. Default adducts are used.')
+    elif isinstance(adduct_list, str):
+        _validate_adduct_elements(adduct_list)
+        adduct_list = [adduct_list.strip()] * len(usi_list)
+    else:
+        adduct_list = [item.strip() if isinstance(item, str) else item for item in adduct_list]
+        for adduct in adduct_list:
+            _validate_adduct_elements(adduct)
+        if len(adduct_list) != len(usi_list):
+            logging.warning('adduct_list and usi_list must have the same length. Default adducts are used.')
+            adduct_list = [None] * len(usi_list)
 
     usi_list = [usi.strip() for usi in usi_list]
 
@@ -470,8 +496,10 @@ def load_usi(usi_list: Union[str, List[str]],
     for usi, adduct in zip(usi_list_unique, adduct_list_unique):
         try:
             data_list.append(_load_usi(usi, adduct))
-        except:
-            logging.warning('Invalid USI: ' + usi)
+        except UnsupportedElementError:
+            raise
+        except Exception as exc:
+            logging.warning('Invalid USI: %s (%s)', usi, exc)
             continue
     return data_list
 

@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <philipxsp@hotmail.com>
+# Copyright (C) 2024-2026 Shipei Xing <sxing@fudan.edu.cn>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,7 +8,7 @@
 """
 File: main_cmd.py
 Author: Shipei Xing
-Email: philipxsp@hotmail.com
+Email: sxing@fudan.edu.cn
 GitHub: Philipbear
 Description: Command line interface for msbuddy.
 """
@@ -18,18 +18,20 @@ import pathlib
 
 import pandas as pd
 
+from msbuddy import __version__
 from msbuddy.main import Msbuddy, MsbuddyConfig
 from msbuddy.load import download_data
 
 
 def main():
-    parser = argparse.ArgumentParser(description="msbuddy command line interface (version 0.3.16)")
+    parser = argparse.ArgumentParser(description=f"msbuddy command line interface (version {__version__})")
+    parser.add_argument('--version', action='version', version=f'msbuddy {__version__}')
     # Keep the original single-dash spellings for backwards compatibility.
     # Documented long options use the conventional --kebab-case form.
     parser.add_argument('--mgf', '-mgf', type=str, help='Path to the MGF file.')
     parser.add_argument('--usi', '-usi', type=str, help='A single USI string.')
     parser.add_argument('--csv', '-csv', type=str,
-                        help='Path to the CSV file containing USI strings in the first column (no header row).')
+                        help='Path to a CSV file with USI strings in the first column and an optional header.')
     parser.add_argument('-o', '--output', '-output', type=str, help='The output file path.')
     parser.add_argument('--data-dir', type=str, default=None,
                         help='Directory for the msbuddy databases and model. '
@@ -108,6 +110,17 @@ def main():
             print(f'  {name}: {file_path}')
         return
 
+    element_ranges = {
+        'C': (args.c_min, args.c_max), 'H': (args.h_min, args.h_max),
+        'N': (args.n_min, args.n_max), 'O': (args.o_min, args.o_max),
+        'P': (args.p_min, args.p_max), 'S': (args.s_min, args.s_max),
+    }
+    if args.halogen:
+        element_ranges.update({
+            'F': (args.f_min, args.f_max), 'Cl': (args.cl_min, args.cl_max),
+            'Br': (args.br_min, args.br_max), 'I': (args.i_min, args.i_max),
+        })
+
     # run msbuddy
     # create a MsbuddyConfig object
     msb_config = MsbuddyConfig(
@@ -116,10 +129,7 @@ def main():
         ms1_tol=args.ms1_tol, ms2_tol=args.ms2_tol, halogen=args.halogen,
         parallel=args.parallel, n_cpu=args.n_cpu,
         timeout_secs=args.timeout_secs, batch_size=args.batch_size,
-        c_range=(args.c_min, args.c_max), h_range=(args.h_min, args.h_max), n_range=(args.n_min, args.n_max),
-        o_range=(args.o_min, args.o_max), p_range=(args.p_min, args.p_max), s_range=(args.s_min, args.s_max),
-        f_range=(args.f_min, args.f_max), cl_range=(args.cl_min, args.cl_max), br_range=(args.br_min, args.br_max),
-        i_range=(args.i_min, args.i_max),
+        element_ranges=element_ranges,
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
         rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, top_n_per_50_da=args.top_n_per_50_da,
         data_dir=args.data_dir, data_files=data_files
@@ -140,8 +150,15 @@ def main():
     elif args.usi:
         engine.load_usi([args.usi])
     elif args.csv:
-        # read and load CSV file, treat empty cells as empty strings
-        df = pd.read_csv(args.csv, keep_default_na=False, na_values=None)
+        # Accept both the supplied headered templates and headerless USI lists.
+        try:
+            df = pd.read_csv(args.csv, header=None, keep_default_na=False, encoding='utf-8-sig')
+        except pd.errors.EmptyDataError as exc:
+            raise ValueError('The USI CSV file is empty.') from exc
+        if not df.empty and str(df.iloc[0, 0]).strip().lower() == 'usi':
+            df = df.iloc[1:]
+        if df.empty:
+            raise ValueError('The USI CSV file contains no USIs.')
         # if df has >1 columns, treat the 2nd column as adduct strings
         if df.shape[1] > 1:
             engine.load_usi(usi_list=df.iloc[:, 0].tolist(),

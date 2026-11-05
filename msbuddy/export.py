@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <philipxsp@hotmail.com>
+# Copyright (C) 2024-2026 Shipei Xing <sxing@fudan.edu.cn>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,7 +8,7 @@
 """
 File: export.py
 Author: Shipei Xing
-Email: philipxsp@hotmail.com
+Email: sxing@fudan.edu.cn
 GitHub: Philipbear
 Description: export results to files
 """
@@ -39,7 +39,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
         result_df_rows.append({
             'identifier': mf.identifier,
             'mz': round(mf.mz, 4),
-            'rt': round(mf.rt, 4) if mf.rt else 'NA',
+            'rt': round(mf.rt, 4) if mf.rt is not None else 'NA',
             'adduct': mf.adduct.string,
             'formula_rank_1': individual_result['formula_rank_1'],
             'estimated_fdr': individual_result['estimated_fdr'] if individual_result[
@@ -58,7 +58,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             # replace '/' with '_' in the identifier, remove special characters
             _id = str(mf.identifier).replace('/', '').replace(':', '').replace(' ', '').strip()
             folder_name = _id + '_mz_' + str(round(mf.mz, 4)) + '_rt_'
-            folder_name += str(round(mf.rt, 2)) if mf.rt else 'NA'
+            folder_name += str(round(mf.rt, 2)) if mf.rt is not None else 'NA'
             mf_path = pathlib.Path(output_path / folder_name)
             mf_path.mkdir(parents=True, exist_ok=True)
 
@@ -78,9 +78,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                     'ms2_explanation_idx': 'NA',
                     'ms2_explanation': 'NA'
                 })
-                continue
-
-            for m, cf in enumerate(mf.candidate_formula_list):
+            for m, cf in enumerate(mf.candidate_formula_list or []):
                 # strings for explained ms2 peak
                 if mf.ms2_processed:
                     if cf.ms2_raw_explanation:

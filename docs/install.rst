@@ -1,7 +1,8 @@
 Installation
 ------------
 
-**msbuddy** requires Python version 3.9+. There are a variety of ways to install **msbuddy**.
+**msbuddy** declares Python 3.8 or newer. The current regression suite has been
+tested on Python 3.8–3.13. There are a variety of ways to install **msbuddy**.
 
 Option 1: Using pip (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -42,6 +42,21 @@ Example Usage:
    :param mgf_file: str. The path to the mgf file.
    :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
+If an adduct cannot be parsed, msbuddy logs a warning and uses ``[M+H]+`` or
+``[M-H]-`` according to the ionization mode. An adduct containing an
+unsupported element raises ``UnsupportedElementError`` instead. Candidate
+formulas with invalid atom counts or nonpositive or nonfinite masses are
+skipped with a warning.
+When an adduct is omitted, the default adds or removes one proton per reported
+charge, for example ``[M+2H]2+`` for charge ``2+``. If a supplied adduct has a
+different charge from the reported charge, msbuddy warns and uses the adduct's
+charge. If an MGF spectrum supplies no polarity in its charge, ion mode, or
+adduct, msbuddy warns and assumes positive mode.
+Peaks with nonpositive or nonfinite intensities are ignored during processing;
+an empty spectrum is treated as missing evidence for model selection.
+For multiply charged precursors, candidate formulas come from the precursor
+database, and MS/MS fragment assignment assumes singly charged fragments.
+
 Example Usage:
 
 .. code-block:: python

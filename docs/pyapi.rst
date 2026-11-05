@@ -1,116 +1,76 @@
 Python API
 -------------
 
-Functions
-~~~~~~~~~~~~~~~
-.. function:: read_formula (formula_string: str)
+Version 1.0 changes several Python APIs. See the :doc:`migration` guide before
+upgrading from 0.x. Public formula compositions are dictionaries mapping
+supported element symbols to nonnegative integer counts.
 
-   Read a formula string (in neutral form) and return a numpy array ([C, H, Br, Cl, F, I, K, N, Na, O, P, S]), return None if invalid. For a more general approach (no element restriction), use :func:`msbuddy.utils.read_formula_str`.
+Formula functions
+~~~~~~~~~~~~~~~~~
 
-   :param formula_string: str. The molecular formula string.
-   :returns: A numpy array of the molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S]. None if invalid.
+.. function:: read_formula(formula: str)
 
-Example Usage:
+   Parse a molecular formula string into an element-count dictionary. Supports
+   parentheses, component multipliers, and dot-separated components. A dot
+   separates components; it does not denote a fractional atom count. Invalid
+   syntax raises ``ValueError`` and unsupported elements raise
+   ``UnsupportedElementError``, a subclass of ``ValueError``.
 
-.. code-block:: python
+   :returns: A dictionary containing nonzero element counts.
 
-   from msbuddy.utils import read_formula
+.. function:: formula_to_string(composition: Mapping[str, int])
 
-   formula_array = read_formula("C10H20O5")
-   print(formula_array)
+   Format an element-count dictionary as a formula string. Unsupported elements
+   and invalid atom counts raise errors.
 
+.. function:: enumerate_subformulas(composition: Mapping[str, int])
 
-.. function:: read_formula_str (formula_string: str)
-
-   Read a formula string and return a dictionary. It can deal with cases such as "2H2O" and "C5H7NO2.HCl".
-
-   :param formula_string: str. The molecular formula string.
-   :returns: A dictionary of the parsed molecular formula.
-
-Example Usage:
-
-.. code-block:: python
-
-   from msbuddy.utils import read_formula_str
-
-   formula_dict = read_formula_str("2H2O")
-   print(formula_dict)
-
-
-.. function:: add_formula_str (formula_str1: str, formula_str2: str)
-
-   Add up two formula strings and return a dictionary.
-
-   :param formula_str1: str. The molecular formula string.
-   :param formula_str2: str. The molecular formula string.
-   :returns: A dictionary of the summed molecular formula.
-
-Example Usage:
+   Return a lazy iterator of element-count dictionaries, including the empty
+   composition. The number of results can grow rapidly with atom counts.
 
 .. code-block:: python
 
-   from msbuddy.utils import add_formula_str
+   from itertools import islice
+   from msbuddy import Formula, enumerate_subformulas, formula_to_string, read_formula
 
-   formula_dict = add_formula_str("C6H12O5", "H2O")
-   print(formula_dict)
+   counts = read_formula('C6H12O6')
+   formula = Formula(counts)  # or Formula.from_string('C6H12O6')
+   print(formula.composition, formula.mass, formula_to_string(counts))
+   print(list(islice(enumerate_subformulas(counts), 5)))
 
+``SUPPORTED_ELEMENTS`` contains the symbols C, H, Br, Cl, F, I, K, N, Na,
+O, P, and S. Counts must be nonnegative integers no greater than 32767.
+The helpers ``msbuddy.utils.read_formula_str`` and
+``msbuddy.utils.add_formula_str`` also validate these symbols.
 
-.. function:: form_arr_to_str (formula_array: List[int])
+.. function:: assign_subformula(ms2_mz, precursor_formula, adduct, ms2_tol=10, ppm=True, dbe_cutoff=0.0)
 
-   Read a neutral formula array and return the Hill string.
+   Assign singly charged fragment formulas to an MS/MS spectrum. The precursor
+   may be a formula string or an element-count dictionary. Radical fragments
+   are considered and candidate subformulas are filtered by DBE and chemical
+   rules. Invalid formulas, unsupported elements and invalid adducts raise
+   errors, including when the peak list is empty.
 
-   :param formula_array: List[int]. The molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S].
-   :returns: The Hill string of the molecular formula.
-
-Example Usage:
-
-.. code-block:: python
-
-   from msbuddy.utils import form_arr_to_str
-
-   formula_str = form_arr_to_str([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
-   print(formula_str)
-
-
-.. function:: assign_subformula (ms2_mz: List[float], precursor_formula: str, adduct: str, ms2_tol: float, ppm: bool, dbe_cutoff: float)
-
-   Assign subformulas to an MS/MS spectrum with a given precursor formula and adduct. Radical fragment ions are considered. Double bond equivalent (DBE) cutoff is used to filter out subformulas.
-   A soft version of SENIOR rules and other rules (remove invalid subformulas such as "C4", "N4") are also applied. Note that input precursor formula strings should only contain CHNOPSFClBrINaK.
-
-   :param ms2_mz: List[float]. A list-like object (or 1D numpy array) of the m/z values of the MS/MS spectrum.
-   :param precursor_formula: str. The precursor formula string (in uncharged form). e.g., "C10H20O5".
-   :param adduct: str. The adduct type string. e.g., "[M+H]+". If the input adduct is not recognized, the default adduct type (M +/- H) will be used.
-   :param ms2_tol: float. The m/z tolerance for MS/MS spectra. Default is 10 ppm.
-   :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da. Default is True.
-   :param dbe_cutoff: float. The DBE cutoff for filtering out subformulas. Default is 0.0.
-   :returns: A list of :class:`msbuddy.utils.SubformulaResult` objects.
-
-Example Usage:
+   :param ms2_mz: Sequence of MS/MS m/z values.
+   :param precursor_formula: Uncharged formula string or element-count mapping.
+   :param adduct: Adduct string, such as ``[M+H]+``.
+   :param ms2_tol: Fragment m/z tolerance, by default 10 ppm.
+   :param ppm: If false, use Da for the tolerance.
+   :param dbe_cutoff: Minimum double bond equivalent.
+   :returns: A list of :class:`msbuddy.utils.SubformulaResult` objects. Use
+      each result's ``peak_index`` and ``formulas`` to inspect matches.
 
 .. code-block:: python
 
    from msbuddy import assign_subformula
 
-   subformla_list = assign_subformula([107.05, 149.02, 209.04, 221.04, 230.96],
-                                      precursor_formula="C15H16O5", adduct="[M+H]+",
-                                      ms2_tol=0.02, ppm=False, dbe_cutoff=0.0)
+   matches = assign_subformula([107.05, 149.02], {'C': 15, 'H': 16, 'O': 5},
+                               '[M+H]+', ms2_tol=0.02, ppm=False)
+   for peak in matches:
+       print(peak.peak_index, [match.formula for match in peak.formulas])
 
-
-.. function:: enumerate_subform_arr (formula_array: List[int])
-
-   Enumerate all possible sub-formula arrays of a given formula array.
-
-   :param formula_array: List[int]. A list-like object (or 1D numpy array) of the molecular formula array.
-   :returns: A 2D numpy array, with each row being a sub-formula array.
-
-Example Usage:
-
-.. code-block:: python
-
-   from msbuddy.utils import enumerate_subform_arr
-
-   all_subform_arr = enumerate_subform_arr([10, 20, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0])
-   print(all_subform_arr)
+Mass search functions
+~~~~~~~~~~~~~~~~~~~~~
 
 .. function:: mass_to_formula (mass: float, mass_tol: float, ppm: bool, halogen: bool, dbe_cutoff: float, integer_dbe: bool)
 
@@ -176,7 +136,7 @@ Classes
 ~~~~~~~~~~~~~~~
 .. class:: msbuddy.Msbuddy (config: Union[MsbuddyConfig, None] = None)
 
-   Buddy main class. Note that the Buddy class is singleton, which means only one Buddy object can be created.
+   Main annotation engine. Instances maintain independent data and configuration.
 
    :param config: :class:`msbuddy.MsbuddyConfig` object. Default is None.
 
@@ -188,20 +148,17 @@ Classes
 
       A list of :class:`msbuddy.base.MetaFeature` objects. Data loaded into the :class:`msbuddy.Msbuddy` object.
 
-   .. attribute:: db_loaded
-
-      bool. True if the database is loaded.
-
    .. method:: update_config (config: **kwargs)
 
-      Update the configuration for the :class:`msbuddy.Msbuddy` object.
+      Replace the configuration with a new one. Unspecified options return to
+      their defaults, and the database dependencies are reloaded.
 
-      :param config: **kwargs, attributes in :class:`msbuddy.MsbuddyConfig` class.
+      :param config: ``**kwargs``, attributes in :class:`msbuddy.MsbuddyConfig` class.
       :returns: None. The ``config`` attribute of the :class:`msbuddy.Msbuddy` object will be updated.
 
    .. method:: load_usi (usi_list: Union[str, List[str]], adduct_list: Union[None, str, List[str]] = None)
 
-      Read from a single USI string or a sequence of USI strings, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
+      Read USIs and replace the currently loaded data.
 
       :param usi_list: str or List[str]. A single USI string or a sequence of USI strings.
       :param optional adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
@@ -209,16 +166,16 @@ Classes
 
    .. method:: load_mgf (mgf_file: str)
 
-      Read a single mgf file, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
+      Read a single MGF file and replace the currently loaded data.
 
       :param mgf_file: str. The path to the mgf file.
       :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
-   .. method:: add_data (data: List[MetaFeature])
+   .. method:: add_data (data)
 
-      Add data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
+      Append one feature or an iterable of features to the loaded data.
 
-      :param data: A list of :class:`msbuddy.base.MetaFeature` objects. The data to be added.
+      :param data: A :class:`msbuddy.base.MetaFeature` or iterable of features.
       :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
    .. method:: clear_data
@@ -261,7 +218,7 @@ Example Usage:
    engine.update_config(ms_instr="fticr", halogen=True, timeout_secs=100)
 
 
-.. class:: msbuddy.MsbuddyConfig (ms_instr: str = None, ppm: bool = True, ms1_tol: float = 5, ms2_tol: float = 10, halogen: bool = False, parallel: bool = False, n_cpu: int = -1, timeout_secs: float = 300, batch_size: int = 1000, c_range: Tuple[int, int] = (0, 80), h_range: Tuple[int, int] = (0, 150), n_range: Tuple[int, int] = (0, 20), o_range: Tuple[int, int] = (0, 30), p_range: Tuple[int, int] = (0, 10), s_range: Tuple[int, int] = (0, 15), f_range: Tuple[int, int] = (0, 20), cl_range: Tuple[int, int] = (0, 15), br_range: Tuple[int, int] = (0, 10), i_range: Tuple[int, int] = (0, 10), isotope_bin_mztol: float = 0.02, max_isotope_cnt: int = 4, rel_int_denoise_cutoff: float = 0.01, top_n_per_50_da: int = 6)
+.. class:: msbuddy.MsbuddyConfig (ms_instr=None, ppm=True, ms1_tol=5, ms2_tol=10, halogen=False, parallel=False, n_cpu=-1, timeout_secs=300, batch_size=1000, element_ranges=None, isotope_bin_mztol=0.02, max_isotope_cnt=4, rel_int_denoise_cutoff=0.01, top_n_per_50_da=6, data_dir=None, data_files=None)
 
    It is a class to store all the configurations for **msbuddy**.
 
@@ -274,16 +231,9 @@ Example Usage:
    :param n_cpu: int. The number of CPUs to use. Default is -1, which means all available CPUs.
    :param timeout_secs: float. The timeout in seconds for each query. Default is 300 seconds.
    :param batch_size: int. The batch size for formula annotation; a larger batch size takes more memory. Default is 1000.
-   :param c_range: Tuple[int, int]. The range of carbon atoms. Default is (0, 80).
-   :param h_range: Tuple[int, int]. The range of hydrogen atoms. Default is (0, 150).
-   :param n_range: Tuple[int, int]. The range of nitrogen atoms. Default is (0, 20).
-   :param o_range: Tuple[int, int]. The range of oxygen atoms. Default is (0, 30).
-   :param p_range: Tuple[int, int]. The range of phosphorus atoms. Default is (0, 10).
-   :param s_range: Tuple[int, int]. The range of sulfur atoms. Default is (0, 15).
-   :param f_range: Tuple[int, int]. The range of fluorine atoms. Default is (0, 20).
-   :param cl_range: Tuple[int, int]. The range of chlorine atoms. Default is (0, 15).
-   :param br_range: Tuple[int, int]. The range of bromine atoms. Default is (0, 10).
-   :param i_range: Tuple[int, int]. The range of iodine atoms. Default is (0, 10).
+   :param element_ranges: Mapping of supported element symbols to inclusive
+      ``(minimum, maximum)`` pairs. Unspecified elements retain their defaults.
+      Nonzero halogen ranges require ``halogen=True``.
    :param isotope_bin_mztol: float. The mass tolerance for MS1 isotope binning, in Da. Default is 0.02 Da.
    :param max_isotope_cnt: int. The maximum number of isotopes to consider. Default is 4.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising. Default is 0.01 (1%).
@@ -299,6 +249,7 @@ Example Usage:
     msb_config = MsbuddyConfig(
         ms_instr="orbitrap",
         halogen=True,
+        element_ranges={"C": (0, 40), "Cl": (0, 2)},
         timeout_secs=100)
 
     # create a Msuddy object with the specified configuration
@@ -334,19 +285,24 @@ Example usage:
 
 
 
-.. class:: msbuddy.base.Formula (array: np.array, charge: int, mass: Union[float, None] = None, isotope: int = 0)
+.. class:: msbuddy.base.Formula (composition, charge=0, mass=None, isotope=0)
 
     A class to represent a molecular formula.
 
-   :param array: numpy array. The molecular formula array in the format of [C, H, Br, Cl, F, I, K, N, Na, O, P, S].
-   :param charge: int. The charge of the molecular formula.
+   :param composition: Mapping from element symbols to nonnegative integer counts.
+   :param charge: int. The charge of the molecular formula; defaults to zero.
    :param optional mass: float. The exact mass of the molecular formula. Default is None, exact mass will be calculated.
    :param isotope: int. The isotopologue of the formula (e.g., 1 for M+1). Default is 0, which means M+0.
 
 
-   .. attribute:: array
+   .. classmethod:: from_string(formula, charge=0)
 
-      A numpy array of the molecular formula array.
+      Construct a formula from a molecular formula string.
+
+   .. attribute:: composition
+
+      A new dictionary containing the nonzero element counts. Array storage is
+      an internal implementation detail.
 
    .. attribute:: charge
 
@@ -368,7 +324,9 @@ Example usage:
 
 .. class:: msbuddy.base.Adduct (string: Union[str, None], pos_mode: bool, report_invalid: bool)
 
-    A class to represent an adduct type. If a invalid string is given, the default adduct type will be used.
+    A class to represent an adduct type. Malformed adducts use the default
+    unless ``report_invalid=True``. Unsupported elements always raise
+    ``UnsupportedElementError``.
 
    :param optional string: str. The adduct type. Default is [M+H]+ for positive mode and [M-H]- for negative mode.
    :param pos_mode: bool. True for positive mode and False for negative mode.
@@ -393,7 +351,9 @@ Example usage:
 
    .. attribute:: net_formula
 
-      :class:`msbuddy.base.Formula` object. The net formula of the adduct. For example, [M+H-H2O]+ has net formula H-1O-1.
+      :class:`msbuddy.base.Formula` object describing the net change. Its
+      ``composition`` can contain negative counts; for example, [M+H-H2O]+
+      has ``{'H': -1, 'O': -1}``.
 
 
 
@@ -432,16 +392,17 @@ Example usage:
 
 
 
-.. class:: msbuddy.base.ProcessedMS2 (mz: float, raw_spec: Spectrum, mz_tol: float, ppm: bool, denoise: bool, rel_int_denoise_cutoff: float, top_n_per_50_da: int)
+.. class:: msbuddy.base.ProcessedMS2 (mz: float, raw_spec: Spectrum, mz_tol: float, ppm: bool, rel_int_denoise_cutoff: float, top_n_per_50_da: int, charge: int = 1)
 
     A class to represent a processed MS/MS spectrum, for MS/MS preprocessing (deprecursor, denoise, reserve top N fragments).
 
    :param mz: float. Precursor ion m/z.
-   :param raw_spec: :class:`msbuddy.base.Spectrum` object. Raw MS1 spectrum.
-   :param mz_tol: float. The mass tolerance for MS1 spectra.
+   :param raw_spec: :class:`msbuddy.base.Spectrum` object. Raw MS/MS spectrum.
+   :param mz_tol: float. The mass tolerance for MS/MS spectra.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da.
    :param rel_int_denoise_cutoff: float. The cutoff for relative intensity denoising.
    :param top_n_per_50_da: int. The maximum number of fragments to reserve in every 50 Da.
+   :param charge: int. The precursor ion charge; defaults to 1.
 
    .. attribute:: mz_tol
 
@@ -536,7 +497,7 @@ Example usage:
    :param mz: float. Precursor ion m/z.
    :param charge: int. Precursor ion charge.
    :param optional rt: float. Retention time in seconds. Default is None.
-   :param optional adduct: str. Adduct type. Default is [M+H]+ for positive mode and [M-H]- for negative mode.
+   :param optional adduct: str. Adduct type. If omitted, the default adds or removes one proton per charge, such as [M+H]+ or [M+2H]2+.
    :param optional ms1: :class:`msbuddy.base.Spectrum` object. MS1 spectrum containing the isotopic pattern information. Default is None.
    :param optional ms2: :class:`msbuddy.base.Spectrum` object. MS/MS spectrum. Default is None.
 
@@ -594,6 +555,14 @@ Example usage:
 
       str. The molecular formula string.
 
+   .. attribute:: mass
+
+      float. The calculated mass or m/z of the formula.
+
+   .. attribute:: target_mass
+
+      float. The input mass or m/z used for the search.
+
    .. attribute:: mass_error
 
       float. Mass error (Da) between the formula and the target mass.
@@ -610,10 +579,18 @@ Example usage:
    :param idx: int. The index of the fragment ion.
    :param subform_list: List[FormulaResult]. A list of :class:`msbuddy.utils.FormulaResult` objects.
 
+   .. attribute:: peak_index
+
+      Index of the fragment peak in the input m/z sequence.
+
+   .. attribute:: formulas
+
+      Formula matches for the peak, as :class:`msbuddy.utils.FormulaResult` objects.
+
    .. attribute:: idx
 
-      int. The index of the fragment ion.
+      Alias of ``peak_index``.
 
    .. attribute:: subform_list
 
-      A list of :class:`msbuddy.utils.FormulaResult` objects.
+      Alias of ``formulas``.

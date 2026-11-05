@@ -1,0 +1,53 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install packaging tools
+        run: python -m pip install build twine
+      - name: Build and check distributions
+        run: |
+          python -m build
+          python -m twine check --strict dist/*
+      - name: Check installed package and command
+        run: |
+          python -m pip install dist/*.whl
+          cd "$RUNNER_TEMP"
+          python -c "import importlib.metadata, msbuddy; assert importlib.metadata.version('msbuddy') == msbuddy.__version__"
+          msbuddy --version
+
+  test-python38:
+    runs-on: ubuntu-latest
+    container: python:3.8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install project
+        run: python -m pip install -e .
+      - name: Run regression suite
+        run: python -m unittest discover -s tests -v
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e .
+      - name: Run regression suite
+        run: python -m unittest discover -s tests -v

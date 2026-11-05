@@ -1,5 +1,5 @@
 # ==============================================================================
-# Copyright (C) 2024 Shipei Xing <philipxsp@hotmail.com>
+# Copyright (C) 2024-2026 Shipei Xing <sxing@fudan.edu.cn>
 #
 # Licensed under the Apache License 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,19 +8,61 @@
 """
 File: utils.py
 Author: Shipei Xing
-Email: philipxsp@hotmail.com
+Email: sxing@fudan.edu.cn
 GitHub: Philipbear
 Description: main util functions for msbuddy
 """
 
-from typing import List
+from collections.abc import Mapping
+from itertools import product
+from numbers import Integral
+import re
+from typing import Iterator, List
 
 import numpy as np
-from chemparse import parse_formula
 from numba import njit
 
 # define alphabet
 alphabet = ["C", "H", "Br", "Cl", "F", "I", "K", "N", "Na", "O", "P", "S"]
+SUPPORTED_ELEMENTS = tuple(alphabet)
+_ELEMENT_SET = frozenset(SUPPORTED_ELEMENTS)
+_MAX_ATOM_COUNT = np.iinfo(np.int16).max
+_FORMULA_TOKEN = re.compile(r'[A-Z][a-z]?|[0-9]+|[().·]')
+
+
+class UnsupportedElementError(ValueError):
+    """An element is not supported by msbuddy's formula database."""
+
+
+def _validate_elements(elements):
+    for element in elements:
+        if element not in _ELEMENT_SET:
+            raise UnsupportedElementError(
+                f'Unsupported element {element!r}. Supported elements: {", ".join(SUPPORTED_ELEMENTS)}.')
+
+
+def _validate_composition(composition):
+    """Return a normalized element-count mapping after validating its contents."""
+    if not isinstance(composition, Mapping):
+        raise TypeError('Formula composition must be a mapping of element symbols to atom counts.')
+    _validate_elements(composition)
+    for element, count in composition.items():
+        if isinstance(count, (bool, np.bool_)) or not isinstance(count, Integral):
+            raise ValueError(f'Atom count for {element} must be a nonnegative integer.')
+        if count < 0 or count > _MAX_ATOM_COUNT:
+            raise ValueError(f'Atom count for {element} must be between 0 and {_MAX_ATOM_COUNT}.')
+    return {element: int(composition[element]) for element in SUPPORTED_ELEMENTS
+            if element in composition and composition[element] != 0}
+
+
+def _composition_to_array(composition):
+    """Convert a validated public composition to the engine's fixed-order array."""
+    composition = _validate_composition(composition)
+    return np.array([composition.get(element, 0) for element in SUPPORTED_ELEMENTS], dtype=np.int16)
+
+
+def _array_to_composition(array):
+    return {element: int(count) for element, count in zip(SUPPORTED_ELEMENTS, array) if count != 0}
 
 
 class FormulaResult:
@@ -36,6 +78,8 @@ class FormulaResult:
         :param t_mass: target mass
         """
         self.formula = formula
+        self.mass = mass
+        self.target_mass = t_mass
         self.mass_error = mass - t_mass
         self.mass_error_ppm = self.mass_error / t_mass * 1e6
 
@@ -54,31 +98,103 @@ class SubformulaResult:
         self.idx = idx
         self.subform_list = subform_list
 
+    @property
+    def peak_index(self):
+        """Index of the input fragment peak."""
+        return self.idx
 
-def read_formula(form: str) -> np.array:
+    @property
+    def formulas(self):
+        """Formula matches for this fragment peak."""
+        return self.subform_list
+
+
+def read_formula(formula: str) -> dict:
+    """Parse a formula into element counts, raising ValueError for invalid input.
+
+    Parenthesized groups, leading multipliers, and dot-separated components are
+    supported; a dot separates components rather than denoting a decimal count.
     """
-    read neutral formula string and return a 12-dim array, return None if invalid
-    :param form: formula string in neutral form, e.g., C6H5NO2
-    :return: 12-dim array
-    """
+    if not isinstance(formula, str):
+        raise TypeError('Formula must be a string.')
+    formula = formula.strip()
+    if not formula:
+        raise ValueError('Formula cannot be empty.')
+    tokens = []
+    position = 0
+    for match in _FORMULA_TOKEN.finditer(formula):
+        if match.start() != position:
+            raise ValueError(f'Invalid formula syntax at position {position}: {formula!r}.')
+        tokens.append(match.group())
+        position = match.end()
+    if position != len(formula):
+        raise ValueError(f'Invalid formula syntax at position {position}: {formula!r}.')
 
-    # parse formula string
-    try:
-        parsed = parse_formula(form)
-    except:
-        return None
+    index = 0
 
-    # check whether contains elements not in alphabet
-    for element in parsed.keys():
-        if element not in alphabet:
-            return None
+    def number():
+        nonlocal index
+        if index < len(tokens) and tokens[index].isdigit():
+            value = int(tokens[index])
+            index += 1
+            if value <= 0:
+                raise ValueError('Formula multipliers and atom counts must be positive.')
+            return value
+        return 1
 
-    # convert to 12-dim array
-    array = np.zeros(12, dtype=np.int16)
-    for i, element in enumerate(alphabet):
-        if element in parsed.keys():
-            array[i] = parsed[element]
-    return array
+    def sequence():
+        nonlocal index
+        counts = {}
+        consumed = False
+        while index < len(tokens) and tokens[index] not in (')', '.', '·'):
+            token = tokens[index]
+            index += 1
+            if token == '(':
+                group = sequence()
+                if index >= len(tokens) or tokens[index] != ')':
+                    raise ValueError(f'Unmatched parenthesis in formula: {formula!r}.')
+                index += 1
+            elif token[0].isupper():
+                _validate_elements((token,))
+                group = {token: 1}
+            else:
+                raise ValueError(f'Invalid formula syntax: {formula!r}.')
+            multiplier = number()
+            for element, count in group.items():
+                counts[element] = counts.get(element, 0) + count * multiplier
+            consumed = True
+        if not consumed:
+            raise ValueError(f'Formula contains an empty component: {formula!r}.')
+        return counts
+
+    counts = {}
+    while index < len(tokens):
+        multiplier = number()
+        component = sequence()
+        for element, count in component.items():
+            counts[element] = counts.get(element, 0) + count * multiplier
+        if index < len(tokens):
+            if tokens[index] not in ('.', '·'):
+                raise ValueError(f'Invalid formula syntax: {formula!r}.')
+            index += 1
+            if index == len(tokens):
+                raise ValueError(f'Formula contains an empty component: {formula!r}.')
+    return _validate_composition(counts)
+
+
+def formula_to_string(composition: Mapping) -> str:
+    """Format an element-count mapping as a molecular formula string."""
+    counts = _validate_composition(composition)
+    return ''.join(element + (str(count) if count != 1 else '')
+                   for element, count in counts.items())
+
+
+def enumerate_subformulas(composition: Mapping) -> Iterator[dict]:
+    """Iterate over all subformula compositions, including the empty one."""
+    counts = _validate_composition(composition)
+    items = list(counts.items())
+    return ({element: value for (element, _), value in zip(items, reversed(values)) if value}
+            for values in product(*(range(count + 1) for _, count in reversed(items))))
 
 
 def enumerate_subform_arr(form_arr: List[int]) -> np.ndarray:
@@ -176,66 +292,14 @@ def form_arr_to_str(form_arr) -> str:
     return _ascii_to_str(_form_arr_to_str(form_arr))
 
 
-def _read_formula_str(x: str) -> dict:
-    """
-    Read formula string and return a dictionary
-    :param x: formula string
-    :return: formula dictionary
-    """
-    # if x starts with a number
-    m = 1
-    idx = 0
-    while x[idx].isdigit():
-        idx += 1
-    if idx > 0:
-        m = int(x[:idx])
-    x = x[idx:]
-    # parse formula
-    form = parse_formula(x)
-    # multiply by m
-    for k, v in form.items():
-        form[k] = v * m
-    return form
-
-
 def read_formula_str(x: str) -> dict:
-    """
-    Read formula string and return a dictionary
-    :param x: formula string
-    :return: formula dictionary
-    """
-    # if x contains '.', read two parts
-    if '.' in x:
-        x1 = x.split('.')[0]
-        x2 = x.split('.')[1]
-        form1 = _read_formula_str(x1)  # this is a dict
-        form2 = _read_formula_str(x2)
-        # merge two dicts, add values with same keys
-        for k, v in form2.items():
-            if k in form1.keys():
-                form1[k] += v
-            else:
-                # add new key
-                form1[k] = v
-        return form1
-    else:
-        return _read_formula_str(x)
+    """Parse a formula string; equivalent to :func:`read_formula`."""
+    return read_formula(x)
 
 
 def add_formula_str(x: str, y: str) -> dict:
-    """
-    Add two formula strings
-    :param x: formula string x
-    :param y: formula string y
-    :return: formula dictionary
-    """
-    form1 = read_formula_str(x)
-    form2 = read_formula_str(y)
-    # merge two dicts, add values with same keys
-    for k, v in form2.items():
-        if k in form1.keys():
-            form1[k] += v
-        else:
-            # add new key
-            form1[k] = v
-    return form1
+    """Add the atom counts from two validated formula strings."""
+    combined = read_formula(x)
+    for element, count in read_formula(y).items():
+        combined[element] = combined.get(element, 0) + count
+    return _validate_composition(combined)

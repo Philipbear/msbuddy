@@ -31,9 +31,23 @@ To perform formula annotation, you also have to install the [lightgbm](https://g
 ```commandline
 pip install lightgbm
 ```
-``
-Note: Python version >= 3.9 and <3.13 is required.
-``
+The package declares Python 3.8 or newer. The current regression suite has
+been tested on Python 3.8–3.13; availability of prebuilt dependency packages
+varies by platform and Python version.
+
+## Upgrading to 1.0
+
+The 1.0 Python API contains breaking changes and is not fully compatible with
+0.x. Formula compositions now use dictionaries, such as
+`{'C': 6, 'H': 12, 'O': 6}`, instead of fixed-order element arrays. `read_formula()` returns a
+dictionary, and `Formula()` accepts one. Use `formula_to_string()` and the
+lazy `enumerate_subformulas()` iterator in place of the former top-level
+array helpers. Invalid formulas and unsupported element symbols raise errors.
+
+Configure element limits with `MsbuddyConfig(element_ranges={'C': (0, 40)})`
+instead of separate arguments such as `c_range`. `Msbuddy.add_data()` now
+appends data; call `clear_data()` first when replacing the loaded dataset.
+See the [migration guide](https://github.com/Philipbear/msbuddy/blob/main/docs/migration.rst) for examples and other changes.
 
 ## Python usage 
 
@@ -79,11 +93,23 @@ msb_engine.load_usi(['mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036',
 Here is a test case on [Google Colab](https://colab.research.google.com/drive/1oLIapoylGbh37ivhcAN-X4tK6l5kIIpf?usp=sharing).
 
 ### Other API functions
-- parse a formula string (e.g., C6H12O6, 2H2O, C5H7NO2.HCl) ([read_formula_str](https://msbuddy.readthedocs.io/en/latest/pyapi.html#read_formula_str))
-- assign subformulas for an MS/MS with a given precursor formula ([assign_subformula](https://msbuddy.readthedocs.io/en/latest/pyapi.html#assign_subformula))
-- enumerate all possible subformulas of a given precursor formula ([enumerate_subform_arr](https://msbuddy.readthedocs.io/en/latest/pyapi.html#enumerate_subform_arr))
-- generate molecular formulas from a neutral mass ([mass_to_formula](https://msbuddy.readthedocs.io/en/latest/pyapi.html#mass_to_formula))
-- generate molecular formulas from a charged _m/z_ ([mz_to_formula](https://msbuddy.readthedocs.io/en/latest/pyapi.html#mz_to_formula))
+
+```python
+from itertools import islice
+from msbuddy import Formula, MsbuddyConfig, enumerate_subformulas, formula_to_string, read_formula
+
+composition = read_formula('C6H12O6')  # {'C': 6, 'H': 12, 'O': 6}
+formula = Formula(composition)          # neutral by default
+print(formula.mass, formula.composition, formula_to_string(composition))
+print(list(islice(enumerate_subformulas(composition), 5)))
+
+config = MsbuddyConfig(halogen=True, element_ranges={'C': (0, 40), 'Cl': (0, 2)})
+```
+
+Supported elements are C, H, Br, Cl, F, I, K, N, Na, O, P, and S.
+Unknown symbols raise `UnsupportedElementError`, a subclass of `ValueError`.
+You can also assign subformulas from MS/MS data with `assign_subformula()`, or
+use `Msbuddy.mass_to_formula()` and `Msbuddy.mz_to_formula()` to search by mass.
 
 See more in the [documentation](https://msbuddy.readthedocs.io/en/latest/pyapi.html).
 
@@ -120,6 +146,21 @@ Run the following command to see the full list of options:
 msbuddy --help
 ```
 
+## Development
+
+The annotation pipeline lives in `msbuddy/`, with regression tests in `tests/`
+and repeatable scaling checks in `benchmarks/`. After installing the project
+dependencies, run the tests from the repository root:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Run `python -m benchmarks.benchmark_workflows` to measure synthetic input
+loading, candidate matching, feature assembly, and subformula mass calculation.
+See the [development guide](https://github.com/Philipbear/msbuddy/blob/main/docs/development.rst) for the project layout and
+benchmark options.
+
 ## Links
 [**msbuddy documentation**](https://msbuddy.readthedocs.io/en/latest/)
 
@@ -138,4 +179,4 @@ msbuddy --help
 This work is licensed under the Apache License 2.0.
 
 ## Contact
-Please contact me via **philipxsp@hotmail.com**.
+Please contact me via **sxing@fudan.edu.cn**.
