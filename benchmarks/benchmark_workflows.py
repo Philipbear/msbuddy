@@ -70,9 +70,9 @@ def main():
         seconds = _measure(lambda: gen_ml_feature(features, True, 5, 10, {}), args.repeats)
     print(f'Model matrix assembly: {seconds:.4f} s ({args.candidates} candidates)')
 
-    ms1 = list(range(args.candidates))
-    ms2 = list(range(args.candidates, 2 * args.candidates))
-    ms1_names = [str(i) for i in ms1]
+    ms1 = [SimpleNamespace(exp_ms2_sum_int=0.0) for _ in range(args.candidates)]
+    ms2 = [SimpleNamespace(exp_ms2_sum_int=0.5) for _ in range(args.candidates)]
+    ms1_names = [str(i) for i in range(args.candidates)]
     ms2_names = [str(i) for i in range(args.candidates // 2, args.candidates + args.candidates // 2)]
     seconds = _measure(lambda: _merge_cand_form_list(ms1, ms2, ms1_names, ms2_names), args.repeats)
     print(f'Candidate merge: {seconds:.4f} s ({args.candidates} candidates per list)')

@@ -19,10 +19,27 @@ from msbuddy.utils import read_formula
 
 class CandidateMatchingTests(unittest.TestCase):
     def test_merge_preserves_order_and_ms1_candidates(self):
-        ms1 = [object(), object()]
-        ms2 = [object(), object(), object()]
+        ms1 = [SimpleNamespace(exp_ms2_sum_int=0.0), SimpleNamespace(exp_ms2_sum_int=0.0)]
+        ms2 = [SimpleNamespace(exp_ms2_sum_int=.8), SimpleNamespace(exp_ms2_sum_int=.2),
+               SimpleNamespace(exp_ms2_sum_int=.4)]
         merged = _merge_cand_form_list(ms1, ms2, ['A', 'B'], ['B', 'C', 'C'])
         self.assertEqual(merged, [*ms1, ms2[1], ms2[2]])
+        self.assertEqual(ms1[1].exp_ms2_sum_int, .8)
+
+    def test_merge_keeps_bottom_up_evidence_for_a_known_precursor_at_the_cutoff(self):
+        from msbuddy.cand import _retain_top_cand_form
+
+        known = CandidateFormula(Formula(read_formula('C6H12O6')), exp_ms2_sum_int=0.0,
+                                  db_existed=True)
+        explained = CandidateFormula(Formula(read_formula('C6H12O6')), exp_ms2_sum_int=.9)
+        known.mz_error = 0.0
+        decoys = [SimpleNamespace(exp_ms2_sum_int=.1, mz_error=0.0) for _ in range(350)]
+        merged = _merge_cand_form_list([known], [explained, *decoys], ['C6H12O6'],
+                                       ['C6H12O6', *map(str, range(350))])
+        retained = _retain_top_cand_form(merged, 5, False, True, 350)
+        self.assertIs(retained[0], known)
+        self.assertTrue(known.db_existed)
+        self.assertEqual(known.exp_ms2_sum_int, .9)
 
     def test_database_existence_marks_only_matching_candidates(self):
         ms2 = [SimpleNamespace(db_existed=False) for _ in range(3)]

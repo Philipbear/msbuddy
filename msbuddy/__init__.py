@@ -43,7 +43,7 @@ def __getattr__(name):
 def __dir__():
     return sorted(set(globals()) | set(__all__))
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Shipei Xing"
 __email__ = "sxing@fudan.edu.cn"
 __author_email__ = "sxing@fudan.edu.cn"

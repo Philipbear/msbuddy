@@ -663,9 +663,18 @@ def _merge_cand_form_list(ms1_cand_list: List[CandidateFormula], ms2_cand_list: 
     :param ms2_cand_str_list: candidate formula string list from MS2 interrogation
     :return: merged candidate formula list, remove duplicates
     """
-    ms1_formulas = set(ms1_cand_str_list)
+    ms1_by_formula = dict(zip(ms1_cand_str_list, ms1_cand_list))
+    # A precursor database hit and a bottom-up explanation can describe the
+    # same formula. Keep its database membership and mass, but also retain the
+    # MS2 evidence used by the pre-ranking cutoff. Otherwise every database
+    # hit has zero explained intensity and can lose to weaker novel formulas.
+    for candidate, formula in zip(ms2_cand_list, ms2_cand_str_list):
+        existing = ms1_by_formula.get(formula)
+        if existing is not None:
+            existing.exp_ms2_sum_int = max(existing.exp_ms2_sum_int or 0.0,
+                                           candidate.exp_ms2_sum_int or 0.0)
     return ms1_cand_list.copy() + [cf for cf, formula in zip(ms2_cand_list, ms2_cand_str_list)
-                                   if formula not in ms1_formulas]
+                                   if formula not in ms1_by_formula]
 
 
 def _fill_in_db_existence(ms1_cand_list: List[CandidateFormula], ms2_cand_list: List[CandidateFormula],

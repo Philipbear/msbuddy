@@ -91,3 +91,9 @@ Now we use a learning-to-rank model to rank the formula candidates.
 - MGF spectra without polarity information now warn and default to positive mode.
 - Move most package metadata to pyproject.toml and use one version number throughout.
 - Update the maintainer contact address.
+
+1.0.1 (2026-11-13)
+- Preserve bottom-up MS/MS intensity when merging duplicate precursor-database
+  candidates, so their evidence survives the pre-ranking cutoff.
+- Add regression coverage for candidate merging and retention at the
+  350-candidate cutoff.
