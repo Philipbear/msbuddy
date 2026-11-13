@@ -38,6 +38,7 @@ Source codes are available at `GitHub <https://github.com/Philipbear/msbuddy>`_.
    install
    quickstart
    migration
+   models
    config
    datain
    dataout

@@ -97,3 +97,15 @@ Now we use a learning-to-rank model to rank the formula candidates.
   candidates, so their evidence survives the pre-ranking cutoff.
 - Add regression coverage for candidate merging and retention at the
   350-candidate cutoff.
+
+1.1.0 (2026-11-14)
+- Replace the four evidence-mode ranking models and add explicit element/adduct
+  features, a learned candidate selector, and validated mode-specific budgets.
+- Preserve missing-answer probability mass in calibrated confidence and FDR
+  estimates; avoid automatic certainty for singleton candidates.
+- Add max_candidates / --max-candidates and preserve other settings when
+  updating engine configuration.
+- Bound fragment subformula matching without large Cartesian allocations,
+  preserve large raw peak indices, and retain legacy-model compatibility.
+- Verify standard model downloads with SHA-256 and atomic replacement.
+- Declare LightGBM as an inference dependency and expand regression coverage.

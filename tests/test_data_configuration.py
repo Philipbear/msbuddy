@@ -1,16 +1,46 @@
 """Protect configurable data files and the historical command-line options."""
 
 import sys
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from msbuddy import main_cmd
-from msbuddy.load import DATA_FILES, get_data_files, init_db, resolve_data_dir
+from msbuddy.load import DATA_FILES, get_data_files, init_db, resolve_data_dir, _download_if_missing
 
 
 class DataConfigurationTests(unittest.TestCase):
+    def test_verified_download_is_atomic_and_replaces_corrupt_cache(self):
+        payload = b'verified-model' * 200
+        digest = hashlib.sha256(payload).hexdigest()
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'model.joblib'
+            target.write_bytes(b'corrupt' * 200)
+            target.chmod(0o640)
+            def fetch(url, temporary):
+                self.assertEqual(target.read_bytes(), b'corrupt' * 200)
+                Path(temporary).write_bytes(payload)
+            with patch('msbuddy.load.download', side_effect=fetch) as download:
+                _download_if_missing('https://example.invalid/model', target, digest)
+                _download_if_missing('https://example.invalid/model', target, digest)
+            download.assert_called_once()
+            self.assertEqual(target.read_bytes(), payload)
+            self.assertEqual(target.stat().st_mode & 0o777, 0o640)
+            self.assertEqual(list(Path(directory).glob('*.part')), [])
+
+    def test_failed_digest_preserves_existing_file_and_cleans_partial_download(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'model.joblib'
+            payload = b'original' * 200
+            target.write_bytes(payload)
+            with patch('msbuddy.load.download', side_effect=lambda url, name:Path(name).write_bytes(b'wrong' * 300)):
+                with self.assertRaisesRegex(RuntimeError, 'SHA-256'):
+                    _download_if_missing('https://example.invalid/model', target, '0' * 64)
+            self.assertEqual(target.read_bytes(), payload)
+            self.assertEqual(list(Path(directory).glob('*.part')), [])
+
     def test_data_paths_resolve_relative_and_absolute_overrides(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

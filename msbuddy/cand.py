@@ -140,7 +140,7 @@ class CandidateSpace:
                            ms2_iso_tol: float) -> CandidateFormula:
         """
         Refine the MS2 explanation by selecting the most reasonable explanation.
-        Explain other fragments as isotope peaks.
+        Annotate the processed monoisotopic peaks.
         Convert into a CandidateFormula.
         :param meta_feature: MetaFeature object
         :param ms2_iso_tol: MS2 tolerance for isotope peaks, in Da
@@ -152,41 +152,16 @@ class CandidateSpace:
         for frag_exp in self.frag_exp_list:
             frag_exp.refine_explanation(ms2_raw.mz_array)
 
-        # consider to further explain other fragments as isotope peaks
-        explained_idx = [f.idx for f in self.frag_exp_list]
-        for m, exp_idx in enumerate(explained_idx):
-            # last peak, skip
-            if m + 1 == len(explained_idx):
-                continue
-            # idx of next exp peak
-            next_exp_idx = explained_idx[m + 1]
-            # if the next peak is already explained
-            if next_exp_idx in explained_idx:
-                continue
-            # if this idx is not in idx_array of ms2_processed, skip
-            if next_exp_idx not in ms2_processed.idx_array:
-                continue
-            # if the next peak is close enough, add it as an isotope peak
-            if (ms2_raw.mz_array[next_exp_idx] - ms2_raw.mz_array[exp_idx] - 1.003355) <= ms2_iso_tol and \
-                    ms2_raw.int_array[next_exp_idx] <= ms2_raw.int_array[exp_idx]:
-                # if the next peak is close enough, add it as an isotope peak
-                this_frag = self.frag_exp_list[m].optim_frag
-                this_nl = self.frag_exp_list[m].optim_nl
-                # add a new FragExplanation
-                new_frag = Formula._from_array(this_frag.array, this_frag.charge, this_frag.mass + 1.003355, 1)
-                # for iso peak, the neutral loss is actually the same as the previous one (M+0)
-                # but we denote it as '-1' isotope peak, so that frag mass + nl mass is still precursor mass
-                new_nl = Formula._from_array(this_nl.array, 0, this_nl.mass - 1.003355, -1)
-                new_frag_exp = FragExplanation(next_exp_idx, new_frag, new_nl)
-                new_frag_exp.direct_assign_optim()
-                self.frag_exp_list.append(new_frag_exp)
+        # Annotations describe the processed monoisotopic peaks. The former
+        # isotope-extension loop selected an already explained index and always
+        # continued, so it never added annotations. Keep that behavior explicit.
 
         # sort the frag_exp_list by idx
         self.frag_exp_list = sorted(self.frag_exp_list, key=lambda x: x.idx)
 
         # convert into a CandidateFormula
         # construct MS2Explanation first
-        ms2_raw_exp = MS2Explanation(idx_array=np.array([f.idx for f in self.frag_exp_list], dtype=np.int16),
+        ms2_raw_exp = MS2Explanation(idx_array=np.array([f.idx for f in self.frag_exp_list], dtype=np.intp),
                                      explanation_list=[f.optim_frag for f in self.frag_exp_list])
 
         return CandidateFormula(formula=Formula._from_array(self.pre_neutral_array, 0, self.neutral_mass),
@@ -196,7 +171,7 @@ class CandidateSpace:
 
 def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
                           db_mode: int, ele_lower_limit: np.array, ele_upper_limit: np.array,
-                          max_isotope_cnt: int, gd: dict) -> MetaFeature:
+                          max_isotope_cnt: int, gd: dict, *, candidate_limit=None) -> MetaFeature:
     """
     Generate candidate formulas for a metabolic feature.
     :param mf: MetaFeature object
@@ -267,7 +242,9 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     ms2_available = mf.ms2_processed
 
     # retain top candidate formulas
-    mf.candidate_formula_list = _retain_top_cand_form(cf_list, ms1_tol, ms1_iso_available, ms2_available, 350)
+    from msbuddy._candidate_selection import select_candidates
+    mf.candidate_formula_list = select_candidates(mf, cf_list, ppm, ms1_tol, ms2_tol, gd,
+                                                  limit=candidate_limit)
 
     return mf
 
@@ -746,6 +723,15 @@ def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float) -> M
     """
 
     for k, cf in enumerate(mf.candidate_formula_list):
+        # Locate only compositions near observed peaks when the Cartesian
+        # product would be large. The bounded matcher retains the exhaustive
+        # implementation's arithmetic, filters and tie ordering.
+        count = 1
+        for upper in cf.charged_formula.array:
+            count *= int(upper) + 1
+        if count > 50000:
+            mf.candidate_formula_list[k] = _assign_targeted_explanation(mf, cf, ppm, ms2_tol)
+            continue
         # enumerate all subformulas
         subform_arr = enumerate_subformula(cf.charged_formula.array)
 
@@ -759,6 +745,34 @@ def assign_subformula_cand_form(mf: MetaFeature, ppm: bool, ms2_tol: float) -> M
                                                                ppm, ms2_tol)
 
     return mf
+
+
+def _assign_targeted_explanation(mf, cf, ppm, ms2_tol):
+    from msbuddy._subformula import closest_subformulas
+
+    processed = mf.ms2_processed
+    targets = processed.mz_array
+    tolerances = np.asarray(targets, dtype=np.float64) * ms2_tol * 1e-6 if ppm else np.full(len(targets), ms2_tol)
+    charge = 1 if mf.adduct.pos_mode else -1
+    raw_targets = mf.ms2_raw.mz_array[processed.idx_array]
+    found, formulas, masses = closest_subformulas(cf.charged_formula.array, targets, tolerances, raw_targets, charge)
+    if not np.any(found):
+        return cf
+    explanations = []
+    for i in np.flatnonzero(found):
+        explanation = FragExplanation(processed.idx_array[i],
+                                     Formula._from_array(formulas[i], charge, masses[i]),
+                                     Formula._from_array(cf.charged_formula.array - formulas[i], 0))
+        explanations.append(explanation)
+    space = CandidateSpace(cf.formula.array, cf.charged_formula.array, frag_exp_ls=explanations)
+    isotope_tolerance = max(ms2_tol * mf.mz * 1e-6 if ppm else ms2_tol, .02)
+    result = space.refine_explanation(mf, isotope_tolerance)
+    result.ms1_isotope_similarity = cf.ms1_isotope_similarity
+    result.formula_feature_array = cf.formula_feature_array
+    result.exp_ms2_sum_int = cf.exp_ms2_sum_int
+    result.db_existed = cf.db_existed
+    return result
+
 
 
 @njit
@@ -909,6 +923,8 @@ def _assign_ms2_explanation(mf: MetaFeature, cf: CandidateFormula, pre_charged_a
     # copy other attributes
     candidate_form.ms1_isotope_similarity = cf.ms1_isotope_similarity
     candidate_form.formula_feature_array = cf.formula_feature_array
+    candidate_form.exp_ms2_sum_int = cf.exp_ms2_sum_int
+    candidate_form.db_existed = cf.db_existed
 
     return candidate_form
 

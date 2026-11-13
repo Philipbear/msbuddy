@@ -63,6 +63,8 @@ def main():
     parser.add_argument('-t', '--timeout-secs', '-timeout_secs', type=int, default=300, help='Timeout in seconds. Default: 300.')
     parser.add_argument('--batch-size', '-batch_size', '-bs', type=int, default=5000,
                         help='Batch size. Default: 5000. A larger batch size needs more memory, but is faster.')
+    parser.add_argument('--max-candidates', type=int, default=None,
+                        help='Candidate budget before fragment assignment. Default: the model recommendation, or 350 for legacy models.')
     parser.add_argument('--c-min', '-c_min', type=int, default=0, help='Minimum number of C atoms. Default: 0.')
     parser.add_argument('--c-max', '-c_max', type=int, default=80, help='Maximum number of C atoms. Default: 80.')
     parser.add_argument('--h-min', '-h_min', type=int, default=0, help='Minimum number of H atoms. Default: 0.')
@@ -132,7 +134,8 @@ def main():
         element_ranges=element_ranges,
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
         rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, top_n_per_50_da=args.top_n_per_50_da,
-        data_dir=args.data_dir, data_files=data_files
+        data_dir=args.data_dir, data_files=data_files,
+        max_candidates=getattr(args, 'max_candidates', None)
     )
 
     if args.output:

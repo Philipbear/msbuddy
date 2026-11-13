@@ -730,7 +730,7 @@ class CandidateFormula:
         self.charged_formula = charged_formula  # charged formula
         self.mz_error = mz_error  # mz error in ppm or Da, depending on config
         self.estimated_prob = None  # estimated probability (ML score, not normalized)
-        self.normed_estimated_prob = None  # normalized estimated probability considering all candidate formulas
+        self.normed_estimated_prob = None  # coherent posterior mass; may sum to less than one across candidates
         self.estimated_fdr = None  # estimated FDR
         self.formula_feature_array = None  # formula feature array
         self.ms1_isotope_similarity = None

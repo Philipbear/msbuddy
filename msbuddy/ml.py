@@ -146,7 +146,15 @@ def gen_ml_feature(meta_feature_list, ppm: bool, ms1_tol: float, ms2_tol: float,
     """
     rows = [gen_ml_feature_single(mf, cf, ppm, ms1_tol, ms2_tol, gd)
             for mf in meta_feature_list for cf in (mf.candidate_formula_list or [])]
-    return np.vstack(rows) if rows else np.empty((1, 0))
+    if not rows:
+        return np.empty((1, 0))
+    matrix = np.vstack(rows)
+    if gd.get('model_feature_version', 1) >= 2:
+        from msbuddy._features import metadata_features
+        extra = [metadata_features(mf, mf.candidate_formula_list, ms1_tol, ms2_tol)
+                 for mf in meta_feature_list if mf.candidate_formula_list]
+        matrix = np.concatenate((matrix, np.vstack(extra)), axis=1)
+    return matrix
 
 
 def gen_ml_feature_single(meta_feature, cand_form, ppm: bool, ms1_tol: float, ms2_tol: float, gd) -> np.array:
@@ -416,22 +424,34 @@ def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2
     if X_arr.size == 0:
         return np.array([])
 
+    from msbuddy._features import select_evidence_features
+    X_arr = select_evidence_features(X_arr, group_no, gd.get('model_feature_version', 1))
+
     # load model
     if group_no == 0:
         model = gd['model_ms1_ms2']
     elif group_no == 1:
         model = gd['model_ms1_noms2']
-        X_arr = X_arr[:, :-24]  # remove MS2-related features
     elif group_no == 2:
         model = gd['model_noms1_ms2']
-        X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
     else:
         model = gd['model_noms1_noms2']
-        X_arr = X_arr[:, 1:]  # remove MS1 isotope similarity
-        X_arr = X_arr[:, :-24]  # remove MS2-related features
 
     # predict formula probability
-    score_arr = model.predict(X_arr)
+    if isinstance(model, dict):
+        weight = float(model.get('new_weight', 1.))
+        new_scale = float(model.get('new_score_scale', 1.))
+        legacy_scale = float(model.get('legacy_score_scale', 1.))
+        if (not np.all(np.isfinite([weight, new_scale, legacy_scale]))
+                or not 0 <= weight <= 1 or new_scale <= 0 or legacy_scale <= 0):
+            raise ValueError('Invalid ranking ensemble weights or scales.')
+        score_arr = weight * model['model'].predict(X_arr.astype(np.float32), num_threads=1) / new_scale
+        if weight < 1:
+            legacy_length = (53, 29, 52, 28)[group_no]
+            score_arr += (1 - weight) * model['legacy_model'].predict(
+                X_arr[:, :legacy_length], num_threads=1) / legacy_scale
+    else:
+        score_arr = model.predict(X_arr.astype(np.float32) if gd.get('model_feature_version', 1) >= 2 else X_arr)
     return score_arr
 
 
@@ -467,9 +487,10 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
 
     # split buddy data into 4 groups and store their indices in a dictionary
     group_dict = dict()
-    for i in range(4):
+    for i in range(8):
         group_dict[i] = []
 
+    from msbuddy._candidate_selection import in_model_scope
     for i, meta_feature in enumerate(batch_data):
         if not meta_feature.candidate_formula_list:
             continue
@@ -477,28 +498,46 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
         # corresponding to the evidence that is actually available.
         has_ms1 = bool(meta_feature.ms1_processed) and len(meta_feature.ms1_processed) > 1
         has_ms2 = bool(meta_feature.ms2_processed)
+        fallback = 4 if 'legacy_dependencies' in gd and not in_model_scope(meta_feature, ppm, gd) else 0
         if has_ms1:
             if has_ms2:
-                group_dict[0].append(i)
+                group_dict[fallback].append(i)
             else:
-                group_dict[1].append(i)
+                group_dict[1 + fallback].append(i)
         else:
             if has_ms2:
-                group_dict[2].append(i)
+                group_dict[2 + fallback].append(i)
             else:
-                group_dict[3].append(i)
+                group_dict[3 + fallback].append(i)
 
     # predict formula probability
-    for i in range(4):
-        if not group_dict[i]:
+    for key in range(8):
+        if not group_dict[key]:
             continue
+        i = key % 4
+        active = gd if key < 4 else dict(gd, **gd['legacy_dependencies'], model_feature_version=1)
         # predict formula probability
-        prob_arr = _predict_ml([batch_data[j] for j in group_dict[i]], i, ppm, ms1_tol, ms2_tol, gd)
-        # Platt calibration
-        prob_arr = _platt_calibrated_probability(prob_arr, gd['platt_a_' + str(i)], gd['platt_b_' + str(i)])
+        prob_arr = _predict_ml([batch_data[j] for j in group_dict[key]], i, ppm, ms1_tol, ms2_tol, active)
+        specification = gd.get('calibration_' + str(i)) if key < 4 else None
+        if specification is not None:
+            from msbuddy._calibration import feature_context, calibrated_probabilities
+            offset = 0
+            calibrated = np.empty_like(prob_arr, dtype=float)
+            for index in group_dict[key]:
+                feature = batch_data[index]
+                size = len(feature.candidate_formula_list)
+                scores = prob_arr[offset:offset + size]
+                context = feature_context(feature, scores)
+                probabilities, _ = calibrated_probabilities(scores, context, specification)
+                calibrated[offset:offset + size] = probabilities
+                offset += size
+            prob_arr = calibrated
+        else:
+            # Backward-compatible calibration for legacy model bundles.
+            prob_arr = _platt_calibrated_probability(prob_arr, active['platt_a_' + str(i)], active['platt_b_' + str(i)])
         # add prediction results to candidate formula objects in the list
         cnt = 0
-        for j in group_dict[i]:
+        for j in group_dict[key]:
             for candidate_formula in batch_data[j].candidate_formula_list:
                 candidate_formula.estimated_prob = prob_arr[cnt]
                 cnt += 1
@@ -516,13 +555,18 @@ def _platt_calibrated_probability(score, a, b):
     :param b: intercept of the sigmoid function
     :return: calibrated probability
     """
-    probability = 1 / (1 + np.exp(-(a * score + b)))
+    from scipy.special import expit
+    probability = expit(a * score + b)
     return probability
 
 
 def calc_fdr(buddy_data, batch_start_idx: int, batch_end_idx: int):
     """
-    calculate FDR for candidate formulas
+    Estimate the expected false fraction among each query's top-N formulas.
+
+    Preserve posterior mass for an absent correct formula. Legacy independent
+    calibrations can sum to more than one; scale those down to a coherent
+    total, but never inflate low confidence to force the total to one.
     :param buddy_data: buddy data
     :param batch_start_idx: batch start index
     :param batch_end_idx: batch end index
@@ -537,38 +581,22 @@ def calc_fdr(buddy_data, batch_start_idx: int, batch_end_idx: int):
         # sort candidate formula list by estimated probability, in descending order
         meta_feature.candidate_formula_list.sort(key=lambda x: x.estimated_prob, reverse=True)
 
-        # sum of estimated probabilities
-        prob_sum = np.sum([cand_form.estimated_prob for cand_form in meta_feature.candidate_formula_list])
+        probabilities = np.asarray([candidate.estimated_prob
+                                    for candidate in meta_feature.candidate_formula_list], dtype=float)
+        if (not np.all(np.isfinite(probabilities)) or np.any(probabilities < 0)
+                or np.any(probabilities > 1)):
+            raise ValueError('Candidate probabilities must be finite values between zero and one.')
+        probabilities = probabilities / max(1., float(probabilities.sum()))
 
         # calculate normed estimated prob and FDR considering all candidate formulas
         sum_normed_estimated_prob = 0
         for i, cand_form in enumerate(meta_feature.candidate_formula_list):
-            this_normed_estimated_prob = cand_form.estimated_prob / prob_sum
+            this_normed_estimated_prob = probabilities[i]
             sum_normed_estimated_prob += this_normed_estimated_prob
 
             cand_form.normed_estimated_prob = this_normed_estimated_prob
             cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
 
-        # if meta_feature.candidate_formula_list[0].estimated_prob > 0.1:
-        #     # calculate normed estimated prob and FDR considering all candidate formulas
-        #     sum_normed_estimated_prob = 0
-        #     for i, cand_form in enumerate(meta_feature.candidate_formula_list):
-        #         this_normed_estimated_prob = cand_form.estimated_prob / prob_sum
-        #         sum_normed_estimated_prob += this_normed_estimated_prob
-        #
-        #         cand_form.normed_estimated_prob = this_normed_estimated_prob
-        #         cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
-        # else:
-        #     # scale estimated prob using softmax, to reduce the effect of very small probs
-        #     prob_sum = np.sum(
-        #         [np.exp(cand_form.estimated_prob) for cand_form in meta_feature.candidate_formula_list])
-        #     sum_normed_estimated_prob = 0
-        #     for i, cand_form in enumerate(meta_feature.candidate_formula_list):
-        #         this_normed_estimated_prob = np.exp(cand_form.estimated_prob) / prob_sum
-        #         sum_normed_estimated_prob += this_normed_estimated_prob
-        #
-        #         cand_form.normed_estimated_prob = this_normed_estimated_prob
-        #         cand_form.estimated_fdr = 1 - (sum_normed_estimated_prob / (i + 1))
 
     # update back
     buddy_data[batch_start_idx:batch_end_idx] = batch_data

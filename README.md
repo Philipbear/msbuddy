@@ -27,13 +27,23 @@ The minimum requirement for a msbuddy query is a single _m/z_ value and its ioni
 ```commandline
 pip install msbuddy
 ```
-To perform formula annotation, you also have to install the [lightgbm](https://github.com/microsoft/LightGBM/tree/master/python-package) package.
-```commandline
-pip install lightgbm
-```
-The package declares Python 3.8 or newer. The current regression suite has
-been tested on Python 3.8–3.13; availability of prebuilt dependency packages
-varies by platform and Python version.
+LightGBM is installed as an inference dependency. The package requires
+Python 3.8 or newer; the current model revision is tested with NumPy 1.x and
+2.x on Python 3.10 and 3.11, with additional Python 3.8 grammar checks.
+
+## Model update in 1.1
+
+The revised evidence-mode models use explicit elemental and adduct features,
+a learned candidate selector, and mode-specific candidate limits. Set
+`halogen=True` or pass `--halogen` when halogen formulas should be considered.
+Use `MsbuddyConfig(max_candidates=350)` or `--max-candidates 350` to override
+the recommended candidate budget.
+
+Probability calibration now reserves mass for an absent correct formula.
+A singleton candidate no longer becomes certain through normalization.
+See the [model guide](https://github.com/Philipbear/msbuddy/blob/main/docs/models.rst)
+and [validation report](https://github.com/Philipbear/msbuddy/releases/tag/v1.1.0)
+for budgets, confidence interpretation, comparisons and limitations.
 
 ## Upgrading to 1.0
 

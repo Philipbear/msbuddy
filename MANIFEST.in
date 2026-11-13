@@ -2,3 +2,4 @@ include changelog.md
 include main_nextflow.py
 include docs/development.rst
 include docs/migration.rst
+include docs/models.rst

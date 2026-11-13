@@ -14,8 +14,10 @@ Description: load databases and data files
 """
 
 import errno
+import hashlib
 import logging
 import os
+import tempfile
 from json import loads as loads
 from pathlib import Path
 from typing import List, Union
@@ -31,7 +33,7 @@ from msbuddy.utils import UnsupportedElementError
 logging.basicConfig(level=logging.INFO)
 
 current_db_version = 'v0.2.4'
-current_model_version = 'v0.3.0'
+current_model_version = 'v1.1.0'
 
 DATA_FILES = {
     'common_db': {
@@ -47,10 +49,11 @@ DATA_FILES = {
             'msbuddy_data_v0.2.4/formula_db_v0.2.4.joblib'),
     },
     'ml_model': {
+        'sha256': 'f5833c0a19d0ca2f8de0dca4fc88466e157bfd972c83e543332cd647b209ed42',
         'filename': 'ml_' + current_model_version + '.joblib',
         'url': (
             'https://github.com/Philipbear/msbuddy/releases/download/'
-            'msbuddy_data_v0.3.0/ml_v0.3.0.joblib'),
+            'msbuddy_data_v1.1.0/ml_v1.1.0.joblib'),
     },
 }
 
@@ -142,22 +145,41 @@ def _file_is_ready(path: Path) -> bool:
         raise
 
 
-def _download_if_missing(url: str, path: Path) -> Path:
-    if _file_is_ready(path):
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _download_if_missing(url: str, path: Path, expected_sha256=None) -> Path:
+    if _file_is_ready(path) and (expected_sha256 is None or _sha256(path) == expected_sha256):
         return path
 
+    temporary = None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        download(url, str(path))
+        # Public release assets should remain readable in shared installations.
+        # Retain an existing file's permissions when repairing its cache entry.
+        mode = (path.stat().st_mode & 0o777) if path.exists() else 0o644
+        descriptor, temporary_name = tempfile.mkstemp(prefix=path.name + '.', suffix='.part', dir=path.parent)
+        os.close(descriptor)
+        temporary = Path(temporary_name)
+        download(url, str(temporary))
+        if not _file_is_ready(temporary):
+            raise RuntimeError(f'Failed to download msbuddy data file: {path}')
+        if expected_sha256 is not None and _sha256(temporary) != expected_sha256:
+            raise RuntimeError(f'Downloaded msbuddy data file failed SHA-256 verification: {path}')
+        os.chmod(temporary, mode)
+        os.replace(temporary, path)
     except OSError as exc:
         if exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
             raise _permission_error(path) from exc
         raise
-
-    if not _file_is_ready(path):
-        if path.parent.exists() and not os.access(path.parent, os.W_OK):
-            raise _permission_error(path)
-        raise RuntimeError(f'Failed to download msbuddy data file: {path}')
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
     return path
 
@@ -176,12 +198,13 @@ def download_data(data_dir=None, data_files=None, include_model=True) -> dict:
         selected.append('ml_model')
 
     for name in selected:
-        _download_if_missing(files[name]['url'], files[name]['path'])
+        digest = DATA_FILES[name].get('sha256') if name not in (data_files or {}) else None
+        _download_if_missing(files[name]['url'], files[name]['path'], expected_sha256=digest)
 
     return {name: files[name]['path'] for name in selected}
 
 
-def check_download_joblibload(url: str, path, download_missing=True):
+def check_download_joblibload(url: str, path, download_missing=True, expected_sha256=None):
     """
     check if the file exists, if not, optionally download from url, and load
     :param url: url to download
@@ -191,7 +214,7 @@ def check_download_joblibload(url: str, path, download_missing=True):
     """
     path = Path(path)
     if download_missing:
-        path = _download_if_missing(url, path)
+        path = _download_if_missing(url, path, expected_sha256=expected_sha256)
     elif not _file_is_ready(path):
         raise _missing_custom_file_error(path)
 
@@ -244,15 +267,76 @@ def init_ml_models(global_dict, data_dir=None, data_files=None) -> dict:
     custom_files = set(data_files or {})
 
     # load ml
-    (global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[
-        'model_noms1_noms2'], global_dict['platt_a_0'], global_dict['platt_b_0'], global_dict['platt_a_1'],
-     global_dict['platt_b_1'], global_dict['platt_a_2'], global_dict['platt_b_2'], global_dict['platt_a_3'],
-     global_dict['platt_b_3']) = (
-        check_download_joblibload(
+    bundle = check_download_joblibload(
             DATA_FILES['ml_model']['url'], files['ml_model'],
-            download_missing='ml_model' not in custom_files))
+            download_missing='ml_model' not in custom_files,
+            expected_sha256=DATA_FILES['ml_model'].get('sha256') if 'ml_model' not in custom_files else None)
+    if isinstance(bundle, dict):
+        _load_versioned_models(bundle, global_dict)
+    else:
+        (global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[
+            'model_noms1_noms2'], global_dict['platt_a_0'], global_dict['platt_b_0'], global_dict['platt_a_1'],
+         global_dict['platt_b_1'], global_dict['platt_a_2'], global_dict['platt_b_2'], global_dict['platt_a_3'],
+         global_dict['platt_b_3']) = bundle
 
     return global_dict
+
+
+def _load_versioned_models(bundle, dependencies):
+    if bundle.get('format_version') != 2 or bundle.get('feature_version') != 2:
+        raise ValueError('Unsupported model bundle format or feature version.')
+    modes = ('joint', 'isotope', 'fragment', 'mass')
+    keys = ('model_ms1_ms2', 'model_ms1_noms2', 'model_noms1_ms2', 'model_noms1_noms2')
+    dimensions = (95, 71, 94, 70)
+    selected = {}
+    for group, (mode, key, expected) in enumerate(zip(modes, keys, dimensions)):
+        model = bundle['models'][mode]
+        estimator = model['model'] if isinstance(model, dict) else model
+        if estimator.num_feature() != expected:
+            raise ValueError('Model feature count does not match the bundle schema: ' + mode)
+        if isinstance(model, dict):
+            weight = float(model.get('new_weight', 1.))
+            scales = [float(model.get(name, 1.)) for name in ('new_score_scale', 'legacy_score_scale')]
+            if not np.all(np.isfinite([weight] + scales)) or not 0 <= weight <= 1 or min(scales) <= 0:
+                raise ValueError('Invalid ranking ensemble weights or scales: ' + mode)
+            if weight < 1 and model['legacy_model'].num_feature() != (53, 29, 52, 28)[group]:
+                raise ValueError('Legacy ensemble feature count does not match its evidence mode.')
+        calibration = bundle['calibrations'][mode]
+        from msbuddy._calibration import CONTEXT_NAMES, calibrated_probabilities
+        if tuple(calibration.get('context_names', CONTEXT_NAMES)) != CONTEXT_NAMES:
+            raise ValueError('Calibration context names do not match the bundle schema.')
+        calibrated_probabilities(np.array([0.]), np.zeros(len(CONTEXT_NAMES)), calibration)
+        selected[key] = model
+        selected['calibration_' + str(group)] = calibration
+    selector = bundle['candidate_selector']
+    if selector.num_feature() != 73:
+        raise ValueError('Candidate selector feature count does not match its schema.')
+    limits = bundle['candidate_limits']
+    if len(limits) != 4 or any(isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= 10000 for n in limits):
+        raise ValueError('Invalid recommended candidate limits in model bundle.')
+    selected.update(model_feature_version=2, candidate_selector=selector,
+                    candidate_limits=tuple(limits), model_bundle_version=bundle.get('version'))
+    if 'validated_adducts' in bundle:
+        from msbuddy.base import Adduct, check_adduct
+        from msbuddy._candidate_selection import adduct_signature
+        allowed = bundle['validated_adducts']
+        if not allowed or any(not isinstance(value, str) or not check_adduct(value)[0] for value in allowed):
+            raise ValueError('Invalid validated-adduct list in model bundle.')
+        selected['validated_adduct_signatures'] = frozenset(
+            adduct_signature(Adduct(value, value.endswith('+'), report_invalid=True)) for value in allowed)
+    legacy = bundle.get('legacy_bundle')
+    if legacy is not None:
+        if len(legacy) != 12 or any(legacy[i].num_feature() != size
+                                    for i, size in enumerate((53, 52, 29, 28))):
+            raise ValueError('Invalid legacy fallback models in versioned bundle.')
+        if not np.all(np.isfinite(legacy[4:])):
+            raise ValueError('Invalid legacy fallback calibration parameters.')
+        fallback = dict(zip(('model_ms1_ms2', 'model_noms1_ms2', 'model_ms1_noms2', 'model_noms1_noms2'), legacy[:4]))
+        for group in range(4):
+            fallback['platt_a_' + str(group)] = legacy[4 + 2 * group]
+            fallback['platt_b_' + str(group)] = legacy[5 + 2 * group]
+        selected['legacy_dependencies'] = fallback
+    dependencies.update(selected)
 
 
 def load_mgf(file_path) -> List[MetaFeature]:

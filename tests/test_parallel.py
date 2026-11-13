@@ -29,6 +29,7 @@ class ParallelCandidateTests(unittest.TestCase):
             # This deliberately cannot be pickled by a spawned worker.
             'model_ms1_ms2': lambda x: x,
             'platt_a_0': 1.0,
+            'legacy_dependencies': {'model_ms1_ms2':lambda x:x},
         }
         engine = object.__new__(Msbuddy)
         engine._dependencies = data

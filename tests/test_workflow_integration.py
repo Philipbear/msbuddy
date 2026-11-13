@@ -112,7 +112,8 @@ END IONS
             self.assertEqual([str(candidate.formula) for candidate in feature.candidate_formula_list], ['C6H12O6'])
             expected_probability = 1 / (1 + np.exp(-group))
             self.assertAlmostEqual(feature.candidate_formula_list[0].estimated_prob, expected_probability)
-            self.assertEqual(feature.candidate_formula_list[0].estimated_fdr, 0.0)
+            self.assertAlmostEqual(feature.candidate_formula_list[0].estimated_fdr,
+                                   1.0 - expected_probability)
         self.assertTrue(results['paired'].candidate_formula_list[0].ms2_raw_explanation)
         self.assertTrue(results['mzspec:example'].candidate_formula_list[0].ms2_raw_explanation)
         for name in ('double_2', 'double_-2'):

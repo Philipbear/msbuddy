@@ -92,7 +92,8 @@ class MsbuddyConfig:
                  rel_int_denoise_cutoff: float = 0.01,
                  top_n_per_50_da: int = 6,
                  data_dir=None,
-                 data_files=None):
+                 data_files=None,
+                 max_candidates=None):
         """
         :param ms_instr: mass spectrometry instrument, one of "orbitrap, "fticr", "qtof".
         :param ppm: whether ppm is used for m/z tolerance
@@ -111,6 +112,8 @@ class MsbuddyConfig:
         :param top_n_per_50_da: top n peaks to keep in each 50 Da, used for MS2 denoise
         :param data_dir: directory containing the msbuddy database and model files
         :param data_files: optional mapping of common_db, formula_db, or ml_model to custom file paths
+        :param max_candidates: optional candidate budget; by default use the model's
+            recommended budget, or 350 with legacy models
         """
         if ms_instr is None or ms_instr == "None":
             self.ppm = ppm
@@ -144,6 +147,7 @@ class MsbuddyConfig:
             self.timeout_secs = 300
         else:
             self.timeout_secs = timeout_secs
+        self._requested_timeout_secs = self.timeout_secs
         if self.parallel:
             self.timeout_secs += 30  # add 30 seconds for db initialization
 
@@ -154,6 +158,8 @@ class MsbuddyConfig:
             self.batch_size = int(batch_size)
 
         self._element_ranges = _normalize_element_ranges(element_ranges, halogen)
+        self._user_element_ranges = {element: self._element_ranges[element]
+                                     for element in (element_ranges or {})}
         self.ele_lower = np.array([self._element_ranges[element][0] for element in SUPPORTED_ELEMENTS], dtype=np.int16)
         self.ele_upper = np.array([self._element_ranges[element][1] for element in SUPPORTED_ELEMENTS], dtype=np.int16)
 
@@ -186,6 +192,17 @@ class MsbuddyConfig:
                          if data_dir is not None else None)
         self.data_files = (None if data_files is None
                            else dict(data_files))
+        if max_candidates is not None:
+            from operator import index
+            try:
+                if isinstance(max_candidates, (bool, np.bool_)):
+                    raise TypeError
+                max_candidates = index(max_candidates)
+            except TypeError as exc:
+                raise ValueError('max_candidates must be an integer between 1 and 10000.') from exc
+            if not 1 <= max_candidates <= 10000:
+                raise ValueError('max_candidates must be an integer between 1 and 10000.')
+        self.max_candidates = max_candidates
 
     @property
     def element_ranges(self):
@@ -214,10 +231,22 @@ class Msbuddy:
         self.data = None  # List[MetabolicFeature]
 
     def update_config(self, **kwargs):
-        self.config = MsbuddyConfig(**kwargs)
-        self._dependencies = init_db(
-            data_dir=self.config.data_dir,
-            data_files=self.config.data_files)  # database initialization
+        """Update selected settings while preserving the remaining configuration."""
+        current = self.config
+        settings = {name: getattr(current, name) for name in (
+            'ppm', 'ms1_tol', 'ms2_tol', 'parallel', 'n_cpu', 'batch_size',
+            'isotope_bin_mztol', 'max_isotope_cnt', 'rel_int_denoise_cutoff',
+            'top_n_per_50_da', 'data_dir', 'data_files', 'max_candidates')}
+        settings.update(halogen=bool(current.db_mode),
+                        timeout_secs=current._requested_timeout_secs,
+                        element_ranges=current._user_element_ranges)
+        settings.update(kwargs)
+        updated = MsbuddyConfig(**settings)
+        dependencies = self._dependencies
+        if (updated.data_dir != current.data_dir
+                or updated.data_files != current.data_files):
+            dependencies = init_db(data_dir=updated.data_dir, data_files=updated.data_files)
+        self.config, self._dependencies = updated, dependencies
 
     def load_usi(self, usi_list: Union[str, List[str]],
                  adduct_list: Union[None, str, List[str]] = None):
@@ -269,7 +298,8 @@ class Msbuddy:
             # sending the models to every candidate worker needlessly copies
             # hundreds of megabytes per worker.
             worker_data = {key: value for key, value in self._dependencies.items()
-                           if not key.startswith(('model_', 'platt_'))}
+                           if not key.startswith(('model_', 'platt_', 'calibration_'))
+                           and key != 'legacy_dependencies'}
             with Pool(processes=int(self.config.n_cpu), initializer=_init_pool,
                       initargs=(worker_data,)) as pool:
                 async_results = [pool.apply_async(_preprocess_and_gen_cand_parallel,
@@ -347,8 +377,8 @@ class Msbuddy:
     def annotate_formula(self):
         """
         annotate formula for loaded data
-        pipeline: data preprocessing -> formula candidate space generation -> ml model A
-        -> subformula annotation -> ml model B -> FDR calculation
+        pipeline: preprocessing -> candidate generation and selection ->
+        subformula annotation -> learned ranking -> uncertainty estimation
         :return: None. Update self.data
         """
         n_batch = self._annotate_formula_prepare()
@@ -582,20 +612,7 @@ def _gen_subformula(mf: MetaFeature, ps: MsbuddyConfig) -> MetaFeature:
     if not mf.candidate_formula_list:
         return mf
 
-    # assign subformula annotation
-    mf = assign_subformula_cand_form(mf, ps.ppm, ps.ms2_tol)
-
-    # retain candidate formula with subformula annotations if there is any candidate formula with annotations
-    cand_form_exp_ms2_peak_list = []
-    for cf in mf.candidate_formula_list:
-        if cf.ms2_raw_explanation:
-            cand_form_exp_ms2_peak_list.append(len(cf.ms2_raw_explanation))
-        else:
-            cand_form_exp_ms2_peak_list.append(0)
-    if min(cand_form_exp_ms2_peak_list) > 0:
-        mf.candidate_formula_list = [cf for cf in mf.candidate_formula_list if len(cf.ms2_raw_explanation) > 0]
-
-    return mf
+    return assign_subformula_cand_form(mf, ps.ppm, ps.ms2_tol)
 
 
 def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict) -> MetaFeature:
@@ -610,8 +627,9 @@ def _generate_candidate_formula(mf: MetaFeature, ps: MsbuddyConfig, global_dict)
     mf.data_preprocess(ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.isotope_bin_mztol, ps.max_isotope_cnt,
                        ps.rel_int_denoise_cutoff, ps.top_n_per_50_da)
     # generate candidate formula space
+    selection = {'candidate_limit': ps.max_candidates} if getattr(ps, 'max_candidates', None) is not None else {}
     gen_candidate_formula(mf, ps.ppm, ps.ms1_tol, ps.ms2_tol, ps.db_mode, ps.ele_lower, ps.ele_upper,
-                          ps.max_isotope_cnt, global_dict)
+                          ps.max_isotope_cnt, global_dict, **selection)
     return mf
 
 
@@ -625,16 +643,7 @@ if __name__ == '__main__':
 
     msb_engine = Msbuddy(msb_config)
 
-    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
-
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000085143_chagas_neg_orbi'  # 83
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081463_tomato_pos'  # 194
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000086988_fecal_neg_orbi'  # 118
-    # mgf_folder = '/Users/shipei/Documents/projects/msbuddy/results/lcms_datasets/MSV000081981_AmericanGutProject'  # 146
-    # msb_engine.load_mgf(str(mgf_folder + '/ms1_ms2.mgf'))
-
-    # cmd version
-    # msb_engine.annotate_formula_cmd(pathlib.Path(str(mgf_folder + '/msbuddy_output')), True)
+    msb_engine.load_mgf(pathlib.Path(__file__).resolve().parents[1] / 'demo' / 'input_file.mgf')
 
     # annotate molecular formula
     msb_engine.annotate_formula()
