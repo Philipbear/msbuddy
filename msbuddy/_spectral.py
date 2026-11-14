@@ -14,7 +14,8 @@ INSTRUMENTS = ('orbitrap', 'qtof', 'timstof')
 
 def validate(specification):
     from msbuddy._calibration import calibrated_probabilities, CONDITIONAL_CONTEXT_NAMES
-    if specification.get('schema_version') != 1:
+    schema = specification.get('schema_version')
+    if schema not in (1, 2):
         raise ValueError('Unsupported compact spectral model schema.')
     encoded = specification['encoder_onnx']
     if (not isinstance(encoded, bytes)
@@ -26,14 +27,19 @@ def validate(specification):
             raise ValueError('Invalid compact count normalization.')
         if name == 'target_scale' and np.any(values <= 0):
             raise ValueError('Invalid compact count normalization scale.')
+    if schema == 2:
+        from msbuddy._compact_features import FEATURE_COUNT
+        if specification['ranker'].num_feature() != FEATURE_COUNT:
+            raise ValueError('Shared compact ranker feature count does not match its schema.')
     for group, dimension in ((0, 288), (2, 286)):
         mode = specification['modes'][group]
-        if mode['model'].num_feature() != dimension:
-            raise ValueError('Compact ranker feature count does not match its schema.')
-        blend = mode['blend']
-        values = [blend[k] for k in ('weight', 'baseline_scale', 'new_scale')]
-        if not np.all(np.isfinite(values)) or not 0 <= values[0] <= 1 or min(values[1:]) <= 0:
-            raise ValueError('Invalid compact ranker blend.')
+        if schema == 1:
+            if mode['model'].num_feature() != dimension:
+                raise ValueError('Compact ranker feature count does not match its schema.')
+            blend = mode['blend']
+            values = [blend[k] for k in ('weight', 'baseline_scale', 'new_scale')]
+            if not np.all(np.isfinite(values)) or not 0 <= values[0] <= 1 or min(values[1:]) <= 0:
+                raise ValueError('Invalid compact ranker blend.')
         calibration = mode['calibration']
         if tuple(calibration.get('context_names', ())) != CONDITIONAL_CONTEXT_NAMES:
             raise ValueError('Invalid compact confidence context.')
@@ -140,6 +146,8 @@ def _session(dependencies):
 
 def rank(features, evidence, baseline, group, dependencies):
     spec = dependencies['model_spectral']
+    if spec['schema_version'] == 2:
+        return _shared_rank(features, evidence, group, dependencies)
     mode = spec['modes'][group]
     center = np.asarray(spec['target_center'])
     scale = np.asarray(spec['target_scale'])
@@ -177,3 +185,38 @@ def rank(features, evidence, baseline, group, dependencies):
     blend = mode['blend']
     return ((1 - blend['weight']) * baseline / blend['baseline_scale']
             + blend['weight'] * predicted / blend['new_scale'])
+
+
+def _shared_rank(features, evidence, group, dependencies):
+    from msbuddy._chemistry import chemistry_features
+    from msbuddy._compact_features import candidate_matrix
+    specification = dependencies['model_spectral']
+    matrices = []
+    offset = 0
+    session = _session(dependencies)
+    for start in range(0, len(features), 32):
+        batch = features[start:start + 32]
+        encoded = [encode(f, dependencies.get('model_spectral_instrument')) for f in batch]
+        metadata = np.asarray([value[1] for value in encoded], dtype=np.float32)
+        chemical = np.asarray([chemistry_features(
+            f.ms2_raw.mz_array, f.ms2_raw.int_array, f.mz, f.adduct,
+            dependencies['model_spectral_tolerance']) for f in batch], dtype=np.float32)
+        masked = metadata.copy()
+        masked[:, 17:19] = 0
+        z, auxiliary = session.run(None, {
+            'spectra': np.asarray([value[0] for value in encoded], dtype=np.float32),
+            'metadata': masked, 'chemistry': chemical})
+        if z.shape != (len(batch), 128) or auxiliary.shape != (len(batch), 72):
+            raise ValueError('Unexpected shared compact encoder output shape.')
+        for i, feature in enumerate(batch):
+            count = len(feature.candidate_formula_list)
+            neutral = np.asarray([c.formula.array for c in feature.candidate_formula_list])
+            isotope_count = len(feature.ms1_processed) if group == 0 else 0
+            matrices.append(candidate_matrix(
+                evidence[offset:offset + count], neutral, metadata[i], chemical[i], z[i],
+                auxiliary[i], specification['target_center'], specification['target_scale'],
+                group, isotope_count))
+            offset += count
+    if offset != len(evidence):
+        raise ValueError('Shared compact ranking candidate offsets do not match.')
+    return specification['ranker'].predict(np.concatenate(matrices), num_threads=1)

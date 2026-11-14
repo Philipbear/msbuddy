@@ -62,6 +62,13 @@ knowledge rules out halogens should you set ``halogen=False``:
 
 For the command-line interface, use ``--no-halogen`` under the same condition.
 
+The default fluorine range is ``(0, 80)``. This allows highly fluorinated
+formulas without requiring a PFAS label. To set a different explicit limit,
+use ``element_ranges={'F': (0, n)}`` or ``--f-max n``. Element-count likelihoods
+in the compact model are soft ranking evidence; they do not remove formulas
+through a binary halogen classifier. A formula outside a configured range
+cannot be recovered by a ranker.
+
 ``element_ranges`` maps supported element symbols to inclusive ``(minimum,
 maximum)`` pairs. Unspecified elements retain their defaults. Halogen ranges
 are zero when ``halogen=False``; a nonzero explicit halogen range requires

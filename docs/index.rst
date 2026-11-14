@@ -39,6 +39,8 @@ Source codes are available at `GitHub <https://github.com/Philipbear/msbuddy>`_.
    quickstart
    migration
    models
+   model_report_1_3
+   database_format
    config
    datain
    dataout

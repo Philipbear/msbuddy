@@ -32,28 +32,36 @@ from msbuddy.utils import UnsupportedElementError
 
 logging.basicConfig(level=logging.INFO)
 
-current_db_version = 'v0.2.4'
-current_model_version = 'v1.2.0'
+current_db_version = 'v0.3.0'
+current_model_version = 'v1.3.0'
 
 DATA_FILES = {
     'common_db': {
-        'filename': 'common_db_' + current_db_version + '.joblib',
+        'sha256': '961e092b20faae6bdc9ba16a8cdd8674755c911fed7f2c7bd7c37d85911d4bc9',
+        'filename': 'common_db_' + current_db_version + '.msbdb',
         'url': (
             'https://github.com/Philipbear/msbuddy/releases/download/'
-            'msbuddy_data_v0.2.4/common_db_v0.2.4.joblib'),
+            'msbuddy_database_v0.3.0/common_db_v0.3.0.msbdb'),
     },
     'formula_db': {
-        'filename': 'formula_db_' + current_db_version + '.joblib',
+        'sha256': '08f1880c0ef7883ab134734ca2d9db701f1e89a17c7cb14009054de594c96784',
+        'filename': 'formula_db_' + current_db_version + '.msbdb',
         'url': (
             'https://github.com/Philipbear/msbuddy/releases/download/'
-            'msbuddy_data_v0.2.4/formula_db_v0.2.4.joblib'),
+            'msbuddy_database_v0.3.0/formula_db_v0.3.0.msbdb'),
     },
     'ml_model': {
-        'sha256': '4e5f9cb20cd14f758d2a7c5fd48c56d4595100be40190adbcbcb48d4e10d6f21',
+        'sha256': 'a0936a1c9f22cae54566e7e5588381661f35306cb66a75c03d2b623a7d4c8d13',
         'filename': 'ml_' + current_model_version + '.joblib',
         'url': (
             'https://github.com/Philipbear/msbuddy/releases/download/'
-            'msbuddy_data_v1.2.0/ml_v1.2.0.joblib'),
+            'msbuddy_data_v1.3.0/ml_v1.3.0.joblib'),
+    },
+    'ml_compatibility': {
+        'sha256': 'b577caafd6b036e949e6ff28a50c6312da2cf2c5f83d69c330ab6d017628c263',
+        'filename': 'ml_compatibility_v1.3.0.joblib',
+        'url': ('https://github.com/Philipbear/msbuddy/releases/download/'
+                'msbuddy_data_v1.3.0/ml_compatibility_v1.3.0.joblib'),
     },
 }
 
@@ -97,7 +105,7 @@ def get_data_files(data_dir=None, data_files=None) -> dict:
 
     Values in ``data_files`` may be file names relative to ``data_dir`` or
     absolute paths. Supported keys are ``common_db``, ``formula_db`` and
-    ``ml_model``. This function does not create directories or download files.
+    ``ml_model`` and ``ml_compatibility``. This function does not create directories or download files.
     """
     paths = _resolve_data_paths(data_dir, data_files)
     return {
@@ -184,21 +192,29 @@ def _download_if_missing(url: str, path: Path, expected_sha256=None) -> Path:
     return path
 
 
-def download_data(data_dir=None, data_files=None, include_model=True) -> dict:
+def download_data(data_dir=None, data_files=None, include_model=True, include_compatibility=False) -> dict:
     """
     Download the standard msbuddy files to the selected local paths.
 
     Custom file names or paths can be supplied through ``data_files``. If a
     custom file already exists, it is used as-is. If it is missing, the
     standard msbuddy release file is downloaded to that path.
+
+    Compatibility weights are downloaded on demand for isotope-only,
+    mass-only, numerical-only or unsupported spectral settings. Set
+    ``include_compatibility=True`` to prepare those modes for offline use.
     """
     files = get_data_files(data_dir, data_files)
     selected = ['common_db', 'formula_db']
     if include_model:
         selected.append('ml_model')
+    if include_compatibility:
+        selected.append('ml_compatibility')
 
     for name in selected:
-        digest = DATA_FILES[name].get('sha256') if name not in (data_files or {}) else None
+        if name in (data_files or {}) and _file_is_ready(files[name]['path']):
+            continue
+        digest = DATA_FILES[name].get('sha256')
         _download_if_missing(files[name]['url'], files[name]['path'], expected_sha256=digest)
 
     return {name: files[name]['path'] for name in selected}
@@ -219,6 +235,10 @@ def check_download_joblibload(url: str, path, download_missing=True, expected_sh
         raise _missing_custom_file_error(path)
 
     try:
+        import zipfile
+        if zipfile.is_zipfile(path):
+            from msbuddy._database import load_database
+            return load_database(path)
         return j_load(path)
     except OSError as exc:
         if exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
@@ -239,13 +259,15 @@ def init_db(data_dir=None, data_files=None) -> dict:
     global_dict['common_loss_db'], global_dict['common_frag_db'] = (
         check_download_joblibload(
             DATA_FILES['common_db']['url'], files['common_db'],
-            download_missing='common_db' not in custom_files))
+            download_missing='common_db' not in custom_files,
+            expected_sha256=DATA_FILES['common_db'].get('sha256') if 'common_db' not in custom_files else None))
 
     # formula_db
     basic_db, halogen_db = (
         check_download_joblibload(
             DATA_FILES['formula_db']['url'], files['formula_db'],
-            download_missing='formula_db' not in custom_files))
+            download_missing='formula_db' not in custom_files,
+            expected_sha256=DATA_FILES['formula_db'].get('sha256') if 'formula_db' not in custom_files else None))
 
     global_dict['basic_db_mass'], global_dict['basic_db_formula'], global_dict['basic_db_idx'] = basic_db
     global_dict['halogen_db_mass'], global_dict['halogen_db_formula'], global_dict['halogen_db_idx'] = halogen_db
@@ -260,7 +282,7 @@ def init_ml_models(global_dict, data_dir=None, data_files=None) -> dict:
     """
 
     # check if ml models exist
-    if 'model_ms1_ms2' in global_dict:
+    if 'model_ms1_ms2' in global_dict or global_dict.get('model_core_loaded'):
         return global_dict
 
     files = _resolve_data_paths(data_dir, data_files)
@@ -273,6 +295,15 @@ def init_ml_models(global_dict, data_dir=None, data_files=None) -> dict:
             expected_sha256=DATA_FILES['ml_model'].get('sha256') if 'ml_model' not in custom_files else None)
     if isinstance(bundle, dict):
         _load_versioned_models(bundle, global_dict)
+        if global_dict.get('model_core_loaded'):
+            specification = bundle['compatibility']
+            compatibility_path = files['ml_compatibility']
+            if 'ml_model' in custom_files and 'ml_compatibility' not in custom_files:
+                compatibility_path = files['ml_model'].parent / specification['filename']
+            global_dict['model_compatibility_files'] = {
+                'path': compatibility_path, 'url': specification['url'],
+                'download_missing': 'ml_compatibility' not in custom_files,
+                'expected_sha256': specification['sha256']}
     else:
         (global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[
             'model_noms1_noms2'], global_dict['platt_a_0'], global_dict['platt_b_0'], global_dict['platt_a_1'],
@@ -283,6 +314,9 @@ def init_ml_models(global_dict, data_dir=None, data_files=None) -> dict:
 
 
 def _load_versioned_models(bundle, dependencies):
+    if bundle.get('format_version') == 3:
+        _load_compact_models(bundle, dependencies)
+        return
     if bundle.get('format_version') != 2 or bundle.get('feature_version') != 2:
         raise ValueError('Unsupported model bundle format or feature version.')
     modes = ('joint', 'isotope', 'fragment', 'mass')
@@ -302,10 +336,12 @@ def _load_versioned_models(bundle, dependencies):
             if weight < 1 and model['legacy_model'].num_feature() != (53, 29, 52, 28)[group]:
                 raise ValueError('Legacy ensemble feature count does not match its evidence mode.')
         calibration = bundle['calibrations'][mode]
-        from msbuddy._calibration import CONTEXT_NAMES, calibrated_probabilities
-        if tuple(calibration.get('context_names', CONTEXT_NAMES)) != CONTEXT_NAMES:
+        from msbuddy._calibration import CONTEXT_NAMES, CONDITIONAL_CONTEXT_NAMES, calibrated_probabilities
+        context_names = (CONDITIONAL_CONTEXT_NAMES if calibration.get('method') == 'conditional_null_softmax'
+                         else CONTEXT_NAMES)
+        if tuple(calibration.get('context_names', context_names)) != context_names:
             raise ValueError('Calibration context names do not match the bundle schema.')
-        calibrated_probabilities(np.array([0.]), np.zeros(len(CONTEXT_NAMES)), calibration)
+        calibrated_probabilities(np.array([0.]), np.zeros(len(context_names)), calibration)
         selected[key] = model
         selected['calibration_' + str(group)] = calibration
     selector = bundle['candidate_selector']
@@ -342,6 +378,61 @@ def _load_versioned_models(bundle, dependencies):
         selected['model_spectral'] = bundle['spectral_models']
         selected['model_spectral_cache'] = {}
     dependencies.update(selected)
+
+
+def _load_compact_models(bundle, dependencies):
+    """Load the small standard path without reading compatibility estimators."""
+    if bundle.get('feature_version') != 2:
+        raise ValueError('Unsupported compact model evidence version.')
+    from msbuddy._spectral import validate
+    specification = bundle['spectral_models']
+    if specification.get('schema_version') != 2:
+        raise ValueError('Compact model bundle requires the shared spectral schema.')
+    validate(specification)
+    selector = bundle['candidate_selector']
+    limits = bundle['candidate_limits']
+    if selector.num_feature() != 73:
+        raise ValueError('Candidate selector feature count does not match its schema.')
+    if len(limits) != 4 or any(type(n) is not int or not 1 <= n <= 10000 for n in limits):
+        raise ValueError('Invalid recommended candidate limits in compact model bundle.')
+    from msbuddy.base import Adduct, check_adduct
+    from msbuddy._candidate_selection import adduct_signature
+    allowed = bundle['validated_adducts']
+    if not allowed or any(not isinstance(value, str) or not check_adduct(value)[0] for value in allowed):
+        raise ValueError('Invalid validated-adduct list in compact model bundle.')
+    compatibility = bundle['compatibility']
+    filename, digest = compatibility['filename'], compatibility['sha256']
+    if (not isinstance(filename, str) or not filename or Path(filename).name != filename
+            or not isinstance(digest, str) or len(digest) != 64
+            or any(c not in '0123456789abcdef' for c in digest)
+            or not isinstance(compatibility['url'], str) or not compatibility['url'].startswith('https://')):
+        raise ValueError('Invalid compatibility model asset specification.')
+    dependencies.update(
+        model_core_loaded=True, model_feature_version=2,
+        model_bundle_version=bundle.get('version'), candidate_selector=selector,
+        candidate_limits=tuple(limits), model_spectral=specification, model_spectral_cache={},
+        validated_adduct_signatures=frozenset(
+            adduct_signature(Adduct(value, value.endswith('+'), report_invalid=True)) for value in allowed))
+
+
+def init_compatibility_models(dependencies):
+    """Fetch old evidence modes once, only when the current batch needs them."""
+    if dependencies.get('model_compatibility_loaded'):
+        return dependencies
+    files = dependencies['model_compatibility_files']
+    bundle = check_download_joblibload(**files)
+    if not isinstance(bundle, dict) or bundle.get('format_version') != 2:
+        raise ValueError('Invalid optional compatibility model bundle.')
+    selected = {}
+    _load_versioned_models(bundle, selected)
+    required = ('model_ms1_ms2', 'model_ms1_noms2', 'model_noms1_ms2', 'model_noms1_noms2')
+    if 'legacy_dependencies' not in selected:
+        raise ValueError('Optional compatibility bundle has no legacy fallback models.')
+    dependencies.update({key: selected[key] for key in required})
+    dependencies.update({key: selected[key] for key in selected if key.startswith('calibration_')})
+    dependencies['legacy_dependencies'] = selected['legacy_dependencies']
+    dependencies['model_compatibility_loaded'] = True
+    return dependencies
 
 
 def load_mgf(file_path) -> List[MetaFeature]:

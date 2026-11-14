@@ -179,6 +179,19 @@ class SpectralRuntimeTests(unittest.TestCase):
 
 
 class ConditionalConfidenceTests(unittest.TestCase):
+    def test_context_clipping_bounds_extrapolation_without_changing_old_specs(self):
+        spec = conditional();spec['context_clip'] = 6.
+        spec['temperature_coefficients'][1] = 1.
+        spec['null_coefficients'][2] = 1.
+        scores = np.array([1., 0.])
+        a = calibrated_probabilities(scores, np.full(11, 100.), spec)
+        b = calibrated_probabilities(scores, np.full(11, 6.), spec)
+        np.testing.assert_array_equal(a[0], b[0]);self.assertEqual(a[1], b[1])
+        self.assertAlmostEqual(float(a[0].sum()) + a[1], 1.)
+        for value in [0., -1., np.nan, True, 'six']:
+            spec['context_clip'] = value
+            with self.assertRaises(ValueError):calibrated_probabilities(scores, np.zeros(11), spec)
+
     def test_positive_temperature_preserves_ranking_and_absent_mass(self):
         scores = np.array([-2., 3., 0.])
         spec = conditional()

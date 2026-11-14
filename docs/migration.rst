@@ -1,5 +1,28 @@
-Migrating from 0.x to 1.0
-=========================
+Migration guide
+===============
+
+Upgrading from 1.2 to 1.3
+-------------------------
+
+Standard database files now use the lossless ``.msbdb`` format, and the
+default model is a small shared MS2/joint bundle. New standard filenames are
+downloaded automatically. Existing custom legacy databases and models remain
+supported. The new format preserves every formula, index and mass bit.
+
+Compatibility weights are fetched when needed. For offline isotope-only,
+mass-only, numerical-only or unsupported spectral settings, run
+``download_data(include_compatibility=True)`` or use the CLI's
+``--download-data --download-compatibility`` options. The optional asset path
+can be overridden with ``data_files['ml_compatibility']``.
+
+Halogens remain enabled by default. The default fluorine range increases from
+``(0, 20)`` to ``(0, 80)``; explicit bounds remain effective. If prior knowledge
+rules out halogens, set ``halogen=False`` or ``--no-halogen``. Acquisition
+metadata remain optional. See :doc:`model_report_1_3` for accuracy and confidence
+checks, including the external PFAS MS2 limitation.
+
+Changes introduced in 1.0
+-------------------------
 
 Version 1.0 changes the Python API and is not fully compatible with 0.x.
 Existing scripts that use element arrays, individual element-range arguments,

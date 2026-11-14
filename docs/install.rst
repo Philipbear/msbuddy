@@ -61,7 +61,9 @@ Compatible files can also use different names. Relative names are resolved insid
        },
    )
 
-The supported keys are ``common_db``, ``formula_db``, and ``ml_model``. A partial mapping is allowed; unspecified files keep their standard names.
+The supported keys are ``common_db``, ``formula_db``, ``ml_model`` and
+``ml_compatibility``. A partial mapping is allowed; unspecified files keep
+their standard names. Existing custom legacy databases remain supported.
 
 A custom file that already exists is loaded as-is. A missing custom file raises a clear error instead of silently substituting another file. To place the standard release asset under a custom name, call ``download_data`` explicitly.
 
@@ -74,6 +76,15 @@ The file paths and standard download links can be inspected, or all files can be
    print(get_data_files(config.data_dir, config.data_files))
    download_data(config.data_dir, config.data_files)
 
+The standard MS/MS and joint paths use the small default model. Optional
+compatibility weights are downloaded only when a query requires an older
+evidence mode or unsupported spectral setting, including ``use_spectral=False``.
+To prepare those paths for offline use, download them explicitly:
+
+.. code-block:: python
+
+   download_data(config.data_dir, config.data_files, include_compatibility=True)
+
 The existing command-line interface provides matching options. Examples use the conventional double-dash form for descriptive option names.
 
 Existing single-dash spellings such as ``-mgf`` remain available as aliases for backwards compatibility.
@@ -81,6 +92,7 @@ Existing single-dash spellings such as ``-mgf`` remain available as aliases for 
 .. code-block:: bash
 
    msbuddy --download-data --data-dir ~/msbuddy-data
+   msbuddy --download-data --download-compatibility --data-dir ~/msbuddy-data
    msbuddy --mgf input.mgf --data-dir ~/msbuddy-data \
        --formula-db formula-custom.joblib \
        --ml-model /shared/msbuddy/model-custom.joblib

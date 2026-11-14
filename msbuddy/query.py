@@ -58,6 +58,19 @@ def _get_formula_db_idx(start_idx, end_idx, db_mode: int, gd) -> Tuple[int, int]
     return int(db_start_idx), int(db_end_idx)
 
 
+def _matching_database_rows(prefix, start, end, target_mass, mass_tol, gd):
+    """Filter resident masses before decoding any formula rows."""
+    masses = gd[prefix + '_db_mass'][start:end]
+    selected = np.flatnonzero(np.abs(masses - target_mass) <= mass_tol)
+    formulas = gd[prefix + '_db_formula']
+    if not len(selected):
+        return masses[:0], formulas[:0]
+    left, right = int(selected[0]), int(selected[-1]) + 1
+    if right - left == len(selected):
+        return masses[left:right], formulas[start + left:start + right]
+    return masses[selected], formulas[selected + start]
+
+
 def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, halogen: bool, gd) -> List[Formula]:
     """
     search neutral mass in neutral formula database
@@ -79,15 +92,13 @@ def query_neutral_mass(mass: float, mz_tol: float, ppm: bool, halogen: bool, gd)
     start_idx, end_idx = _mass_bin_bounds(target_mass, mass_tol)
 
     db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 0, gd)
-    results_basic_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
-    results_basic_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
+    results_basic_mass, results_basic_formula = _matching_database_rows('basic', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
     forms_basic = _func_a(results_basic_mass, results_basic_formula, target_mass, mass_tol, None)
     formulas.extend(forms_basic)
 
     if halogen:
         db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
-        results_halogen_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
-        results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
+        results_halogen_mass, results_halogen_formula = _matching_database_rows('halogen', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
         forms_halogen = _func_a(results_halogen_mass, results_halogen_formula, target_mass, mass_tol, None)
         formulas.extend(forms_halogen)
 
@@ -124,11 +135,9 @@ def check_formula_existence(form_arr, pos_mode: bool, frag: bool, gd) -> Tuple[b
 
     db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, db_mode, gd)
     if db_mode == 0:
-        results_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
-        results_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
+        results_mass, results_formula = _matching_database_rows('basic', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
     else:
-        results_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
-        results_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
+        results_mass, results_formula = _matching_database_rows('halogen', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
     forms = _func_a(results_mass, results_formula, target_mass, mass_tol, None)
 
     db_existed_bool = len(forms) > 0
@@ -167,8 +176,7 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
     start_idx, end_idx = _mass_bin_bounds(target_mass, mass_tol)
 
     db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 0, gd)
-    results_basic_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
-    results_basic_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
+    results_basic_mass, results_basic_formula = _matching_database_rows('basic', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
     forms_basic = _func_a(results_basic_mass, results_basic_formula, target_mass, mass_tol, adduct.loss_formula)
     neutral_formulas.extend(forms_basic)
     charged_formulas.extend([Formula._from_array(adduct.m * f.array + adduct.net_formula.array,
@@ -176,8 +184,7 @@ def query_precursor_mass(mass: float, adduct: Adduct, mz_tol: float,
 
     if db_mode > 0:
         db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, 1, gd)
-        results_halogen_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
-        results_halogen_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
+        results_halogen_mass, results_halogen_formula = _matching_database_rows('halogen', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
         forms_halogen = _func_a(results_halogen_mass, results_halogen_formula,
                                 target_mass, mass_tol, adduct.loss_formula)
         neutral_formulas.extend(forms_halogen)
@@ -388,11 +395,9 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
     """
     db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, db_mode, gd)
     if db_mode == 0:
-        results_mass = gd['basic_db_mass'][db_start_idx:db_end_idx]
-        results_formula = gd['basic_db_formula'][db_start_idx:db_end_idx]
+        results_mass, results_formula = _matching_database_rows('basic', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
     else:
-        results_mass = gd['halogen_db_mass'][db_start_idx:db_end_idx]
-        results_formula = gd['halogen_db_formula'][db_start_idx:db_end_idx]
+        results_mass, results_formula = _matching_database_rows('halogen', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
 
     all_idx = np.where(np.abs(results_mass - target_mass) <= mass_tol)[0]
 

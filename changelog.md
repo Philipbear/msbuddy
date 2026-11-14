@@ -132,3 +132,18 @@ Now we use a learning-to-rank model to rank the formula candidates.
 - Keep halogens enabled by default and retain the recommended candidate budgets.
 - Use lazy CPU ONNX Runtime inference without requiring PyTorch or CUDA.
 - Clarify per-query confidence cutoffs versus pooled expected-error selection.
+
+1.3.0 (2026-11-15)
+- Use one shared compact MS2/joint scorer with soft count likelihoods and
+  precise fragment-mass evidence; reduce the default model to 9.37 MB.
+- Load older evidence-mode and compatibility weights on demand; support
+  explicit offline prefetch with include_compatibility and --download-compatibility.
+- Introduce lossless indexed .msbdb assets: preserve all formulas, duplicates,
+  indexes and mass bits while reducing the formula database to 23.0 MB.
+- Retain custom legacy databases and model bundles; verify standard downloads.
+- Keep halogens enabled by default and increase the default fluorine ceiling
+  to 80; respect explicit bounds and halogen=False when prior knowledge applies.
+- Refit coherent confidence for the wider candidate pools, including
+  isotope-only and mass-only modes, with bounded observable contexts.
+- Publish frozen accuracy and error-rate comparisons, including the smaller
+  external PFAS MS2 limitation, and retain the 25/50 MS2/joint candidate budgets.

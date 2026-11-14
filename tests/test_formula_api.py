@@ -119,6 +119,8 @@ class ElementRangeTests(unittest.TestCase):
         halogen = MsbuddyConfig(halogen=True, element_ranges={'Cl': (1, 3)})
         self.assertEqual(halogen.element_ranges['Cl'], (1, 3))
         self.assertEqual(halogen.element_ranges['Br'], (0, 10))
+        self.assertEqual(MsbuddyConfig().element_ranges['F'], (0, 80))
+        self.assertEqual(MsbuddyConfig(element_ranges={'F': (0, 3)}).element_ranges['F'], (0, 3))
         restricted = MsbuddyConfig(halogen=False)
         self.assertEqual(restricted.db_mode, 0)
         for element in ('F', 'Cl', 'Br', 'I'):

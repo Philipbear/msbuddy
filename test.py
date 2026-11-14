@@ -8,8 +8,8 @@ def test_main():
     # instantiate a Msbuddy object
     msb_engine = Msbuddy(msb_config)
 
-    # you can load multiple USIs at once
-    msb_engine.load_mgf('/Users/shipei/Documents/projects/msbuddy/demo/input_file.mgf')
+    from pathlib import Path
+    msb_engine.load_mgf(Path(__file__).parent / "demo" / "input_file.mgf")
 
     # annotate molecular formula
     msb_engine.annotate_formula()

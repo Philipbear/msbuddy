@@ -1,5 +1,7 @@
 include changelog.md
 include main_nextflow.py
-include docs/development.rst
-include docs/migration.rst
-include docs/models.rst
+include test.py
+recursive-include docs *.rst *.py
+recursive-include tests *.py
+recursive-include benchmarks *.py
+recursive-include demo *.mgf *.csv

@@ -427,6 +427,10 @@ def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2
     from msbuddy._features import select_evidence_features
     X_arr = select_evidence_features(X_arr, group_no, gd.get('model_feature_version', 1))
 
+    if gd.get('model_spectral_active') and gd['model_spectral'].get('schema_version') == 2:
+        from msbuddy._spectral import rank
+        return rank(meta_feature_list, X_arr, None, group_no, gd)
+
     # load model
     if group_no == 0:
         model = gd['model_ms1_ms2']
@@ -451,7 +455,9 @@ def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2
             score_arr += (1 - weight) * model['legacy_model'].predict(
                 X_arr[:, :legacy_length], num_threads=1) / legacy_scale
     else:
-        score_arr = model.predict(X_arr.astype(np.float32) if gd.get('model_feature_version', 1) >= 2 else X_arr)
+        from lightgbm import Booster
+        values = X_arr.astype(np.float32) if gd.get('model_feature_version', 1) >= 2 else X_arr
+        score_arr = model.predict(values, num_threads=1) if isinstance(model, Booster) else model.predict(values)
     if gd.get('model_spectral_active'):
         from msbuddy._spectral import rank
         score_arr = rank(meta_feature_list, X_arr, score_arr, group_no, gd)
@@ -494,6 +500,14 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
         group_dict[i] = []
 
     from msbuddy._candidate_selection import in_model_scope
+    if gd.get('model_core_loaded'):
+        from msbuddy._spectral import in_scope as spectral_in_scope
+        needs_compatibility = any(
+            f.candidate_formula_list and (not f.ms2_processed or not spectral_in_scope(f, config))
+            for f in batch_data)
+        if needs_compatibility:
+            from msbuddy.load import init_compatibility_models
+            init_compatibility_models(gd)
     for i, meta_feature in enumerate(batch_data):
         if not meta_feature.candidate_formula_list:
             continue
@@ -519,7 +533,8 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
                           model_spectral_active=False)
         elif key >= 8:
             active = dict(gd, model_spectral_active=True,
-                          model_spectral_instrument=getattr(config, 'ms_instr', None))
+                          model_spectral_instrument=getattr(config, 'ms_instr', None),
+                          model_spectral_tolerance=ms2_tol)
         else:
             active = gd
         # predict formula probability

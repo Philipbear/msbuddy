@@ -8,10 +8,23 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from msbuddy import main_cmd
-from msbuddy.load import DATA_FILES, get_data_files, init_db, resolve_data_dir, _download_if_missing
+from msbuddy.load import DATA_FILES, get_data_files, init_db, resolve_data_dir, _download_if_missing, download_data
 
 
 class DataConfigurationTests(unittest.TestCase):
+    def test_new_standard_download_to_custom_name_is_verified_but_existing_custom_is_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'custom.msbdb'
+            with patch('msbuddy.load._download_if_missing') as fetch:
+                download_data(directory, {'formula_db': target}, include_model=False)
+            formula_call = [call for call in fetch.call_args_list if call.args[1] == target][0]
+            self.assertEqual(formula_call.kwargs['expected_sha256'], DATA_FILES['formula_db']['sha256'])
+            target.write_bytes(b'custom' * 300)
+            with patch('msbuddy.load._download_if_missing') as fetch:
+                download_data(directory, {'formula_db': target}, include_model=False)
+            self.assertFalse(any(call.args[1] == target for call in fetch.call_args_list))
+            self.assertEqual(target.read_bytes(), b'custom' * 300)
+
     def test_verified_download_is_atomic_and_replaces_corrupt_cache(self):
         payload = b'verified-model' * 200
         digest = hashlib.sha256(payload).hexdigest()

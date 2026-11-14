@@ -48,7 +48,7 @@ def main():
     parser.add_argument('-s_min', type=int, default=0, help='Minimum number of S atoms. Default: 0.')
     parser.add_argument('-s_max', type=int, default=15, help='Maximum number of S atoms. Default: 15.')
     parser.add_argument('-f_min', type=int, default=0, help='Minimum number of F atoms. Default: 0.')
-    parser.add_argument('-f_max', type=int, default=20, help='Maximum number of F atoms. Default: 20.')
+    parser.add_argument('-f_max', type=int, default=80, help='Maximum number of F atoms. Default: 80.')
     parser.add_argument('-cl_min', type=int, default=0, help='Minimum number of Cl atoms. Default: 0.')
     parser.add_argument('-cl_max', type=int, default=15, help='Maximum number of Cl atoms. Default: 15.')
     parser.add_argument('-br_min', type=int, default=0, help='Minimum number of Br atoms. Default: 0.')

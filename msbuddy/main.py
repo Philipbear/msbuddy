@@ -41,7 +41,7 @@ shared_data_dict = None
 
 _DEFAULT_ELEMENT_RANGES = {
     'C': (0, 80), 'H': (0, 150), 'Br': (0, 10), 'Cl': (0, 15),
-    'F': (0, 20), 'I': (0, 10), 'K': (0, 0), 'N': (0, 20),
+    'F': (0, 80), 'I': (0, 10), 'K': (0, 0), 'N': (0, 20),
     'Na': (0, 0), 'O': (0, 30), 'P': (0, 10), 'S': (0, 15),
 }
 _HALOGENS = ('Br', 'Cl', 'F', 'I')
@@ -113,7 +113,7 @@ class MsbuddyConfig:
         :param rel_int_denoise_cutoff: relative intensity cutoff, used for MS2 denoise
         :param top_n_per_50_da: top n peaks to keep in each 50 Da, used for MS2 denoise
         :param data_dir: directory containing the msbuddy database and model files
-        :param data_files: optional mapping of common_db, formula_db, or ml_model to custom file paths
+        :param data_files: optional mapping of common_db, formula_db, ml_model, or ml_compatibility to custom file paths
         :param max_candidates: optional candidate budget; by default use the model's
             recommended budget, or 350 with legacy models
         :param use_spectral: use the compact CPU spectral ranker when supported by the loaded bundle

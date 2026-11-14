@@ -31,13 +31,26 @@ LightGBM and the CPU ONNX Runtime are inference dependencies. PyTorch and CUDA
 are not required. Python 3.8 or newer is supported; Python 3.8 uses NumPy 1.x
 and a compatible ONNX Runtime version.
 
-## Compact spectral models in 1.2
+## Compact models and databases in 1.3
 
-MS2 and joint MS1+MS2 ranking now share a compact 714,599-parameter spectrum
-encoder, combined with the existing formula, mass and fragment evidence.
-The encoder and two heads occupy about 9 MB before compression. The complete
-model bundle, including the established models, is about 197 MB, replacing
-the previous 192 MB bundle. The formula database is a separate download.
+MS2 and joint MS1+MS2 ranking share one 749,644-parameter spectral encoder
+and one candidate scorer. Accurate fragment-mass patterns and soft atom-count
+likelihoods complement formula, mass, isotope and fragment evidence.
+The default model is **9.37 MB**, replacing the 197 MB all-mode download.
+Compatibility weights are downloaded when an older evidence mode or setting
+requires them; use `download_data(include_compatibility=True)` for offline use.
+
+The redesigned formula database is **23.0 MB**, down from 436.5 MB, with every
+formula, duplicate, index and stored mass bit preserved. Default model and
+database downloads total about **32.4 MB**. Existing custom legacy databases
+and models remain supported.
+
+On a frozen 4,000-formula evaluation, MS2-only top-1 accuracy improved from
+86.55% to 89.63%; joint accuracy improved from 94.38% to 94.95% with simulated
+MS1 isotope evidence. A separate 153-formula fluorinated challenge also
+improved. Results vary across domains: a smaller external PFAS subset had
+lower MS2-only accuracy. See the [complete validation report](https://github.com/Philipbear/msbuddy/blob/main/docs/model_report_1_3.rst)
+for paired intervals, missing-metadata results, confidence checks and limitations.
 
 Acquisition metadata are optional. Set `MsbuddyConfig(ms_instr="orbitrap")`
 or the appropriate instrument family to configure mass tolerances and provide
@@ -60,6 +73,8 @@ a learned candidate selector, and mode-specific candidate limits.
 This allows both halogen-free and halogen-containing formulas without requiring
 prior knowledge of the unknown compound. Only when prior knowledge rules out
 halogens should you set `MsbuddyConfig(halogen=False)` or pass `--no-halogen`.
+The default fluorine limit is 80 atoms. Set `element_ranges={'F': (0, n)}`
+or `--f-max n` when a different limit is justified by prior knowledge.
 Use `MsbuddyConfig(max_candidates=350)` or `--max-candidates 350` to override
 the recommended candidate budget.
 

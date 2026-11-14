@@ -1,21 +1,26 @@
 Model update and confidence estimates
 ============================================
 
-Version 1.2 adds compact spectral ranking to MS2 and joint MS1+MS2 annotation.
-One 714,599-parameter encoder summarizes binned fragment and neutral-loss
-signals. Small evidence-specific rankers combine its representation with
-formula, adduct, mass, isotope and fragment evidence. The models use CPU ONNX
-inference; PyTorch and CUDA are not required.
+Version 1.3 uses one 749,644-parameter spectral encoder and one shared
+candidate scorer for MS2 and joint MS1+MS2 annotation. The scorer combines
+the spectrum representation, soft atom-count likelihoods, accurate fragment
+mass patterns and physical formula evidence. It no longer needs numerical
+ranker scores as inputs. Inference uses CPU ONNX Runtime and LightGBM;
+PyTorch and CUDA are not required.
 
 There is no hard biological-formula classifier or element-presence gate.
 F, Cl, Br and I remain available for every query by default. Atom-count
 predictions contribute ranking evidence without excluding candidate formulas.
 
-The encoder and two heads total approximately 9 MB before compression. The
-complete compressed model bundle is approximately 197 MB, including the
-established models used for its numerical score and compatibility paths.
-It replaces the previous approximately 192 MB model download. Database assets
-are separate; they are not part of the encoder size.
+The default model download is 9,371,942 bytes. The encoder itself is about
+3.05 MB; the model download also contains the shared scorer, candidate
+selector and probability calibration. Optional compatibility weights are
+169,787,342 bytes and are fetched only when needed. The redesigned formula
+and common databases total about 23.0 MB. Together, standard model and database
+downloads total about 32.4 MB, compared with about 633.7 MB in version 1.2.
+
+See :doc:`model_report_1_3` for the full evaluation and :doc:`database_format`
+for the lossless numerical format.
 
 Optional acquisition metadata
 -----------------------------
@@ -50,6 +55,9 @@ halogen-free and halogen-containing candidates are searched for every query.
 Only when prior knowledge rules out F, Cl, Br and I should you use
 ``MsbuddyConfig(halogen=False)`` or ``--no-halogen``. The reported model
 validation and candidate-budget selection used halogens enabled for all queries.
+The default fluorine range is ``(0, 80)``. Explicit ``element_ranges`` and
+``--f-max`` limits are respected. Count likelihoods and chemical patterns are
+soft ranking inputs; no PFAS or halogen classification gate removes candidates.
 Formula generation still depends on the configured element bounds and fragment/neutral-loss
 database queries; a ranker cannot recover an excluded formula.
 
@@ -67,10 +75,12 @@ top-1 calls by this error probability and average accepted values to estimate
 the pooled false fraction. These estimates depend on calibration and domain
 match; they are not distribution-free FDR guarantees.
 
-Compact-model calibration uses a positive query-dependent temperature and
+Calibration for the compact models and the standard isotope-only and
+mass-only compatibility modes uses a positive query-dependent temperature and
 an absent-answer state. The winning formula's precursor-mass fit and observed
 isotope count help adjust confidence. The positive temperature preserves the
-candidate ranking.
+candidate ranking. Context inputs are bounded after standardization to limit
+extrapolation. Calibration is fitted on a separate formula-disjoint role.
 
 A per-query ``estimated_fdr <= 0.05`` cutoff accepts top-1 probabilities of at
 least 0.95. This is different from accepting the largest pool whose *average*
@@ -97,7 +107,7 @@ supported monomer/multimer adducts, and precursor/fragment tolerances of
 For other settings, the established numerical rankers remain available.
 ``MsbuddyConfig(use_spectral=False)`` or ``--no-spectral`` selects them
 explicitly. Absolute-tolerance, multiply charged and other adduct inputs use
-the bundled legacy compatibility models as before.
+the optional legacy compatibility models as before.
 Chemically equivalent adduct spellings share the same model routing. Custom legacy model files
 remain supported through ``data_files`` or ``--ml-model``.
 

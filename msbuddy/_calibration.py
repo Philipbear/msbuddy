@@ -73,13 +73,20 @@ def calibrated_probabilities(scores, context, specification):
             or inverse_temperature <= 0 or not all(np.all(np.isfinite(x))
                                                   for x in [values, context, center, scale, coefficients])):
         raise ValueError('Invalid probability calibration specification or inputs.')
+    standardized = (context - center) / scale
+    clip = specification.get('context_clip')
+    if clip is not None:
+        if (isinstance(clip, (bool, np.bool_)) or not isinstance(clip, (int, float, np.integer, np.floating))
+                or not np.isfinite(clip) or clip <= 0):
+            raise ValueError('Invalid calibration context clipping range.')
+        standardized = np.clip(standardized, -clip, clip)
     if conditional:
         if (temperature_coefficients.shape != (len(context) + 1,)
                 or not np.all(np.isfinite(temperature_coefficients))):
             raise ValueError('Invalid conditional temperature specification.')
-        log_temperature = temperature_coefficients[0] + np.dot(temperature_coefficients[1:], (context - center) / scale)
+        log_temperature = temperature_coefficients[0] + np.dot(temperature_coefficients[1:], standardized)
         inverse_temperature = float(np.exp(np.clip(log_temperature, np.log(.03), np.log(20.))))
-    null_logit = coefficients[0] + np.dot(coefficients[1:], (context - center) / scale)
+    null_logit = coefficients[0] + np.dot(coefficients[1:], standardized)
     null_logit = np.clip(null_logit, -25., 25.)
     logits = (values - values.max()) * inverse_temperature
     normalizer = logsumexp(np.append(logits, null_logit))

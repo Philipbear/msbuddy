@@ -45,8 +45,12 @@ def main():
     parser.add_argument('--ml-model', type=str, default=None,
                         help='ML model filename relative to --data-dir, '
                              'or an absolute file path.')
+    parser.add_argument('--ml-compatibility', type=str, default=None,
+                        help='Optional compatibility model filename or absolute path.')
     parser.add_argument('--download-data', action='store_true',
                         help='Download the databases and model, then exit.')
+    parser.add_argument('--download-compatibility', action='store_true',
+                        help='Include optional compatibility weights with --download-data.')
     parser.add_argument('-d', '--details', '-details', action='store_true',
                         help='Store true. Whether to write detailed results. Default: detailed results are not written.')
     parser.add_argument('--ms-instr', '-ms_instr', '-ms', type=str, default=None,
@@ -84,7 +88,7 @@ def main():
     parser.add_argument('--s-min', '-s_min', type=int, default=0, help='Minimum number of S atoms. Default: 0.')
     parser.add_argument('--s-max', '-s_max', type=int, default=15, help='Maximum number of S atoms. Default: 15.')
     parser.add_argument('--f-min', '-f_min', type=int, default=0, help='Minimum number of F atoms. Default: 0.')
-    parser.add_argument('--f-max', '-f_max', type=int, default=20, help='Maximum number of F atoms. Default: 20.')
+    parser.add_argument('--f-max', '-f_max', type=int, default=80, help='Maximum number of F atoms. Default: 80.')
     parser.add_argument('--cl-min', '-cl_min', type=int, default=0, help='Minimum number of Cl atoms. Default: 0.')
     parser.add_argument('--cl-max', '-cl_max', type=int, default=15, help='Maximum number of Cl atoms. Default: 15.')
     parser.add_argument('--br-min', '-br_min', type=int, default=0, help='Minimum number of Br atoms. Default: 0.')
@@ -101,18 +105,22 @@ def main():
                         help='Top n peaks per 50 Da, used for MS2 denoise. Default: 6.')
 
     args = parser.parse_args()
+    if args.download_compatibility and not args.download_data:
+        parser.error('--download-compatibility requires --download-data.')
 
     data_files = {
         'common_db': args.common_db,
         'formula_db': args.formula_db,
         'ml_model': args.ml_model,
+        'ml_compatibility': args.ml_compatibility,
     }
     data_files = {
         name: path for name, path in data_files.items() if path is not None
     } or None
 
     if args.download_data:
-        downloaded = download_data(args.data_dir, data_files)
+        downloaded = download_data(args.data_dir, data_files,
+                                   include_compatibility=args.download_compatibility)
         print('Data files are available:')
         for name, file_path in downloaded.items():
             print(f'  {name}: {file_path}')
