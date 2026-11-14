@@ -80,7 +80,18 @@ class DataConfigurationTests(unittest.TestCase):
         self.assertEqual(current['data_dir'], '~/msbuddy-data')
         self.assertEqual(current['data_files'], {'formula_db': 'custom.joblib'})
         self.assertEqual(current['element_ranges']['C'], (0, 80))
-        self.assertNotIn('Cl', current['element_ranges'])
+        self.assertTrue(current['halogen'])
+        self.assertEqual(current['element_ranges']['Cl'], (0, 15))
+        restricted = get_config_args(['--mgf', 'input.mgf', '--no-halogen'])
+        self.assertFalse(restricted['halogen'])
+        for element in ('F', 'Cl', 'Br', 'I'):
+            self.assertNotIn(element, restricted['element_ranges'])
+        for flag in ('--halogen', '-halogen', '-hal'):
+            with self.subTest(flag=flag):
+                self.assertTrue(get_config_args(['--mgf', 'input.mgf', flag])['halogen'])
+        with patch.object(sys, 'stderr'), self.assertRaises(SystemExit) as error:
+            get_config_args(['--mgf', 'input.mgf', '--halogen', '--no-halogen'])
+        self.assertEqual(error.exception.code, 2)
         custom = get_config_args(['--mgf', 'input.mgf', '--halogen', '--c-max', '42', '--cl-max', '3'])
         self.assertEqual(custom['element_ranges']['C'], (0, 42))
         self.assertEqual(custom['element_ranges']['Cl'], (0, 3))
@@ -88,15 +99,22 @@ class DataConfigurationTests(unittest.TestCase):
     def test_nextflow_passes_element_limits_to_the_revised_configuration(self):
         import main_nextflow
 
-        with patch.object(sys, 'argv', ['main_nextflow', '-input', 'input.mgf', '-hal', '1',
-                                        '-c_max', '42', '-cl_max', '3']), \
-             patch('main_nextflow.MsbuddyConfig') as config, \
-             patch('main_nextflow.Msbuddy', return_value=MagicMock()), \
-             patch('os.path.exists', return_value=True):
-            main_nextflow.main()
-        ranges = config.call_args.kwargs['element_ranges']
-        self.assertEqual(ranges['C'], (0, 42))
-        self.assertEqual(ranges['Cl'], (0, 3))
+        for flags, expected in (([], True), (['-hal', '1'], True), (['-hal', '0'], False)):
+            with self.subTest(flags=flags), \
+                 patch.object(sys, 'argv', ['main_nextflow', '-input', 'input.mgf',
+                                            '-c_max', '42', '-cl_max', '3', *flags]), \
+                 patch('main_nextflow.MsbuddyConfig') as config, \
+                 patch('main_nextflow.Msbuddy', return_value=MagicMock()), \
+                 patch('os.path.exists', return_value=True):
+                main_nextflow.main()
+            arguments = config.call_args.kwargs
+            ranges = arguments['element_ranges']
+            self.assertEqual(arguments['halogen'], expected)
+            self.assertEqual(ranges['C'], (0, 42))
+            if expected:
+                self.assertEqual(ranges['Cl'], (0, 3))
+            else:
+                self.assertNotIn('Cl', ranges)
 
     def test_csv_accepts_headered_and_headerless_usi_lists(self):
         examples = [

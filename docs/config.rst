@@ -18,7 +18,7 @@ We would recommend considering parallel processing for large datasets (e.g. >100
         ppm=True, # use ppm for mass tolerance, otherwise use Da
         ms1_tol=5, # ms1 tolerance, see below for default values for each MS instrument
         ms2_tol=10, # ms2 tolerance, see below for default values for each MS instrument
-        halogen=True, # enable halogen atoms in molecular formula annotation
+        halogen=True, # default: allow F, Cl, Br and I
         # parallel=True, # enable parallel processing, see note below
         # n_cpu=12, # number of CPUs to use
         timeout_secs=600, # timeout for each query in seconds
@@ -49,7 +49,16 @@ If you do need to use a different mass tolerance, you can set the ``ppm``, ``ms1
    msb_config = MsbuddyConfig(ppm=True, ms1_tol=10, ms2_tol=10)
 
 
-Note that the ``halogen`` parameter is set to ``False`` by default. If you are working with halogenated compounds, you will need to set this to ``True`` to enable halgoen atoms in molecular formula annotation.
+The ``halogen`` parameter defaults to ``True``. Both halogen-free and
+halogen-containing formulas are considered, so prior knowledge of whether the
+unknown compounds contain F, Cl, Br or I is unnecessary. Only when prior
+knowledge rules out halogens should you set ``halogen=False``:
+
+.. code-block:: python
+
+   msb_config = MsbuddyConfig(ms_instr='orbitrap', halogen=False)
+
+For the command-line interface, use ``--no-halogen`` under the same condition.
 
 ``element_ranges`` maps supported element symbols to inclusive ``(minimum,
 maximum)`` pairs. Unspecified elements retain their defaults. Halogen ranges

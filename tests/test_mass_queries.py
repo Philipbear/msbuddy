@@ -107,6 +107,21 @@ class MassQueryTests(unittest.TestCase):
         self.assertEqual([match.formula for match in matches], ['C6H12O6'])
         self.assertAlmostEqual(matches[0].mass_error, 0.0, places=10)
 
+    def test_public_mass_searches_include_halogen_by_default_and_allow_exclusion(self):
+        formula = Formula(read_formula('C6H5Cl'))
+        gd = database([])
+        gd['halogen_db_mass'] = np.array([formula.mass])
+        gd['halogen_db_formula'] = np.array([formula.array], dtype=np.int16)
+        gd['halogen_db_idx'] = np.searchsorted(gd['halogen_db_mass'], np.arange(15000) / 10)
+        engine = object.__new__(Msbuddy)
+        engine._dependencies = gd
+        self.assertEqual([match.formula for match in engine.mass_to_formula(formula.mass)], ['C6H5Cl'])
+        self.assertEqual(engine.mass_to_formula(formula.mass, halogen=False), [])
+        ion = Adduct('[M+H]+', True)
+        mz = formula.mass + ion.net_formula.mass - ion.charge * 0.00054858
+        self.assertEqual([match.formula for match in engine.mz_to_formula(mz)], ['C6H5Cl'])
+        self.assertEqual(engine.mz_to_formula(mz, halogen=False), [])
+
 
 if __name__ == '__main__':
     unittest.main()

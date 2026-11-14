@@ -17,9 +17,12 @@ validation partition. Override them with
 Legacy model bundles retain a default limit of 350. Calibration was validated
 for budgets up to 350; larger custom budgets need separate evaluation.
 
-Enable halogen formulas explicitly with ``MsbuddyConfig(halogen=True)`` or
-``--halogen``. The historical default remains ``False``. Formula generation
-still depends on the configured element bounds and fragment/neutral-loss
+Halogen formulas are enabled by default with ``halogen=True``. Both
+halogen-free and halogen-containing candidates are searched for every query.
+Only when prior knowledge rules out F, Cl, Br and I should you use
+``MsbuddyConfig(halogen=False)`` or ``--no-halogen``. The reported model
+validation and candidate-budget selection used halogens enabled for all queries.
+Formula generation still depends on the configured element bounds and fragment/neutral-loss
 database queries; a ranker cannot recover an excluded formula.
 
 Probability and FDR interpretation

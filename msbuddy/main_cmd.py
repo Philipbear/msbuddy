@@ -55,8 +55,12 @@ def main():
                         help='Store true. Whether to use Dalton for mass tolerance. Default: ppm is used.')
     parser.add_argument('--ms1-tol', '-ms1_tol', type=float, default=5, help='MS1 tolerance. Default: 5.')
     parser.add_argument('--ms2-tol', '-ms2_tol', type=float, default=10, help='MS2 tolerance. Default: 10.')
-    parser.add_argument('--halogen', '-halogen', '-hal', action='store_true',
-                        help='Store true. Whether to consider halogen atoms FClBrI. Default: halogen atoms are not considered.')
+    halogen_options = parser.add_mutually_exclusive_group()
+    halogen_options.add_argument('--halogen', '-halogen', '-hal', dest='halogen', action='store_true',
+                                 help='Allow halogen atoms F, Cl, Br and I (default).')
+    halogen_options.add_argument('--no-halogen', dest='halogen', action='store_false',
+                                 help='Exclude F, Cl, Br and I only when prior knowledge rules out halogens.')
+    parser.set_defaults(halogen=True)
     parser.add_argument('-p', '--parallel', '-parallel', action='store_true',
                         help='Store true. Whether to use parallel computing. Default: parallel computing is disabled.')
     parser.add_argument('--n-cpu', '-n_cpu', type=int, default=-1, help='Number of CPUs to use. Default: -1, use all CPUs.')

@@ -108,7 +108,10 @@ class ElementRangeTests(unittest.TestCase):
         self.assertEqual(config.element_ranges['C'], (2, 40))
         self.assertEqual(config.element_ranges['O'], (1, 8))
         self.assertEqual(config.element_ranges['H'], (0, 150))
-        self.assertEqual(config.element_ranges['Cl'], (0, 0))
+        self.assertEqual(config.db_mode, 1)
+        self.assertEqual(config.element_ranges['Cl'], (0, 15))
+        for element in ('F', 'Cl', 'Br', 'I'):
+            self.assertGreater(config.element_ranges[element][1], 0)
         self.assertEqual(config.ele_lower[SUPPORTED_ELEMENTS.index('O')], 1)
         self.assertEqual(config.ele_upper[SUPPORTED_ELEMENTS.index('C')], 40)
         with self.assertRaises(TypeError):
@@ -116,6 +119,11 @@ class ElementRangeTests(unittest.TestCase):
         halogen = MsbuddyConfig(halogen=True, element_ranges={'Cl': (1, 3)})
         self.assertEqual(halogen.element_ranges['Cl'], (1, 3))
         self.assertEqual(halogen.element_ranges['Br'], (0, 10))
+        restricted = MsbuddyConfig(halogen=False)
+        self.assertEqual(restricted.db_mode, 0)
+        for element in ('F', 'Cl', 'Br', 'I'):
+            self.assertEqual(restricted.element_ranges[element], (0, 0))
+            self.assertEqual(restricted.ele_upper[SUPPORTED_ELEMENTS.index(element)], 0)
 
     def test_invalid_ranges_are_rejected(self):
         for bounds in ((1,), (2, 1), (-1, 2), (0, 32768), (0, 1.5), (False, 1), '0,1'):
@@ -124,7 +132,7 @@ class ElementRangeTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             MsbuddyConfig(element_ranges=[('C', (0, 1))])
         with self.assertRaisesRegex(ValueError, 'halogen=True'):
-            MsbuddyConfig(element_ranges={'Cl': (0, 1)})
+            MsbuddyConfig(halogen=False, element_ranges={'Cl': (0, 1)})
 
     def test_add_data_appends_and_validates_before_modifying(self):
         engine = object.__new__(Msbuddy)

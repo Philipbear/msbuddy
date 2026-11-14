@@ -3,7 +3,7 @@
 def test_main():
     from msbuddy import Msbuddy, MsbuddyConfig
     # instantiate a MsbuddyConfig object
-    msb_config = MsbuddyConfig(ms_instr='orbitrap', halogen=False)
+    msb_config = MsbuddyConfig(ms_instr='orbitrap')
 
     # instantiate a Msbuddy object
     msb_engine = Msbuddy(msb_config)

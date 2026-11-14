@@ -109,3 +109,13 @@ Now we use a learning-to-rank model to rank the formula candidates.
   preserve large raw peak indices, and retain legacy-model compatibility.
 - Verify standard model downloads with SHA-256 and atomic replacement.
 - Declare LightGBM as an inference dependency and expand regression coverage.
+
+1.1.1 (2026-11-14)
+- Include F, Cl, Br and I by default in annotation and direct mass searches.
+  Set halogen=False only when prior knowledge rules out halogens.
+- Add --no-halogen to exclude halogens in the CLI while retaining existing
+  --halogen, -halogen and -hal flags. The Nextflow wrapper defaults to -hal 1
+  and accepts -hal 0 to exclude halogens.
+- Clarify the default and explicit exclusion in the README, configuration,
+  command-line, Python API, model and migration documentation.
+- Retain the validated 1.1.0 model bundle and calibration.

@@ -34,11 +34,23 @@ If you want detailed results for each query (all candidate formulas and their sc
 
 Here is an example of processing a mgf file from Orbitrap (``-ms orbitrap``) in parallel (``-p``) using 12 cores (``-n_cpu``).
 Detailed results are written (``-d``).
-Halogen atoms (FClBrI) are also considered (``-hal``).
+Halogen atoms (F, Cl, Br and I) are considered by default.
 
 .. code-block:: bash
 
-        msbuddy -mgf <mgf_file> -output <output_folder> -ms orbitrap -p -n_cpu 12 -d -hal
+        msbuddy -mgf <mgf_file> -output <output_folder> -ms orbitrap -p -n_cpu 12 -d
+
+Both halogen-free and halogen-containing formulas remain candidates. Only when
+prior knowledge rules out halogens should you add ``--no-halogen``:
+
+.. code-block:: bash
+
+        msbuddy --mgf <mgf_file> --ms-instr orbitrap --no-halogen
+
+The existing ``--halogen``, ``-halogen`` and ``-hal`` flags remain supported and
+explicitly enable the default behavior. They cannot be combined with
+``--no-halogen``. The Nextflow wrapper also includes halogens by default;
+its numeric ``-hal 0`` option excludes them when prior knowledge rules them out.
 
 For mgf file or csv file, if you want to use the default output folder (``./msbuddy_output``), you can omit the ``-output`` option.
 Results will be written in the same folder as the input file.

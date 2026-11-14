@@ -82,7 +82,7 @@ class MsbuddyConfig:
                  ppm: bool = True,
                  ms1_tol: float = 5,
                  ms2_tol: float = 10,
-                 halogen: bool = False,
+                 halogen: bool = True,
                  parallel: bool = False,
                  n_cpu: int = -1,
                  timeout_secs: float = 300,
@@ -99,7 +99,8 @@ class MsbuddyConfig:
         :param ppm: whether ppm is used for m/z tolerance
         :param ms1_tol: MS1 m/z tolerance
         :param ms2_tol: MS2 m/z tolerance
-        :param halogen: whether to include halogen atoms; if False, ranges of F, Cl, Br, I will be set to (0, 0)
+        :param halogen: include F, Cl, Br and I by default; set False only when prior
+            knowledge rules out halogens, setting their ranges to (0, 0)
         :param parallel: whether to use parallel processing
         :param n_cpu: number of CPU cores used for parallel processing; if -1, all available cores will be used
         :param timeout_secs: timeout in seconds
@@ -499,14 +500,15 @@ class Msbuddy:
         return result_summary_list
 
     def mass_to_formula(self, mass: float, mass_tol: float = 10., ppm: bool = True,
-                        halogen: bool = False, dbe_cutoff: float = 0.0,
+                        halogen: bool = True, dbe_cutoff: float = 0.0,
                         integer_dbe: bool = True) -> List[FormulaResult]:
         """
         convert mass to formula, return list of formula strings
         :param mass: target mass, should be <1500 Da
         :param mass_tol: mass tolerance
         :param ppm: whether mass_tol is in ppm
-        :param halogen: whether to include halogen atoms
+        :param halogen: include F, Cl, Br and I by default; set False only when prior
+            knowledge rules out halogens
         :param dbe_cutoff: double bond equivalent cutoff
         :param integer_dbe: whether to return only integer DBE
         :return: list of FormulaResult objects
@@ -526,7 +528,7 @@ class Msbuddy:
         return out
 
     def mz_to_formula(self, mz: float, adduct: str = '[M+H]+',
-                      mz_tol: float = 10., ppm: bool = True, halogen: bool = False,
+                      mz_tol: float = 10., ppm: bool = True, halogen: bool = True,
                       dbe_cutoff: float = 0.0, integer_dbe: bool = True) -> List[FormulaResult]:
         """
         convert mz to formula, return list of formula strings
@@ -534,7 +536,8 @@ class Msbuddy:
         :param adduct: adduct string
         :param mz_tol: mz tolerance
         :param ppm: whether mz_tol is in ppm
-        :param halogen: whether to include halogen atoms
+        :param halogen: include F, Cl, Br and I by default; set False only when prior
+            knowledge rules out halogens
         :param dbe_cutoff: double bond equivalent cutoff
         :param integer_dbe: whether to return only integer DBE
         :return: list of FormulaResult objects

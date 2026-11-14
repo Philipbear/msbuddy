@@ -184,10 +184,15 @@ class ModelBundleTests(unittest.TestCase):
 
     def test_configuration_update_can_enable_default_halogen_ranges(self):
         engine = Msbuddy.__new__(Msbuddy)
-        engine.config = MsbuddyConfig()
+        engine.config = MsbuddyConfig(halogen=False)
         engine._dependencies = {}
         engine.update_config(halogen=True)
         self.assertGreater(engine.config.element_ranges['Cl'][1], 0)
+        engine.update_config(halogen=False)
+        engine.update_config(max_candidates=25)
+        self.assertEqual(engine.config.db_mode, 0)
+        for element in ('F', 'Cl', 'Br', 'I'):
+            self.assertEqual(engine.config.element_ranges[element], (0, 0))
 
     def test_partial_update_does_not_reuse_mutated_caller_bounds(self):
         bounds = {'C':[1,60]}

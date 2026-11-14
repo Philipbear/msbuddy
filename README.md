@@ -34,8 +34,11 @@ Python 3.8 or newer; the current model revision is tested with NumPy 1.x and
 ## Model update in 1.1
 
 The revised evidence-mode models use explicit elemental and adduct features,
-a learned candidate selector, and mode-specific candidate limits. Set
-`halogen=True` or pass `--halogen` when halogen formulas should be considered.
+a learned candidate selector, and mode-specific candidate limits.
+**Starting with 1.1.1, halogen atoms (F, Cl, Br and I) are included in the search by default.**
+This allows both halogen-free and halogen-containing formulas without requiring
+prior knowledge of the unknown compound. Only when prior knowledge rules out
+halogens should you set `MsbuddyConfig(halogen=False)` or pass `--no-halogen`.
 Use `MsbuddyConfig(max_candidates=350)` or `--max-candidates 350` to override
 the recommended candidate budget.
 
@@ -75,7 +78,7 @@ msb_config = MsbuddyConfig(ms_instr='orbitrap', # supported: "qtof", "orbitrap",
                            ppm=True,  # use ppm for mass tolerance
                            ms1_tol=5,  # MS1 tolerance in ppm or Da
                            ms2_tol=10,  # MS2 tolerance in ppm or Da
-                           halogen=False)
+                           halogen=True)  # default: allow F, Cl, Br and I
 
 # instantiate a Msbuddy object
 msb_engine = Msbuddy(msb_config)
@@ -91,6 +94,17 @@ result = msb_engine.get_summary()
 ```
 See [demo mgf file](https://github.com/Philipbear/msbuddy/tree/main/demo).
 One of the following fields is recommended to be included, which will be used as the query identifier: `TITLE`, `FEATURE_ID`, `SPECTRUMID`, or `SPECTRUM_ID`.
+
+If prior knowledge establishes that the compounds cannot contain halogens,
+exclude them explicitly:
+
+```python
+msb_config = MsbuddyConfig(ms_instr='orbitrap', halogen=False)
+```
+
+For direct mass searches, pass `halogen=False` to `mass_to_formula()` or
+`mz_to_formula()` under the same condition; these methods also include halogens
+by default.
 
 
 MS/MS spectra can be loaded via their [USIs](https://www.biorxiv.org/content/10.1101/2020.05.09.086066v2) if they are publicly available:
@@ -146,10 +160,18 @@ For mgf file or csv file, you can omit the `-output` option, and results will be
 
 
 Here is an example of processing a mgf file from Orbitrap (`-ms orbitrap`) in parallel (`-p`) using 12 cores (`-n_cpu 12`). Detailed results are written (`-d`).
-Halogen atoms (FClBrI) are also considered (`-hal`).
+Halogen atoms (F, Cl, Br and I) are considered by default.
 ```bash
-msbuddy -mgf <mgf_file> -ms orbitrap -p -n_cpu 12 -d -hal
+msbuddy -mgf <mgf_file> -ms orbitrap -p -n_cpu 12 -d
 ```
+
+Only if prior knowledge rules out halogens, add `--no-halogen`:
+
+```bash
+msbuddy --mgf <mgf_file> --ms-instr orbitrap --no-halogen
+```
+
+The existing `--halogen`, `-halogen` and `-hal` flags remain supported.
 
 Run the following command to see the full list of options:
 ```bash

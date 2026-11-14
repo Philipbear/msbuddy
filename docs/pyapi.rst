@@ -72,6 +72,11 @@ The helpers ``msbuddy.utils.read_formula_str`` and
 Mass search functions
 ~~~~~~~~~~~~~~~~~~~~~
 
+These searches include F, Cl, Br and I by default, alongside halogen-free
+formulas. Only when prior knowledge rules out halogens should you pass
+``halogen=False`` to the search method. Each method accepts its own halogen
+setting independently of the engine's annotation configuration.
+
 .. function:: mass_to_formula (mass: float, mass_tol: float, ppm: bool, halogen: bool, dbe_cutoff: float, integer_dbe: bool)
 
    Convert a monoisotopic mass (neutral) to formula, return list of :class:`msbuddy.utils.FormulaResult`. This function relies on the global dependencies within the :class:`msbuddy.Msbuddy`. It works by database searching. Formula results are sorted by the absolute mass error.
@@ -79,7 +84,7 @@ Mass search functions
    :param mass: float. Target mass, should be <1500 Da.
    :param mass_tol: float. The mass tolerance for searching. Default is 10 ppm.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da. Default is True.
-   :param halogen: bool. If True, the halogen elements (F, Cl, Br, I) are considered. Default is False.
+   :param halogen: bool. Include F, Cl, Br and I by default (True). Set False only when prior knowledge rules out halogens.
    :param dbe_cutoff: float. The DBE cutoff for filtering out formula results. Default is 0.0.
    :param integer_dbe: bool. If True, only return formulas with interger DBE values. Default is True.
    :returns: A list of :class:`msbuddy.utils.FormulaResult` objects.
@@ -109,7 +114,7 @@ Example Usage:
    :param adduct: str. Precursor type string, e.g. "[M+H]+", "[M-H]-".
    :param mz_tol: float. The m/z tolerance for searching. Default is 10 ppm.
    :param ppm: bool. If True, the m/z tolerance is in ppm. If False, the m/z tolerance is in Da. Default is True.
-   :param halogen: bool. If True, the halogen elements (F, Cl, Br, I) are considered. Default is False.
+   :param halogen: bool. Include F, Cl, Br and I by default (True). Set False only when prior knowledge rules out halogens.
    :param dbe_cutoff: float. The DBE cutoff for filtering out formula results. Default is 0.0.
    :param integer_dbe: bool. If True, only return formulas with interger DBE values. Default is True.
    :returns: A list of :class:`msbuddy.utils.FormulaResult` objects.
@@ -218,7 +223,7 @@ Example Usage:
    engine.update_config(ms_instr="fticr", halogen=True, timeout_secs=100)
 
 
-.. class:: msbuddy.MsbuddyConfig (ms_instr=None, ppm=True, ms1_tol=5, ms2_tol=10, halogen=False, parallel=False, n_cpu=-1, timeout_secs=300, batch_size=1000, element_ranges=None, isotope_bin_mztol=0.02, max_isotope_cnt=4, rel_int_denoise_cutoff=0.01, top_n_per_50_da=6, data_dir=None, data_files=None)
+.. class:: msbuddy.MsbuddyConfig (ms_instr=None, ppm=True, ms1_tol=5, ms2_tol=10, halogen=True, parallel=False, n_cpu=-1, timeout_secs=300, batch_size=1000, element_ranges=None, isotope_bin_mztol=0.02, max_isotope_cnt=4, rel_int_denoise_cutoff=0.01, top_n_per_50_da=6, data_dir=None, data_files=None)
 
    It is a class to store all the configurations for **msbuddy**.
 
@@ -226,7 +231,7 @@ Example Usage:
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da. Default is True.
    :param ms1_tol: float. The mass tolerance for MS1 spectra. Default is 5 ppm.
    :param ms2_tol: float. The mass tolerance for MS/MS spectra. Default is 10 ppm.
-   :param halogen: bool. If True, the halogen elements (F, Cl, Br, I) are considered. Default is False.
+   :param halogen: bool. Include F, Cl, Br and I by default (True). Set False only when prior knowledge rules out halogens.
    :param parallel: bool. If True, the annotation is performed in parallel. Default is False.
    :param n_cpu: int. The number of CPUs to use. Default is -1, which means all available CPUs.
    :param timeout_secs: float. The timeout in seconds for each query. Default is 300 seconds.

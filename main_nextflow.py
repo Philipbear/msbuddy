@@ -30,8 +30,8 @@ def main():
                         help='Whether to use ppm for mass tolerance. Default: ppm is enabled.')
     parser.add_argument('-ms1_tol', type=float, default=5, help='MS1 tolerance. Default: 5.')
     parser.add_argument('-ms2_tol', type=float, default=10, help='MS2 tolerance. Default: 10.')
-    parser.add_argument('-halogen', '-hal', type=int, default=0,
-                        help='Whether to consider halogen atoms FClBrI. Default: False.')
+    parser.add_argument('-halogen', '-hal', type=int, choices=(0, 1), default=1,
+                        help='Allow F, Cl, Br and I by default (1). Use 0 only when prior knowledge rules out halogens.')
     parser.add_argument('-timeout_secs', '-t', type=int, default=300, help='Timeout in seconds. Default: 300.')
     parser.add_argument('-batch_size', '-bs', type=int, default=5000,
                         help='Batch size. Default: 5000. A larger batch size needs more memory, but is faster.')

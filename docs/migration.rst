@@ -54,6 +54,17 @@ Each pair is inclusive. Unspecified elements keep their defaults; K and Na
 default to zero. Explicit nonzero halogen ranges require ``halogen=True``.
 The existing command-line element-limit options remain available.
 
+Halogen search defaults
+-----------------------
+
+Since 1.1.1, halogen searching defaults to ``True`` in ``MsbuddyConfig``,
+``mass_to_formula`` and ``mz_to_formula``, and is enabled by default in the CLI.
+Both halogen-free and halogen-containing formulas are considered. Only when
+prior knowledge rules out F, Cl, Br and I should you restrict annotation with
+``MsbuddyConfig(halogen=False)`` or ``--no-halogen``. For direct mass searches,
+pass ``halogen=False`` to the search method under the same condition.
+Existing explicit ``halogen=False`` settings continue to exclude halogens.
+
 Adding data
 -----------
 
