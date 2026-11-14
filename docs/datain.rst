@@ -10,7 +10,7 @@ Built-in Data Import
     Read from a single USI string or a sequence of USI strings, and load the data into the ``data`` attribute of the :class:`msbuddy.Msbuddy` object. The USI string will be used as the unique identifier in `msbuddy`.
 
     :param usi_list: str or List[str]. A single USI string or a sequence of USI strings.
-    :param optional adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
+    :param adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
     :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
 Example Usage:

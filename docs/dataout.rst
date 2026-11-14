@@ -9,7 +9,7 @@ All the top 5 formulas will be included in the ``results``.
    # retrieve the annotation result summary
    results = msb_engine.get_summary()
 
-In case you want to access all the annotation results, you can iterate through the :class:`CandidateFormula` objects stored in each :class:`MetaFeature`.
+In case you want to access all the annotation results, you can iterate through the :class:`msbuddy.base.CandidateFormula` objects stored in each :class:`msbuddy.base.MetaFeature`.
 
 .. code-block:: python
 
@@ -22,7 +22,7 @@ In case you want to access all the annotation results, you can iterate through t
 
 
 
-Please see :class:`MetaFeature` and :class:`CandidateFormula` in `Python API <pyapi.html>`_ for more details.
+Please see :class:`msbuddy.base.MetaFeature` and :class:`msbuddy.base.CandidateFormula` in `Python API <pyapi.html>`_ for more details.
 
 .. note::
     If you are using the command-line interface, the result summary will be automatically written in the output directory as a ``.tsv`` file.

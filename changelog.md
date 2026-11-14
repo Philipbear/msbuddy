@@ -119,3 +119,16 @@ Now we use a learning-to-rank model to rank the formula candidates.
 - Clarify the default and explicit exclusion in the README, configuration,
   command-line, Python API, model and migration documentation.
 - Retain the validated 1.1.0 model bundle and calibration.
+
+1.2.0 (2026-11-14)
+- Add one compact CPU spectral encoder shared by MS2 and joint MS1+MS2 ranking,
+  combined with formula, mass, isotope and fragment evidence.
+- Add conditional probability calibration using precursor fit and observed
+  isotope count, preserving explicit absent-answer probability mass.
+- Accept optional instrument and collision-energy metadata in MetaFeature and
+  MGF input; mask unknown units and stepped energies.
+- Add timstof configuration and use_spectral / --no-spectral selection, with
+  established rankers retained outside validated compact-model settings.
+- Keep halogens enabled by default and retain the recommended candidate budgets.
+- Use lazy CPU ONNX Runtime inference without requiring PyTorch or CUDA.
+- Clarify per-query confidence cutoffs versus pooled expected-error selection.

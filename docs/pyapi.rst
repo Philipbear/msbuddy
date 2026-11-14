@@ -166,7 +166,7 @@ Classes
       Read USIs and replace the currently loaded data.
 
       :param usi_list: str or List[str]. A single USI string or a sequence of USI strings.
-      :param optional adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
+      :param adduct_list: str or List[str]. A single adduct string or a sequence of adduct strings, which will be applied to all USI strings accordingly.
       :returns: None. A list of :class:`msbuddy.base.MetaFeature` objects will be stored in the ``data`` attribute of the :class:`msbuddy.Msbuddy` object.
 
    .. method:: load_mgf (mgf_file: str)
@@ -223,11 +223,12 @@ Example Usage:
    engine.update_config(ms_instr="fticr", halogen=True, timeout_secs=100)
 
 
-.. class:: msbuddy.MsbuddyConfig (ms_instr=None, ppm=True, ms1_tol=5, ms2_tol=10, halogen=True, parallel=False, n_cpu=-1, timeout_secs=300, batch_size=1000, element_ranges=None, isotope_bin_mztol=0.02, max_isotope_cnt=4, rel_int_denoise_cutoff=0.01, top_n_per_50_da=6, data_dir=None, data_files=None)
+.. class:: msbuddy.MsbuddyConfig (ms_instr=None, ppm=True, ms1_tol=5, ms2_tol=10, halogen=True, parallel=False, n_cpu=-1, timeout_secs=300, batch_size=1000, element_ranges=None, isotope_bin_mztol=0.02, max_isotope_cnt=4, rel_int_denoise_cutoff=0.01, top_n_per_50_da=6, data_dir=None, data_files=None, max_candidates=None, use_spectral=True)
 
    It is a class to store all the configurations for **msbuddy**.
 
-   :param ms_instr: str. The mass spectrometry instrument type, used for automated mass tolerance setting. Supported instruments are "orbitrap", "fticr" and "qtof". Default is None. If None, parameters ``ppm``, ``ms1_tol`` and ``ms2_tol`` will be used.
+   :param ms_instr: str. Instrument family for mass tolerances and optional spectral metadata: "orbitrap", "fticr", "qtof" or "timstof". Default None uses ``ppm``, ``ms1_tol`` and ``ms2_tol``.
+   :param use_spectral: bool. Use the compact CPU spectral ranker for supported settings (default True). False uses the established numerical rankers.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da. Default is True.
    :param ms1_tol: float. The mass tolerance for MS1 spectra. Default is 5 ppm.
    :param ms2_tol: float. The mass tolerance for MS/MS spectra. Default is 10 ppm.
@@ -262,7 +263,7 @@ Example Usage:
 
 
 
-.. class:: msbuddy.base.Spectrum (mz_array: np.array, int_array: np.array)
+.. class:: msbuddy.base.Spectrum (mz_array, int_array)
 
     A class to represent a mass spectrum.
 
@@ -296,7 +297,7 @@ Example usage:
 
    :param composition: Mapping from element symbols to nonnegative integer counts.
    :param charge: int. The charge of the molecular formula; defaults to zero.
-   :param optional mass: float. The exact mass of the molecular formula. Default is None, exact mass will be calculated.
+   :param mass: float. The exact mass of the molecular formula. Default is None, exact mass will be calculated.
    :param isotope: int. The isotopologue of the formula (e.g., 1 for M+1). Default is 0, which means M+0.
 
 
@@ -333,7 +334,7 @@ Example usage:
     unless ``report_invalid=True``. Unsupported elements always raise
     ``UnsupportedElementError``.
 
-   :param optional string: str. The adduct type. Default is [M+H]+ for positive mode and [M-H]- for negative mode.
+   :param string: str. The adduct type. Default is [M+H]+ for positive mode and [M-H]- for negative mode.
    :param pos_mode: bool. True for positive mode and False for negative mode.
    :param report_invalid: bool. If True, an error will be raised if the input adduct type cannot be parsed. If False, the default adduct type will be used. Default is False.
 
@@ -438,7 +439,7 @@ Example usage:
 
 
 
-.. class:: msbuddy.base.MS2Explanation (idx_array: np.array, explanation_array: List[Union[Formula, None]])
+.. class:: msbuddy.base.MS2Explanation (idx_array, explanation_array: List[Union[Formula, None]])
 
     A class to represent MS/MS explanation.
 
@@ -461,8 +462,8 @@ Example usage:
 
    :param formula: :class:`msbuddy.base.Formula` object. The candidate formula (in neutral form).
    :param charged_formula: :class:`msbuddy.base.Formula` object. The candidate formula (in charged form).
-   :param optional ms1_isotope_similarity: float. The isotope similarity between the candidate formula and the MS1 isotopic pattern.
-   :param optional ms2_raw_explanation: :class:`msbuddy.base.MS2Explanation` object. The MS/MS explanation for the candidate formula.
+   :param ms1_isotope_similarity: float. The isotope similarity between the candidate formula and the MS1 isotopic pattern.
+   :param ms2_raw_explanation: :class:`msbuddy.base.MS2Explanation` object. The MS/MS explanation for the candidate formula.
 
    .. attribute:: formula
 
@@ -494,17 +495,20 @@ Example usage:
 
 
 
-.. class:: msbuddy.base.MetaFeature (identifier: Union[str, int], mz: float, charge: int, rt: Union[float, None] = None, adduct: Union[str, None] = None, ms1: Union[Spectrum, None] = None, ms2: Union[Spectrum, None] = None)
+.. class:: msbuddy.base.MetaFeature (identifier: Union[str, int], mz: float, charge: int, rt: Union[float, None] = None, adduct: Union[str, None] = None, ms1: Union[Spectrum, None] = None, ms2: Union[Spectrum, None] = None, instrument=None, collision_energy=None, collision_energy_unit=None)
 
     A class to represent a metabolic feature.
 
    :param identifier: str or int. A unique identifier for the metabolic feature.
    :param mz: float. Precursor ion m/z.
    :param charge: int. Precursor ion charge.
-   :param optional rt: float. Retention time in seconds. Default is None.
-   :param optional adduct: str. Adduct type. If omitted, the default adds or removes one proton per charge, such as [M+H]+ or [M+2H]2+.
-   :param optional ms1: :class:`msbuddy.base.Spectrum` object. MS1 spectrum containing the isotopic pattern information. Default is None.
-   :param optional ms2: :class:`msbuddy.base.Spectrum` object. MS/MS spectrum. Default is None.
+   :param rt: float. Retention time in seconds. Default is None.
+   :param adduct: str. Adduct type. If omitted, the default adds or removes one proton per charge, such as [M+H]+ or [M+2H]2+.
+   :param ms1: :class:`msbuddy.base.Spectrum` object. MS1 spectrum containing the isotopic pattern information. Default is None.
+   :param ms2: :class:`msbuddy.base.Spectrum` object. MS/MS spectrum. Default is None.
+   :param instrument: Acquisition family ("orbitrap", "qtof" or "timstof"). Supplies model metadata without changing configured mass tolerances.
+   :param collision_energy: Energy string with units, or a numeric value with ``collision_energy_unit``. Unknown and stepped energies are masked.
+   :param collision_energy_unit: "ev" or "nce" for numeric energy values. Default is None.
 
    .. attribute:: identifier
 

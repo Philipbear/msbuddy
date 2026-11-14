@@ -3,7 +3,10 @@ numpy>=1.24.0
 scipy>=1.10.0
 
 # Machine Learning libraries
-lightgbm>=3.2.1
+lightgbm>=4.0
+onnxruntime>=1.19.2,<2; python_version >= '3.9'
+onnxruntime>=1.16.3,<1.19; python_version < '3.9'
+numpy<2; python_version < '3.9'
 
 # For downloading data
 gdown>=4.7.0

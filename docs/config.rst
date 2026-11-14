@@ -31,11 +31,13 @@ We would recommend considering parallel processing for large datasets (e.g. >100
     msb_engine = Msbuddy(msb_config)
 
 
-It is **highly recommended** to set up ``ms_instr`` in the :class:`msbuddy.MsbuddyConfig` to obtain the best annotation performance. The supported MS types are ``"qtof"``, ``"orbitrap"`` and ``"fticr"``.
+It is **highly recommended** to set up ``ms_instr`` in the :class:`msbuddy.MsbuddyConfig` to obtain the best annotation performance. The supported MS types are ``"qtof"``, ``"timstof"``, ``"orbitrap"`` and ``"fticr"``.
 
 The following mass tolerances will be used for each MS instrument:
 
 ``qtof``: ms1 tolerance = 10 ppm, ms2 tolerance = 20 ppm
+
+``timstof``: ms1 tolerance = 10 ppm, ms2 tolerance = 20 ppm
 
 ``orbitrap``: ms1 tolerance = 5 ppm, ms2 tolerance = 10 ppm
 

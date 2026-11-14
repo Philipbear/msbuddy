@@ -761,7 +761,10 @@ class MetaFeature:
                  rt: Union[float, None] = None,  # retention time in seconds
                  adduct: Union[str, None] = None,
                  ms1: Union[Spectrum, None] = None,
-                 ms2: Union[Spectrum, None] = None):
+                 ms2: Union[Spectrum, None] = None,
+                 instrument: Union[str, None] = None,
+                 collision_energy=None,
+                 collision_energy_unit: Union[str, None] = None):
         """
         Instantiate a new MetaFeature object.
         :param identifier: identifier (str or int)
@@ -771,6 +774,9 @@ class MetaFeature:
         :param adduct: adduct string, e.g., "[M+H]+" (str)
         :param ms1: MS1 spectrum (Spectrum class)
         :param ms2: MS2 spectrum (Spectrum class)
+        :param instrument: optional orbitrap, qtof or timstof acquisition family
+        :param collision_energy: optional energy with explicit units in its string or collision_energy_unit
+        :param collision_energy_unit: ev or nce; unspecified numeric units are masked
         """
         if charge == 0:
             raise ValueError("Charge cannot be 0.")
@@ -784,6 +790,9 @@ class MetaFeature:
         self.identifier = identifier
         self.mz = mz
         self.rt = rt
+        from msbuddy._acquisition import instrument_family, collision_energy as normalize_energy
+        self.instrument = instrument_family(instrument)
+        self.collision_energy, self.collision_energy_unit = normalize_energy(collision_energy, collision_energy_unit)
 
         pos_mode = charge > 0
         if adduct is None and abs(charge) > 1:

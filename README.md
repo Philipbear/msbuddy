@@ -27,9 +27,30 @@ The minimum requirement for a msbuddy query is a single _m/z_ value and its ioni
 ```commandline
 pip install msbuddy
 ```
-LightGBM is installed as an inference dependency. The package requires
-Python 3.8 or newer; the current model revision is tested with NumPy 1.x and
-2.x on Python 3.10 and 3.11, with additional Python 3.8 grammar checks.
+LightGBM and the CPU ONNX Runtime are inference dependencies. PyTorch and CUDA
+are not required. Python 3.8 or newer is supported; Python 3.8 uses NumPy 1.x
+and a compatible ONNX Runtime version.
+
+## Compact spectral models in 1.2
+
+MS2 and joint MS1+MS2 ranking now share a compact 714,599-parameter spectrum
+encoder, combined with the existing formula, mass and fragment evidence.
+The encoder and two heads occupy about 9 MB before compression. The complete
+model bundle, including the established models, is about 197 MB, replacing
+the previous 192 MB bundle. The formula database is a separate download.
+
+Acquisition metadata are optional. Set `MsbuddyConfig(ms_instr="orbitrap")`
+or the appropriate instrument family to configure mass tolerances and provide
+the instrument hint. `MetaFeature` also accepts `instrument`, `collision_energy`
+and `collision_energy_unit` (`"ev"` or `"nce"`). MGF fields
+`INSTRUMENT_TYPE` and `COLLISION_ENERGY=30 nce` are recognized. Unknown or
+stepped energies are masked; bare numbers need explicit units.
+
+Use `MsbuddyConfig(use_spectral=False)` or `--no-spectral` to select the
+established numerical rankers. They are also used for custom candidate budgets
+and inputs outside the compact models' validated settings. See the
+[model guide](https://github.com/Philipbear/msbuddy/blob/main/docs/models.rst)
+for confidence interpretation and supported settings.
 
 ## Model update in 1.1
 

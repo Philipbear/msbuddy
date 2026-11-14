@@ -50,7 +50,9 @@ def main():
     parser.add_argument('-d', '--details', '-details', action='store_true',
                         help='Store true. Whether to write detailed results. Default: detailed results are not written.')
     parser.add_argument('--ms-instr', '-ms_instr', '-ms', type=str, default=None,
-                        help='MS instrument type. Supported types: orbitrap, qtof, fticr.')
+                        help='MS instrument type. Supported types: orbitrap, qtof, timstof, fticr.')
+    parser.add_argument('--no-spectral', dest='use_spectral', action='store_false', default=True,
+                        help='Use the established numerical rankers without the compact spectral encoder.')
     parser.add_argument('--use-da', '-use_Da', dest='use_Da', action='store_true',
                         help='Store true. Whether to use Dalton for mass tolerance. Default: ppm is used.')
     parser.add_argument('--ms1-tol', '-ms1_tol', type=float, default=5, help='MS1 tolerance. Default: 5.')
@@ -139,7 +141,8 @@ def main():
         isotope_bin_mztol=args.isotope_bin_mztol, max_isotope_cnt=args.max_isotope_cnt,
         rel_int_denoise_cutoff=args.rel_int_denoise_cutoff, top_n_per_50_da=args.top_n_per_50_da,
         data_dir=args.data_dir, data_files=data_files,
-        max_candidates=getattr(args, 'max_candidates', None)
+        max_candidates=getattr(args, 'max_candidates', None),
+        use_spectral=getattr(args, 'use_spectral', True)
     )
 
     if args.output:

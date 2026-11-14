@@ -33,7 +33,7 @@ from msbuddy.utils import UnsupportedElementError
 logging.basicConfig(level=logging.INFO)
 
 current_db_version = 'v0.2.4'
-current_model_version = 'v1.1.0'
+current_model_version = 'v1.2.0'
 
 DATA_FILES = {
     'common_db': {
@@ -49,11 +49,11 @@ DATA_FILES = {
             'msbuddy_data_v0.2.4/formula_db_v0.2.4.joblib'),
     },
     'ml_model': {
-        'sha256': 'f5833c0a19d0ca2f8de0dca4fc88466e157bfd972c83e543332cd647b209ed42',
+        'sha256': '4e5f9cb20cd14f758d2a7c5fd48c56d4595100be40190adbcbcb48d4e10d6f21',
         'filename': 'ml_' + current_model_version + '.joblib',
         'url': (
             'https://github.com/Philipbear/msbuddy/releases/download/'
-            'msbuddy_data_v1.1.0/ml_v1.1.0.joblib'),
+            'msbuddy_data_v1.2.0/ml_v1.2.0.joblib'),
     },
 }
 
@@ -336,6 +336,11 @@ def _load_versioned_models(bundle, dependencies):
             fallback['platt_a_' + str(group)] = legacy[4 + 2 * group]
             fallback['platt_b_' + str(group)] = legacy[5 + 2 * group]
         selected['legacy_dependencies'] = fallback
+    if 'spectral_models' in bundle:
+        from msbuddy._spectral import validate
+        validate(bundle['spectral_models'])
+        selected['model_spectral'] = bundle['spectral_models']
+        selected['model_spectral_cache'] = {}
     dependencies.update(selected)
 
 
@@ -367,6 +372,9 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 ms2_spec = True
                 rt = None
                 adduct_str = None
+                instrument = None
+                energy = None
+                energy_unit = None
             elif _line.startswith('END IONS'):
                 # create a new MetaFeature
                 if precursor_mz is None:
@@ -393,6 +401,9 @@ def load_mgf(file_path) -> List[MetaFeature]:
                 if existing is not None:
                     if ms2_spec and existing.ms2_raw is None:
                         existing.ms2_raw = Spectrum(mz_arr, int_arr) if mz_arr else None
+                        from msbuddy._acquisition import instrument_family, collision_energy
+                        existing.instrument = instrument_family(instrument) or existing.instrument
+                        existing.collision_energy, existing.collision_energy_unit = collision_energy(energy, energy_unit)
                     elif ms2_spec is False and existing.ms1_raw is None:
                         existing.ms1_raw = Spectrum(mz_arr, int_arr) if mz_arr else None
                     continue
@@ -404,14 +415,15 @@ def load_mgf(file_path) -> List[MetaFeature]:
                                          rt=rt,
                                          adduct=adduct_str,
                                          ms2=Spectrum(mz_arr, int_arr) if mz_arr else None,
-                                         identifier=identifier)
+                                         identifier=identifier, instrument=instrument,
+                                         collision_energy=energy, collision_energy_unit=energy_unit)
                     else:
                         mf = MetaFeature(mz=precursor_mz,
                                          charge=charge,
                                          rt=rt,
                                          adduct=adduct_str,
                                          ms1=Spectrum(mz_arr, int_arr) if mz_arr else None,
-                                         identifier=identifier)
+                                         identifier=identifier, instrument=instrument)
                     meta_feature_list.append(mf)
                     features_by_identifier[identifier] = mf
                     cnt += 1
@@ -442,7 +454,7 @@ def load_mgf(file_path) -> List[MetaFeature]:
                         else:
                             charge = int(value)
                     # if key is 'ION', it is adduct type
-                    elif key.upper() in ['ION', 'IONTYPE', 'ION_TYPE', 'ADDUCT', 'ADDUCTTYPE', 'ADDUCT_TYPE']:
+                    elif key.upper() in ['ION', 'IONTYPE', 'ION_TYPE', 'ADDUCT', 'ADDUCTTYPE', 'ADDUCT_TYPE', 'PRECURSOR_TYPE']:
                         _validate_adduct_elements(value)
                         adduct_str = value
                     # if key is 'IONMODE', it is ion mode
@@ -460,6 +472,14 @@ def load_mgf(file_path) -> List[MetaFeature]:
                         rt = float(value)
                     elif key.upper() == 'RTINMINUTES' and value != '':
                         rt = float(value) * 60
+                    elif key.upper() in ['INSTRUMENT', 'INSTRUMENT_TYPE', 'MS_INSTRUMENT']:
+                        instrument = value
+                    elif key.upper() in ['COLLISION_ENERGY', 'COLLISIONENERGY', 'CE']:
+                        energy = value
+                    elif key.upper() in ['COLLISION_ENERGY_EV', 'COLLISIONENERGYEV']:
+                        energy, energy_unit = value, 'ev'
+                    elif key.upper() in ['COLLISION_ENERGY_UNIT', 'COLLISIONENERGYUNIT']:
+                        energy_unit = value
                 else:
                     # Some MGF files include a third peak charge or annotation.
                     parts = _line.split()

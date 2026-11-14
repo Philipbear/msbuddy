@@ -452,6 +452,9 @@ def _predict_ml(meta_feature_list, group_no: int, ppm: bool, ms1_tol: float, ms2
                 X_arr[:, :legacy_length], num_threads=1) / legacy_scale
     else:
         score_arr = model.predict(X_arr.astype(np.float32) if gd.get('model_feature_version', 1) >= 2 else X_arr)
+    if gd.get('model_spectral_active'):
+        from msbuddy._spectral import rank
+        score_arr = rank(meta_feature_list, X_arr, score_arr, group_no, gd)
     return score_arr
 
 
@@ -487,7 +490,7 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
 
     # split buddy data into 4 groups and store their indices in a dictionary
     group_dict = dict()
-    for i in range(8):
+    for i in range(12):
         group_dict[i] = []
 
     from msbuddy._candidate_selection import in_model_scope
@@ -499,35 +502,40 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
         has_ms1 = bool(meta_feature.ms1_processed) and len(meta_feature.ms1_processed) > 1
         has_ms2 = bool(meta_feature.ms2_processed)
         fallback = 4 if 'legacy_dependencies' in gd and not in_model_scope(meta_feature, ppm, gd) else 0
-        if has_ms1:
-            if has_ms2:
-                group_dict[fallback].append(i)
-            else:
-                group_dict[1 + fallback].append(i)
-        else:
-            if has_ms2:
-                group_dict[2 + fallback].append(i)
-            else:
-                group_dict[3 + fallback].append(i)
+        group = 0 if has_ms1 and has_ms2 else 1 if has_ms1 else 2 if has_ms2 else 3
+        if not fallback and group in (0, 2) and gd.get('model_spectral'):
+            from msbuddy._spectral import in_scope as spectral_in_scope
+            if spectral_in_scope(meta_feature, config):
+                fallback = 8
+        group_dict[group + fallback].append(i)
 
     # predict formula probability
-    for key in range(8):
+    for key in range(12):
         if not group_dict[key]:
             continue
         i = key % 4
-        active = gd if key < 4 else dict(gd, **gd['legacy_dependencies'], model_feature_version=1)
+        if 4 <= key < 8:
+            active = dict(gd, **gd['legacy_dependencies'], model_feature_version=1,
+                          model_spectral_active=False)
+        elif key >= 8:
+            active = dict(gd, model_spectral_active=True,
+                          model_spectral_instrument=getattr(config, 'ms_instr', None))
+        else:
+            active = gd
         # predict formula probability
         prob_arr = _predict_ml([batch_data[j] for j in group_dict[key]], i, ppm, ms1_tol, ms2_tol, active)
-        specification = gd.get('calibration_' + str(i)) if key < 4 else None
+        specification = (gd['model_spectral']['modes'][i]['calibration'] if key >= 8
+                         else gd.get('calibration_' + str(i)) if key < 4 else None)
         if specification is not None:
-            from msbuddy._calibration import feature_context, calibrated_probabilities
+            from msbuddy._calibration import feature_context, calibrated_probabilities, CONTEXT_NAMES
             offset = 0
             calibrated = np.empty_like(prob_arr, dtype=float)
             for index in group_dict[key]:
                 feature = batch_data[index]
                 size = len(feature.candidate_formula_list)
                 scores = prob_arr[offset:offset + size]
-                context = feature_context(feature, scores)
+                context = feature_context(feature, scores, ms1_tol,
+                                          specification.get('context_names', CONTEXT_NAMES))
                 probabilities, _ = calibrated_probabilities(scores, context, specification)
                 calibrated[offset:offset + size] = probabilities
                 offset += size

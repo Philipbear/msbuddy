@@ -93,9 +93,10 @@ class MsbuddyConfig:
                  top_n_per_50_da: int = 6,
                  data_dir=None,
                  data_files=None,
-                 max_candidates=None):
+                 max_candidates=None,
+                 use_spectral: bool = True):
         """
-        :param ms_instr: mass spectrometry instrument, one of "orbitrap, "fticr", "qtof".
+        :param ms_instr: orbitrap, qtof, timstof, fticr, or None
         :param ppm: whether ppm is used for m/z tolerance
         :param ms1_tol: MS1 m/z tolerance
         :param ms2_tol: MS2 m/z tolerance
@@ -115,12 +116,13 @@ class MsbuddyConfig:
         :param data_files: optional mapping of common_db, formula_db, or ml_model to custom file paths
         :param max_candidates: optional candidate budget; by default use the model's
             recommended budget, or 350 with legacy models
+        :param use_spectral: use the compact CPU spectral ranker when supported by the loaded bundle
         """
         if ms_instr is None or ms_instr == "None":
             self.ppm = ppm
             self.ms1_tol = ms1_tol
             self.ms2_tol = ms2_tol
-        elif ms_instr in ["orbitrap", "fticr", "qtof"]:
+        elif ms_instr in ["orbitrap", "fticr", "qtof", "timstof"]:
             self.ppm = True
             if ms_instr == "orbitrap":
                 self.ms1_tol = 5
@@ -132,7 +134,12 @@ class MsbuddyConfig:
                 self.ms1_tol = 10
                 self.ms2_tol = 20
         else:
-            raise ValueError("Invalid MS instrument. Please choose from 'orbitrap', 'fticr', 'qtof' and None.")
+            raise ValueError("Invalid MS instrument. Please choose from 'orbitrap', 'fticr', 'qtof', 'timstof' and None.")
+
+        self.ms_instr = None if ms_instr in (None, 'None') else ms_instr
+        if not isinstance(use_spectral, bool):
+            raise ValueError('use_spectral must be True or False.')
+        self.use_spectral = use_spectral
 
         self.db_mode = 0 if not halogen else 1
         self.parallel = parallel
@@ -240,9 +247,14 @@ class Msbuddy:
             'top_n_per_50_da', 'data_dir', 'data_files', 'max_candidates')}
         settings.update(halogen=bool(current.db_mode),
                         timeout_secs=current._requested_timeout_secs,
-                        element_ranges=current._user_element_ranges)
+                        element_ranges=current._user_element_ranges,
+                        use_spectral=getattr(current, 'use_spectral', True))
         settings.update(kwargs)
         updated = MsbuddyConfig(**settings)
+        if 'ms_instr' not in kwargs:
+            # Preserve the metadata hint without reapplying its preset over
+            # an explicit tolerance update.
+            updated.ms_instr = getattr(current, 'ms_instr', None)
         dependencies = self._dependencies
         if (updated.data_dir != current.data_dir
                 or updated.data_files != current.data_files):
