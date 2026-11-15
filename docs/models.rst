@@ -1,7 +1,7 @@
 Model update and confidence estimates
 ============================================
 
-Version 1.3 uses one 749,644-parameter spectral encoder and one shared
+Version 1.4 uses one 749,644-parameter spectral encoder and one shared
 candidate scorer for MS2 and joint MS1+MS2 annotation. The scorer combines
 the spectrum representation, soft atom-count likelihoods, accurate fragment
 mass patterns and physical formula evidence. It no longer needs numerical
@@ -12,14 +12,15 @@ There is no hard biological-formula classifier or element-presence gate.
 F, Cl, Br and I remain available for every query by default. Atom-count
 predictions contribute ranking evidence without excluding candidate formulas.
 
-The default model download is 9,371,942 bytes. The encoder itself is about
+The default model download is 8,751,792 bytes. The encoder itself is about
 3.05 MB; the model download also contains the shared scorer, candidate
 selector and probability calibration. Optional compatibility weights are
 169,787,342 bytes and are fetched only when needed. The redesigned formula
-and common databases total about 23.0 MB. Together, standard model and database
-downloads total about 32.4 MB, compared with about 633.7 MB in version 1.2.
+and common databases total 18,408,367 bytes. Together, standard model and
+database downloads total 27,160,159 bytes, compared with 32,365,088 bytes in
+version 1.3 and about 633.7 MB in version 1.2.
 
-See :doc:`model_report_1_3` for the full evaluation and :doc:`database_format`
+See :doc:`model_report_1_4` for the current evaluation and :doc:`database_format`
 for the lossless numerical format.
 
 Optional acquisition metadata
@@ -89,6 +90,11 @@ The latter operating point can be mildly optimistic under precursor mass
 error, particularly with missing acquisition metadata. Validate pooled
 reporting, halogen-rich samples and unusual acquisition conditions separately.
 Neither operating point provides a distribution-free FDR-control guarantee.
+For version 1.4, the nominal pooled 5% rule exceeded 5% observed error in
+the external halogen MS2 subgroup (3 errors among 34 accepted). The missing
+true-formula probability was also underestimated in external MS2 data. These
+estimates should not be treated as validated 5% FDR control across sources;
+see :doc:`model_report_1_4` for the complete denominators and other modes.
 
 The ``normalized_estimated_prob`` output column is retained for compatibility.
 It now preserves probability mass for an absent answer, rather than forcing

@@ -32,8 +32,8 @@ from msbuddy.utils import UnsupportedElementError
 
 logging.basicConfig(level=logging.INFO)
 
-current_db_version = 'v0.3.0'
-current_model_version = 'v1.3.0'
+current_db_version = 'v0.4.0'
+current_model_version = 'v1.4.0'
 
 DATA_FILES = {
     'common_db': {
@@ -41,21 +41,21 @@ DATA_FILES = {
         'filename': 'common_db_' + current_db_version + '.msbdb',
         'url': (
             'https://github.com/Philipbear/msbuddy/releases/download/'
-            'msbuddy_database_v0.3.0/common_db_v0.3.0.msbdb'),
+            'msbuddy_database_v0.4.0/common_db_v0.4.0.msbdb'),
     },
     'formula_db': {
-        'sha256': '08f1880c0ef7883ab134734ca2d9db701f1e89a17c7cb14009054de594c96784',
+        'sha256': '26b9ed9b4d1aa0a0bd5b03ed75b1d97e7fd19fe2137c38784280526fd7e678b8',
         'filename': 'formula_db_' + current_db_version + '.msbdb',
         'url': (
             'https://github.com/Philipbear/msbuddy/releases/download/'
-            'msbuddy_database_v0.3.0/formula_db_v0.3.0.msbdb'),
+            'msbuddy_database_v0.4.0/formula_db_v0.4.0.msbdb'),
     },
     'ml_model': {
-        'sha256': 'a0936a1c9f22cae54566e7e5588381661f35306cb66a75c03d2b623a7d4c8d13',
+        'sha256': 'bc00f4b94a194c962a7ce9f505fa70876e90df62d7bb2bc3f109f085baad61da',
         'filename': 'ml_' + current_model_version + '.joblib',
         'url': (
             'https://github.com/Philipbear/msbuddy/releases/download/'
-            'msbuddy_data_v1.3.0/ml_v1.3.0.joblib'),
+            'msbuddy_data_v1.4.0/ml_v1.4.0.joblib'),
     },
     'ml_compatibility': {
         'sha256': 'b577caafd6b036e949e6ff28a50c6312da2cf2c5f83d69c330ab6d017628c263',

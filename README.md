@@ -31,26 +31,28 @@ LightGBM and the CPU ONNX Runtime are inference dependencies. PyTorch and CUDA
 are not required. Python 3.8 or newer is supported; Python 3.8 uses NumPy 1.x
 and a compatible ONNX Runtime version.
 
-## Compact models and databases in 1.3
+## Compact models and downloads in 1.4
 
 MS2 and joint MS1+MS2 ranking share one 749,644-parameter spectral encoder
-and one candidate scorer. Accurate fragment-mass patterns and soft atom-count
-likelihoods complement formula, mass, isotope and fragment evidence.
-The default model is **9.37 MB**, replacing the 197 MB all-mode download.
+and one candidate scorer. The 1.4 hybrid refines the encoder's output head
+while retaining formula, mass, isotope and fragment evidence. The default
+model download is **8.75 MB**.
 Compatibility weights are downloaded when an older evidence mode or setting
 requires them; use `download_data(include_compatibility=True)` for offline use.
 
-The redesigned formula database is **23.0 MB**, down from 436.5 MB, with every
-formula, duplicate, index and stored mass bit preserved. Default model and
-database downloads total about **32.4 MB**. Existing custom legacy databases
-and models remain supported.
+The lossless formula database is **18.41 MB**, with every formula, duplicate,
+index and stored mass bit preserved. Default model and database downloads
+total **27.16 MB**, compared with 32.37 MB in 1.3. Existing custom legacy
+databases and models remain supported.
 
-On a frozen 4,000-formula evaluation, MS2-only top-1 accuracy improved from
-86.55% to 89.63%; joint accuracy improved from 94.38% to 94.95% with simulated
-MS1 isotope evidence. A separate 153-formula fluorinated challenge also
-improved. Results vary across domains: a smaller external PFAS subset had
-lower MS2-only accuracy. See the [complete validation report](https://github.com/Philipbear/msbuddy/blob/main/docs/model_report_1_3.rst)
-for paired intervals, missing-metadata results, confidence checks and limitations.
+On a 1,696-formula fresh accuracy review, native MS2 top-1 improved from
+1,225 to 1,241 correct, and joint top-1 with simulated isotope evidence from
+1,447 to 1,461. Transfer varies by acquisition source: an independent
+1,507-formula diagnostic reached 900 correct with MS2 alone. A nominal pooled
+5% error threshold had 3 errors among 34 accepted halogen MS2 annotations
+in that diagnostic (8.82%). **The 1.4 confidence estimates are model-based
+and are not validated as general 5% FDR control across sources or halogen-rich
+MS2 data.** See the [1.4 model review](https://github.com/Philipbear/msbuddy/blob/main/docs/model_report_1_4.rst).
 
 Acquisition metadata are optional. Set `MsbuddyConfig(ms_instr="orbitrap")`
 or the appropriate instrument family to configure mass tolerances and provide

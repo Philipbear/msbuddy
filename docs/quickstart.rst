@@ -48,7 +48,9 @@ Within the result summary, ``results`` is a list of Python dictionaries. ``indiv
 - ``rt``: Retention time in seconds
 - ``adduct``: Adduct type
 - ``formula_rank_1``: Molecular formula annotation ranked in the first place
-- ``estimated_fdr``: Estimated false discovery rate (FDR)
+- ``estimated_fdr``: Model-based expected error among this query's top-ranked
+  formulas. At rank one it is the posterior error estimate; cross-source 5%
+  FDR control is not validated for version 1.4 (see :doc:`model_report_1_4`).
 - ``formula_rank_2``: Molecular formula annotation ranked in the second place
 - ``formula_rank_3``: Molecular formula annotation ranked in the third place
 - ``formula_rank_4``: Molecular formula annotation ranked in the fourth place
