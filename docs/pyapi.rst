@@ -492,8 +492,7 @@ Example usage:
    .. attribute:: estimated_fdr
 
       float. Model-based expected false fraction among this query's candidate
-      prefix. At rank one it is the posterior error estimate. It is not a
-      validated cross-source FDR guarantee; see :doc:`model_report_1_4`.
+      prefix. See :ref:`update-1-4` for validation limits.
 
 
 

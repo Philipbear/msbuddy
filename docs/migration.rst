@@ -18,7 +18,7 @@ can be overridden with ``data_files['ml_compatibility']``.
 Halogens remain enabled by default. The default fluorine range increases from
 ``(0, 20)`` to ``(0, 80)``; explicit bounds remain effective. If prior knowledge
 rules out halogens, set ``halogen=False`` or ``--no-halogen``. Acquisition
-metadata remain optional. See :doc:`model_report_1_3` for accuracy and confidence
+metadata remain optional. See :ref:`update-1-3` for accuracy and confidence
 checks, including the external PFAS MS2 limitation.
 
 Changes introduced in 1.0
