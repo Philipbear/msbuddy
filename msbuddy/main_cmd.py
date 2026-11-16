@@ -54,7 +54,7 @@ def main():
     parser.add_argument('-d', '--details', '-details', action='store_true',
                         help='Store true. Whether to write detailed results. Default: detailed results are not written.')
     parser.add_argument('--ms-instr', '-ms_instr', '-ms', type=str, default=None,
-                        help='MS instrument type. Supported types: orbitrap, qtof, timstof, fticr.')
+                        help='MS instrument type. Supported types: orbitrap, tof, fticr. qtof and timstof are aliases for tof.')
     parser.add_argument('--no-spectral', dest='use_spectral', action='store_false', default=True,
                         help='Use the established numerical rankers without the compact spectral encoder.')
     parser.add_argument('--use-da', '-use_Da', dest='use_Da', action='store_true',

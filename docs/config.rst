@@ -14,7 +14,7 @@ We would recommend considering parallel processing for large datasets (e.g. >100
     # create a config object
     msb_config = MsbuddyConfig(
         ms_instr='orbitrap', # highly recommended to fill for the best annotation performance
-                             # supported MS types: "qtof", "orbitrap" and "fticr"
+                             # supported MS types: "tof", "orbitrap" and "fticr"
         ppm=True, # use ppm for mass tolerance, otherwise use Da
         ms1_tol=5, # ms1 tolerance, see below for default values for each MS instrument
         ms2_tol=10, # ms2 tolerance, see below for default values for each MS instrument
@@ -31,13 +31,11 @@ We would recommend considering parallel processing for large datasets (e.g. >100
     msb_engine = Msbuddy(msb_config)
 
 
-It is **highly recommended** to set up ``ms_instr`` in the :class:`msbuddy.MsbuddyConfig` to obtain the best annotation performance. The supported MS types are ``"qtof"``, ``"timstof"``, ``"orbitrap"`` and ``"fticr"``.
+It is **highly recommended** to set up ``ms_instr`` in the :class:`msbuddy.MsbuddyConfig` to obtain the best annotation performance. The supported MS types are ``"tof"``, ``"orbitrap"`` and ``"fticr"``. Both QTOF and timsTOF use ``"tof"``; the older ``"qtof"`` and ``"timstof"`` inputs remain accepted aliases.
 
 The following mass tolerances will be used for each MS instrument:
 
-``qtof``: ms1 tolerance = 10 ppm, ms2 tolerance = 20 ppm
-
-``timstof``: ms1 tolerance = 10 ppm, ms2 tolerance = 20 ppm
+``tof``: ms1 tolerance = 10 ppm, ms2 tolerance = 20 ppm
 
 ``orbitrap``: ms1 tolerance = 5 ppm, ms2 tolerance = 10 ppm
 

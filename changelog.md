@@ -160,3 +160,12 @@ Now we use a learning-to-rank model to rank the formula candidates.
 - Report the fresh accuracy results and the external confidence limitation:
   nominal 5% FDR selections are not validated across sources, particularly
   for halogen-rich MS2 data. No general 5% FDR guarantee is claimed.
+
+1.4.1 (2026-11-16)
+- Unify QTOF and timsTOF as the ``tof`` instrument family, with unchanged
+  10/20 ppm tolerances. The former settings remain supported aliases.
+- Normalize per-feature and MGF metadata to the same TOF family and use one
+  model input while retaining compatibility with existing spectral bundles.
+- Update the CLI, Nextflow wrapper, documentation, and regression coverage.
+- The frozen model uses its former QTOF indicator for all TOF inputs; timsTOF
+  predictions can change and the original validation does not cover this change.

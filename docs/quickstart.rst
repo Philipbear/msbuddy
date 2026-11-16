@@ -8,7 +8,7 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
    from msbuddy import Msbuddy, MsbuddyConfig
 
    # create a MsbuddyConfig object
-   msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "qtof", "orbitrap", "fticr" or None
+   msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "tof", "orbitrap", "fticr" or None
                                                    # custom MS1 and MS2 tolerance will be used if None
                                                    # highly recommended to fill in the instrument type
                               ppm=True,  # use ppm for mass tolerance
@@ -82,7 +82,7 @@ If parallel computing is needed, you can specify the number of CPUs to be used, 
    if __name__ == '__main__':
        from msbuddy import Msbuddy, MsbuddyConfig
        # create a MsbuddyConfig object
-       msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "qtof", "orbitrap" and "fticr"
+       msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "tof", "orbitrap" and "fticr"
                                                        # highly recommended to fill in the instrument type
                                   halogen=True,
                                   parallel=True, # enable parallel computing

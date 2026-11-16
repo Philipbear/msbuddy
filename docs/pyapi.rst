@@ -227,7 +227,7 @@ Example Usage:
 
    It is a class to store all the configurations for **msbuddy**.
 
-   :param ms_instr: str. Instrument family for mass tolerances and optional spectral metadata: "orbitrap", "fticr", "qtof" or "timstof". Default None uses ``ppm``, ``ms1_tol`` and ``ms2_tol``.
+   :param ms_instr: str. Instrument family for mass tolerances and optional spectral metadata: "orbitrap", "fticr" or "tof" ("qtof" and "timstof" are aliases). Default None uses ``ppm``, ``ms1_tol`` and ``ms2_tol``.
    :param use_spectral: bool. Use the compact CPU spectral ranker for supported settings (default True). False uses the established numerical rankers.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da. Default is True.
    :param ms1_tol: float. The mass tolerance for MS1 spectra. Default is 5 ppm.
@@ -507,7 +507,7 @@ Example usage:
    :param adduct: str. Adduct type. If omitted, the default adds or removes one proton per charge, such as [M+H]+ or [M+2H]2+.
    :param ms1: :class:`msbuddy.base.Spectrum` object. MS1 spectrum containing the isotopic pattern information. Default is None.
    :param ms2: :class:`msbuddy.base.Spectrum` object. MS/MS spectrum. Default is None.
-   :param instrument: Acquisition family ("orbitrap", "qtof" or "timstof"). Supplies model metadata without changing configured mass tolerances.
+   :param instrument: Acquisition family ("orbitrap" or "tof"; "qtof" and "timstof" map to "tof"). Supplies model metadata without changing configured mass tolerances.
    :param collision_energy: Energy string with units, or a numeric value with ``collision_energy_unit``. Unknown and stepped energies are masked.
    :param collision_energy_unit: "ev" or "nce" for numeric energy values. Default is None.
 

@@ -5,12 +5,10 @@ import re
 
 def instrument_family(value):
     text = str(value or '').lower().replace('-', '').replace(' ', '')
-    if 'timstof' in text:
-        return 'timstof'
     if 'orbitrap' in text or 'qexactive' in text:
         return 'orbitrap'
-    if 'qtof' in text or 'qtimeofflight' in text:
-        return 'qtof'
+    if text == 'tof' or 'qtof' in text or 'timstof' in text or 'timeofflight' in text:
+        return 'tof'
     if 'fticr' in text:
         return 'fticr'
     return None

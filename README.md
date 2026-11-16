@@ -31,7 +31,7 @@ engine.annotate_formula()
 results = engine.get_summary()
 ```
 
-Use `ms_instr="qtof"`, `"timstof"`, or `"fticr"` as appropriate. Acquisition metadata are optional. See the [quick start](https://msbuddy.readthedocs.io/en/latest/quickstart.html) and [configuration guide](https://msbuddy.readthedocs.io/en/latest/config.html) for other inputs and settings.
+Use `ms_instr="tof"` for both QTOF and timsTOF, or `"fticr"` as appropriate. The older `"qtof"` and `"timstof"` settings remain accepted aliases for `"tof"`. Acquisition metadata are optional. See the [quick start](https://msbuddy.readthedocs.io/en/latest/quickstart.html) and [configuration guide](https://msbuddy.readthedocs.io/en/latest/config.html) for other inputs and settings.
 
 Halogens are searched by default. Set `MsbuddyConfig(halogen=False)` only when prior knowledge rules out F, Cl, Br, and I. Reported confidence values are model-based estimates; [validation and limitations](https://msbuddy.readthedocs.io/en/latest/updates.html) explain their use.
 

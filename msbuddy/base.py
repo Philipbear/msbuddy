@@ -774,7 +774,7 @@ class MetaFeature:
         :param adduct: adduct string, e.g., "[M+H]+" (str)
         :param ms1: MS1 spectrum (Spectrum class)
         :param ms2: MS2 spectrum (Spectrum class)
-        :param instrument: optional orbitrap, qtof or timstof acquisition family
+        :param instrument: optional orbitrap or tof acquisition family (qtof and timstof map to tof)
         :param collision_energy: optional energy with explicit units in its string or collision_energy_unit
         :param collision_energy_unit: ev or nce; unspecified numeric units are masked
         """

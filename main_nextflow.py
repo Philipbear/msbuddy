@@ -25,7 +25,7 @@ def main():
     parser = argparse.ArgumentParser(description="msbuddy on Nextflow.")
     parser.add_argument('-input', type=str, default=None, help='Path to the input file.')
     parser.add_argument('-ms_instr', '-ms', type=str, default=None,
-                        help='MS instrument type. Supported types: orbitrap, qtof, fticr.')
+                        help='MS instrument type. Supported types: orbitrap, tof, fticr. qtof and timstof are aliases for tof.')
     parser.add_argument('-ppm', type=int, default=1,
                         help='Whether to use ppm for mass tolerance. Default: ppm is enabled.')
     parser.add_argument('-ms1_tol', type=float, default=5, help='MS1 tolerance. Default: 5.')

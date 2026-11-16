@@ -6,6 +6,15 @@ For a short change list, see the `changelog
 <https://github.com/Philipbear/msbuddy/blob/main/changelog.md>`_.
 Jump to :ref:`update-1-4` or :ref:`update-1-3`.
 
+Version 1.4.1 (16 November 2026)
+--------------------------------
+
+QTOF and timsTOF now share the ``tof`` instrument setting and the same
+10/20 ppm mass tolerances. Existing ``qtof`` and ``timstof`` inputs remain
+supported aliases. The frozen spectral model uses its former QTOF indicator
+for all TOF metadata. This can change timsTOF predictions; the 1.4.0
+validation below does not evaluate the new representation.
+
 .. _update-1-4:
 
 Version 1.4.0 (16 November 2026)

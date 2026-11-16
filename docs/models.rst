@@ -16,8 +16,9 @@ for the preceding release, and :doc:`database_format` for the lossless format.
 Optional acquisition metadata
 -----------------------------
 
-``MsbuddyConfig(ms_instr=...)`` accepts ``orbitrap``, ``qtof``, ``timstof`` and
-``fticr``. It selects the documented mass tolerances. For mixed or manually
+``MsbuddyConfig(ms_instr=...)`` accepts ``orbitrap``, ``tof`` and ``fticr``.
+Both ``qtof`` and ``timstof`` are accepted as aliases for ``tof``. It selects
+the documented mass tolerances. For mixed or manually
 configured inputs, ``MetaFeature(instrument=..., collision_energy=...,
 collision_energy_unit=...)`` can supply a per-query instrument and energy.
 Per-query metadata do not override the engine's mass tolerances.
@@ -27,7 +28,10 @@ Energy units must be explicit: ``"30 nce"``, ``"20 eV"``, or a number with
 Ranged or stepped energies are masked. Supported MGF keys include
 ``INSTRUMENT_TYPE``, ``COLLISION_ENERGY`` and ``COLLISION_ENERGY_EV``.
 Missing metadata remain valid inputs; instrument type is not inferred from
-mass tolerance.
+mass tolerance. QTOF and timsTOF metadata both use the same TOF model input.
+The existing model was trained with separate indicators; the unified TOF input
+uses the former QTOF indicator. Its predictions for timsTOF inputs can therefore
+change, and the original per-instrument evaluation does not validate this change.
 
 Candidate budgets
 -----------------
@@ -91,7 +95,7 @@ Compatibility
 
 The compact models are validated for singly charged ppm inputs below 1500 m/z,
 supported monomer/multimer adducts, and precursor/fragment tolerances of
-5/10 ppm or 10/20 ppm. Known Orbitrap metadata use 5/10 ppm; QTOF/timsTOF use
+5/10 ppm or 10/20 ppm. Known Orbitrap metadata use 5/10 ppm; TOF metadata use
 10/20 ppm. The validated preprocessing uses four maximum isotope peaks,
 0.02 Da isotope bins, 1% denoising and six peaks per 50 Da.
 

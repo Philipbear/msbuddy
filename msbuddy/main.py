@@ -96,7 +96,7 @@ class MsbuddyConfig:
                  max_candidates=None,
                  use_spectral: bool = True):
         """
-        :param ms_instr: orbitrap, qtof, timstof, fticr, or None
+        :param ms_instr: orbitrap, tof, fticr, or None; qtof and timstof are aliases for tof
         :param ppm: whether ppm is used for m/z tolerance
         :param ms1_tol: MS1 m/z tolerance
         :param ms2_tol: MS2 m/z tolerance
@@ -118,25 +118,28 @@ class MsbuddyConfig:
             recommended budget, or 350 with legacy models
         :param use_spectral: use the compact CPU spectral ranker when supported by the loaded bundle
         """
-        if ms_instr is None or ms_instr == "None":
+        aliases = {'orbitrap': 'orbitrap', 'fticr': 'fticr', 'tof': 'tof',
+                   'qtof': 'tof', 'timstof': 'tof'}
+        if ms_instr is None or ms_instr == 'None':
+            self.ms_instr = None
             self.ppm = ppm
             self.ms1_tol = ms1_tol
             self.ms2_tol = ms2_tol
-        elif ms_instr in ["orbitrap", "fticr", "qtof", "timstof"]:
+        elif isinstance(ms_instr, str) and ms_instr.lower() in aliases:
+            self.ms_instr = aliases[ms_instr.lower()]
             self.ppm = True
-            if ms_instr == "orbitrap":
+            if self.ms_instr == 'orbitrap':
                 self.ms1_tol = 5
                 self.ms2_tol = 10
-            elif ms_instr == "fticr":
+            elif self.ms_instr == 'fticr':
                 self.ms1_tol = 2
                 self.ms2_tol = 5
             else:
                 self.ms1_tol = 10
                 self.ms2_tol = 20
         else:
-            raise ValueError("Invalid MS instrument. Please choose from 'orbitrap', 'fticr', 'qtof', 'timstof' and None.")
+            raise ValueError("Invalid MS instrument. Please choose from 'orbitrap', 'fticr', 'tof' and None.")
 
-        self.ms_instr = None if ms_instr in (None, 'None') else ms_instr
         if not isinstance(use_spectral, bool):
             raise ValueError('use_spectral must be True or False.')
         self.use_spectral = use_spectral
@@ -653,7 +656,7 @@ if __name__ == '__main__':
 
     start = time.time()
 
-    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "tof", "orbitrap" and "fticr"
                                halogen=True, parallel=True, n_cpu=10)
 
     msb_engine = Msbuddy(msb_config)
