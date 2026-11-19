@@ -168,6 +168,13 @@ cython_debug/
 /ml/deprecated/
 /ms2_lib/
 
+# Private research and manuscript material (never commit)
+/old_manuscript/
+/output/
+/manuscript_msbuddy2/
+/research/
+~$*
+
 .pypirc
 package_update.md
 .DS*
