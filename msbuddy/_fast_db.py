@@ -56,7 +56,7 @@ QUERY_META_60_DIM = 60
 MS1_FEAT_DIM = 12
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def _pack_formula_hash(arr: np.ndarray) -> Tuple[np.uint64, np.uint64]:
     """Bijective 128-bit key for any 12-element formula (counts 0..1023)."""
     lo = np.uint64(0)
@@ -68,7 +68,7 @@ def _pack_formula_hash(arr: np.ndarray) -> Tuple[np.uint64, np.uint64]:
     return lo, hi
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def pack_common_key(arr: np.ndarray) -> np.uint64:
     """Exact 64-bit bijective packing for small common neutral losses."""
     k = np.uint64(0)
@@ -87,7 +87,7 @@ def pack_common_key(arr: np.ndarray) -> np.uint64:
     return k
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def common_nl_lookup_fast(arr: np.ndarray, sorted_keys: np.ndarray) -> bool:
     """O(log n) lookup for common neutral loss in sorted packed uint64 keys."""
     if len(sorted_keys) == 0:
@@ -114,7 +114,7 @@ def common_nl_lookup_fast(arr: np.ndarray, sorted_keys: np.ndarray) -> bool:
     return False
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def _dbe_12(arr: np.ndarray) -> float:
     return (
         float(arr[0]) + 1.0
@@ -123,7 +123,7 @@ def _dbe_12(arr: np.ndarray) -> float:
     )
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def _formula_valid_precursor(arr: np.ndarray, lower: np.ndarray, upper: np.ndarray,
                              loss_arr: np.ndarray, has_loss: bool) -> bool:
     atoms = 0
@@ -149,7 +149,7 @@ def _formula_valid_precursor(arr: np.ndarray, lower: np.ndarray, upper: np.ndarr
     return val >= 2 * (atoms - 1)
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def _binsearch_window(masses: np.ndarray, index: np.ndarray, target: float, tol: float) -> Tuple[int, int]:
     """Return exact [lo, hi) row slice in sorted masses matching |m - target| <= tol."""
     n = len(masses)
@@ -192,14 +192,14 @@ def _binsearch_window(masses: np.ndarray, index: np.ndarray, target: float, tol:
     return start, l
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def mass_exists_fast(masses: np.ndarray, index: np.ndarray, target: float, tol: float) -> bool:
     """Bit-exact mass-only existence check without decoding formula rows."""
     lo, hi = _binsearch_window(masses, index, target, tol)
     return hi > lo
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def _query_fragnl_arrays(
     mass: float, fragment: bool, pos_mode: bool, na_contain: bool, k_contain: bool,
     mz_tol: float, ppm: bool, db_mode: int,
@@ -320,7 +320,7 @@ def _query_fragnl_arrays(
     return out_arr[order], out_mass[order], out_dbe[order]
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def generate_candidates_fast_numba(
     precursor_mz: float,
     ms2_mzs: np.ndarray,
@@ -536,7 +536,7 @@ def generate_candidates_fast_numba(
     return out_arr, out_db, out_int, out_err
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def compute_ms2_evidence_fast(
     cand_neutral: np.ndarray,
     cand_charged: np.ndarray,
@@ -752,7 +752,7 @@ def compute_ms2_evidence_fast(
 # -----------------------------------------------------------------------------
 # Analytical Numba MS1 Isotope Engine (exact M0..M4 convolution + mass shifts)
 # -----------------------------------------------------------------------------
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def _convolve_trunc5(dist_p, dist_m, q0, q1, q2, dm1, dm2, count):
     if count <= 0:
         return
@@ -817,7 +817,7 @@ def _convolve_trunc5(dist_p, dist_m, q0, q1, q2, dm1, dm2, count):
         dist_m[i] = out_m[i]
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def calc_isotope_envelope_numba(formula_arr: np.ndarray):
     """Return exact normalized M0..M4 intensities and mean mass shifts (Da)."""
     dp = np.zeros(5, dtype=np.float64)
@@ -853,7 +853,7 @@ def calc_isotope_envelope_numba(formula_arr: np.ndarray):
     return dp, shifts
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def compute_ms1_features_numba(
     cand_charged: np.ndarray,
     exp_iso_ints: np.ndarray,
@@ -949,7 +949,7 @@ def compute_ms1_features_numba(
 # -----------------------------------------------------------------------------
 # General Exact-Mass Spectral Summary (32 dims) + Universal Query Meta (60 dims)
 # -----------------------------------------------------------------------------
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def general_chemistry_summary_numba(
     mzs: np.ndarray,
     ints: np.ndarray,
@@ -1163,40 +1163,54 @@ def build_query_meta_60(
     return meta
 
 
+def _materialize_int16(obj) -> np.ndarray:
+    """Stream a Database Array directly into a contiguous int16 ndarray without int64 spikes."""
+    if isinstance(obj, np.ndarray):
+        return np.ascontiguousarray(obj, dtype=np.int16)
+    db = getattr(obj, 'database', None)
+    name = getattr(obj, 'name', None)
+    if db is not None and name is not None:
+        spec = db.manifest['arrays'][name]
+        out = np.empty(tuple(spec['shape']), dtype=np.int16)
+        offset = 0
+        for idx, blk in enumerate(spec['blocks']):
+            rows = int(blk['rows'])
+            out[offset:offset + rows] = db.rows(name, idx, 0, rows)
+            offset += rows
+        db._cache.clear()
+        db._cached_bytes = 0
+        return out
+    return np.ascontiguousarray(obj[:], dtype=np.int16)
+
+
+def _materialize_float64(obj) -> np.ndarray:
+    """Stream a 1D Database Array directly into a contiguous float64 ndarray."""
+    if isinstance(obj, np.ndarray):
+        return np.ascontiguousarray(obj, dtype=np.float64)
+    db = getattr(obj, 'database', None)
+    name = getattr(obj, 'name', None)
+    if db is not None and name is not None:
+        out = np.ascontiguousarray(db.materialize(name), dtype=np.float64)
+        db._cache.clear()
+        db._cached_bytes = 0
+        return out
+    return np.ascontiguousarray(obj[:], dtype=np.float64)
+
+
 class FastFormulaStore:
     """In-RAM contiguous int16 formula store + packed common-loss keys built lazily from gd."""
 
     def __init__(self, gd: dict):
-        self.basic_mass = np.ascontiguousarray(gd['basic_db_mass'], dtype=np.float64)
+        self.basic_mass = _materialize_float64(gd['basic_db_mass'])
         self.basic_idx = np.ascontiguousarray(gd['basic_db_idx'], dtype=np.int64)
-        bf_obj = gd['basic_db_formula']
-        if hasattr(bf_obj, '_database') and hasattr(bf_obj, '_name'):
-            bf = bf_obj._database.materialize(bf_obj._name)
-            bf_obj._database._cache.clear()
-            bf_obj._database._cached_bytes = 0
-        else:
-            bf = bf_obj if isinstance(bf_obj, np.ndarray) else bf_obj[:]
-        self.basic_form = np.ascontiguousarray(bf, dtype=np.int16)
+        self.basic_form = _materialize_int16(gd['basic_db_formula'])
 
-        self.halogen_mass = np.ascontiguousarray(gd['halogen_db_mass'], dtype=np.float64)
+        self.halogen_mass = _materialize_float64(gd['halogen_db_mass'])
         self.halogen_idx = np.ascontiguousarray(gd['halogen_db_idx'], dtype=np.int64)
-        hf_obj = gd['halogen_db_formula']
-        if hasattr(hf_obj, '_database') and hasattr(hf_obj, '_name'):
-            hf = hf_obj._database.materialize(hf_obj._name)
-            hf_obj._database._cache.clear()
-            hf_obj._database._cached_bytes = 0
-        else:
-            hf = hf_obj if isinstance(hf_obj, np.ndarray) else hf_obj[:]
-        self.halogen_form = np.ascontiguousarray(hf, dtype=np.int16)
+        self.halogen_form = _materialize_int16(gd['halogen_db_formula'])
 
-        cf_obj = gd['common_frag_db']
-        self.common_frag_db = np.ascontiguousarray(
-            cf_obj[:] if not isinstance(cf_obj, np.ndarray) else cf_obj, dtype=np.int16
-        )
-        cl_obj = gd['common_loss_db']
-        cl = np.ascontiguousarray(
-            cl_obj[:] if not isinstance(cl_obj, np.ndarray) else cl_obj, dtype=np.int16
-        )
+        self.common_frag_db = _materialize_int16(gd['common_frag_db'])
+        cl = _materialize_int16(gd['common_loss_db'])
         if len(cl) > 0:
             keys = np.array([pack_common_key(row) for row in cl], dtype=np.uint64)
             self.common_loss_keys = np.ascontiguousarray(np.unique(keys))

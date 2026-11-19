@@ -147,6 +147,27 @@ class TestMsbuddyV2Components(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_v2_bundle(bad_scale)
 
+    def test_materialize_int16_streams_database_without_cache_bloat(self):
+        import tempfile
+        from pathlib import Path
+        from msbuddy._database import Database, write_database
+        from msbuddy._fast_db import _materialize_int16
+
+        arr = np.arange(12000 * 12, dtype=np.int64).reshape(12000, 12) % 97
+        with tempfile.TemporaryDirectory() as td:
+            db_path = Path(td) / 'mini.msbdb'
+            write_database(db_path, {'forms': arr}, role='test', block_rows=2048)
+            db = Database(db_path)
+            try:
+                out = _materialize_int16(db.array('forms'))
+                self.assertEqual(out.dtype, np.int16)
+                self.assertTrue(out.flags['C_CONTIGUOUS'])
+                np.testing.assert_array_equal(out, arr.astype(np.int16))
+                self.assertEqual(len(db._cache), 0)
+                self.assertEqual(db._cached_bytes, 0)
+            finally:
+                db.close()
+
 
 if __name__ == '__main__':
     unittest.main()

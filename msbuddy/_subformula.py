@@ -9,7 +9,7 @@ _MASSES = np.array([12.000000, 1.007825, 78.918336, 34.968853,
                     22.989769, 15.994915, 30.973762, 31.972071], dtype=np.float32)
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def _valid(fragment, precursor):
     atoms = 0
     loss_atoms = 0
@@ -36,7 +36,7 @@ def _valid(fragment, precursor):
     return valences >= 2 * (atoms - 1)
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def _earlier(fragment, previous):
     # The exhaustive enumerator increments carbon fastest. Preserve its tie
     # ordering without calculating a possibly overflowing mixed-radix index.
@@ -46,7 +46,7 @@ def _earlier(fragment, previous):
     return False
 
 
-@njit(cache=True)
+@njit(cache=True, nogil=True)
 def closest_subformulas(precursor, targets, tolerances, raw_targets, charge):
     """Return the closest valid subformula per target, without a Cartesian array.
 

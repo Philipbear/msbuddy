@@ -17,9 +17,11 @@ Pipeline:
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -617,6 +619,14 @@ def annotate_batch_v2(batch_data: Sequence, config, gd: dict) -> None:
             )
             hyp_specs.append((fi, ion, qm))
 
+    # Resolve effective worker thread count for shared-memory parallel execution
+    if getattr(config, 'parallel', False):
+        req_cpu = int(getattr(config, 'n_cpu', -1))
+        n_threads = (os.cpu_count() or 1) if req_cpu <= 0 else req_cpu
+    else:
+        n_threads = 1
+    n_threads = max(1, min(n_threads, max(1, len(hyp_specs))))
+
     # Stage 0: Batched CPU ONNX inference across all hypotheses (dynamic peak length per batch)
     n_hyp = len(hyp_specs)
     ep_all = np.zeros((n_hyp, 34), dtype=np.float32)
@@ -624,8 +634,9 @@ def annotate_batch_v2(batch_data: Sequence, config, gd: dict) -> None:
     s0_sess = rt['stage0']
     # Sort indices by peak count so short spectra never pay O(64^2) attention cost
     hyp_order = sorted(range(n_hyp), key=lambda idx: peak_cache[hyp_specs[idx][0]][6])
-    for a in range(0, n_hyp, 32):
-        batch_ids = hyp_order[a:a + 32]
+    s0_chunks = [hyp_order[a:a + 32] for a in range(0, n_hyp, 32)]
+
+    def _run_s0_chunk(batch_ids: List[int]) -> None:
         bs = len(batch_ids)
         nb = max(1, max(peak_cache[hyp_specs[idx][0]][6] for idx in batch_ids))
         pf_b = np.empty((bs, nb, PEAK_FEAT_DIM), dtype=np.float32)
@@ -643,18 +654,34 @@ def annotate_batch_v2(batch_data: Sequence, config, gd: dict) -> None:
             ep_all[idx] = ep_o[j]
             pr_all[idx] = pr_o[j]
 
-    # Stage 1 & 2: Compiled candidate generation + feature extraction per hypothesis
-    valid_hyps = []
-    valid_hyp_fi = []
-    for hi, (fi, ion, _) in enumerate(hyp_specs):
+    def _run_hyp(hi: int):
+        fi, ion, _ = hyp_specs[hi]
         _, pm, pi, _, _, _, n_v, _ = peak_cache[fi]
-        hyp = _prepare_single_hypothesis(
+        return _prepare_single_hypothesis(
             batch_data[fi], ion, ep_all[hi], pr_all[hi],
             pm, pi, n_v, config, store, k_max, n_protect, DEFAULT_LL_W,
         )
+
+    if n_threads > 1:
+        with ThreadPoolExecutor(max_workers=n_threads) as pool:
+            if len(s0_chunks) > 1:
+                list(pool.map(_run_s0_chunk, s0_chunks))
+            else:
+                for ch in s0_chunks:
+                    _run_s0_chunk(ch)
+            # Stage 1 & 2: Compiled nogil candidate generation + feature extraction
+            hyp_results = list(pool.map(_run_hyp, range(n_hyp)))
+    else:
+        for ch in s0_chunks:
+            _run_s0_chunk(ch)
+        hyp_results = [_run_hyp(hi) for hi in range(n_hyp)]
+
+    valid_hyps = []
+    valid_hyp_fi = []
+    for hi, hyp in enumerate(hyp_results):
         if hyp is not None:
             valid_hyps.append(hyp)
-            valid_hyp_fi.append(fi)
+            valid_hyp_fi.append(hyp_specs[hi][0])
 
     # Clear features with 0 candidates across all hypotheses
     by_feature: Dict[int, List[dict]] = {fi: [] for fi in range(len(batch_data))}
@@ -679,8 +706,9 @@ def annotate_batch_v2(batch_data: Sequence, config, gd: dict) -> None:
 
     # Stage-3A ONNX in length-bucketed batches of 32 (avoids O(80^2) padding for small K!)
     vh_order = sorted(range(n_vh), key=lambda idx: valid_hyps[idx]['K'])
-    for a in range(0, n_vh, 32):
-        b_ids = vh_order[a:a + 32]
+    s3_chunks = [vh_order[a:a + 32] for a in range(0, n_vh, 32)]
+
+    def _run_s3_chunk(b_ids: List[int]) -> None:
         bs = len(b_ids)
         kb = max(valid_hyps[idx]['K'] for idx in b_ids)
         cf_b = np.zeros((bs, kb, CAND_FEAT_DIM), dtype=np.float32)
@@ -698,6 +726,13 @@ def annotate_batch_v2(batch_data: Sequence, config, gd: dict) -> None:
             nn_logits_all[idx, :k] = l_out[j, :k]
             nn_logits_all[idx, max_k_batch] = l_out[j, kb]
 
+    if n_threads > 1 and len(s3_chunks) > 1:
+        with ThreadPoolExecutor(max_workers=n_threads) as pool:
+            list(pool.map(_run_s3_chunk, s3_chunks))
+    else:
+        for ch in s3_chunks:
+            _run_s3_chunk(ch)
+
     # Stage-3B LightGBM over concatenated valid candidates (1 fast vectorized call)
     lgb_rows = []
     offsets = [0]
@@ -707,7 +742,7 @@ def annotate_batch_v2(batch_data: Sequence, config, gd: dict) -> None:
         lgb_rows.append(np.concatenate([h['cf_full'], pf_rep], axis=1))
         offsets.append(offsets[-1] + k)
     X_lgb = np.concatenate(lgb_rows, axis=0)
-    lgb_preds = s3_lgb.predict(X_lgb, num_threads=1).astype(np.float32)
+    lgb_preds = s3_lgb.predict(X_lgb, num_threads=n_threads).astype(np.float32)
 
     for hi, (fi, h) in enumerate(zip(valid_hyp_fi, valid_hyps)):
         k = h['K']
