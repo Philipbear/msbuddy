@@ -548,26 +548,21 @@ def _build_candidate_formula(hyp: dict, k: int, mf, raw_idx_map: Optional[np.nda
     neutral_f = Formula._from_array(arr.copy(), 0, float(hyp['masses'][k]))
     charged_f = Formula._from_array(ch_arr.copy(), int(adduct.charge))
 
-    # Build MS2Explanation mapped to raw MS2 indices
-    found_mask = hyp['best_found'][k, :hyp['n_v']]
-    ms2_exp = None
-    if found_mask.any():
-        exp_local = np.flatnonzero(found_mask)
-        idx_arr = raw_idx_map[exp_local] if raw_idx_map is not None else exp_local
-        frag_forms = [
-            Formula._from_array(hyp['best_frags'][k, li].copy(), int(adduct.charge))
-            for li in exp_local
-        ]
-        ms2_exp = MS2Explanation(idx_array=idx_arr.astype(np.intp), explanation_list=frag_forms)
-
     cf = CandidateFormula(
         formula=neutral_f,
         charged_formula=charged_f,
         mz_error=float(hyp['sub_err_raw'][k]),
         exp_ms2_sum_int=float(hyp['sub_int'][k]),
-        ms2_raw_explanation=ms2_exp,
+        ms2_raw_explanation=None,
         db_existed=bool(hyp['sub_db'][k]),
     )
+    # Defer Formula object instantiation for fragment peaks until ms2_raw_explanation is accessed
+    found_mask = hyp['best_found'][k, :hyp['n_v']]
+    if found_mask.any():
+        exp_local = np.flatnonzero(found_mask)
+        idx_arr = (raw_idx_map[exp_local] if raw_idx_map is not None else exp_local).astype(np.intp)
+        frag_arrs = np.ascontiguousarray(hyp['best_frags'][k, exp_local], dtype=np.int16)
+        cf._ms2_raw_explanation_lazy = (idx_arr, frag_arrs, int(adduct.charge))
     cf.adduct = adduct
     if hyp['ms1_sim'] is not None:
         cf.ms1_isotope_similarity = float(hyp['ms1_sim'][k])
@@ -622,26 +617,31 @@ def annotate_batch_v2(batch_data: Sequence, config, gd: dict) -> None:
             )
             hyp_specs.append((fi, ion, qm))
 
-    # Stage 0: Batched CPU ONNX inference across all hypotheses
+    # Stage 0: Batched CPU ONNX inference across all hypotheses (dynamic peak length per batch)
     n_hyp = len(hyp_specs)
     ep_all = np.zeros((n_hyp, 34), dtype=np.float32)
     pr_all = np.zeros((n_hyp, 3), dtype=np.float32)
     s0_sess = rt['stage0']
-    for a in range(0, n_hyp, 64):
-        b = min(n_hyp, a + 64)
-        bs = b - a
-        pf_b = np.empty((bs, 64, PEAK_FEAT_DIM), dtype=np.float32)
-        pm_b = np.empty((bs, 64), dtype=np.float32)
-        mk_b = np.empty((bs, 64), dtype=bool)
+    # Sort indices by peak count so short spectra never pay O(64^2) attention cost
+    hyp_order = sorted(range(n_hyp), key=lambda idx: peak_cache[hyp_specs[idx][0]][6])
+    for a in range(0, n_hyp, 32):
+        batch_ids = hyp_order[a:a + 32]
+        bs = len(batch_ids)
+        nb = max(1, max(peak_cache[hyp_specs[idx][0]][6] for idx in batch_ids))
+        pf_b = np.empty((bs, nb, PEAK_FEAT_DIM), dtype=np.float32)
+        pm_b = np.empty((bs, nb), dtype=np.float32)
+        mk_b = np.empty((bs, nb), dtype=bool)
         qm_b = np.empty((bs, QUERY_META_60_DIM), dtype=np.float32)
-        for j, (fi, _, qm) in enumerate(hyp_specs[a:b]):
+        for j, idx in enumerate(batch_ids):
+            fi, _, qm = hyp_specs[idx]
             pf, pm, _, pmask, _, _, _, _ = peak_cache[fi]
-            pf_b[j] = pf; pm_b[j] = pm; mk_b[j] = pmask; qm_b[j] = qm
+            pf_b[j] = pf[:nb]; pm_b[j] = pm[:nb]; mk_b[j] = pmask[:nb]; qm_b[j] = qm
         ep_o, pr_o = s0_sess.run(None, {
             'peak_feats': pf_b, 'peak_mzs': pm_b, 'peak_mask': mk_b, 'query_meta': qm_b,
         })
-        ep_all[a:b] = ep_o
-        pr_all[a:b] = pr_o
+        for j, idx in enumerate(batch_ids):
+            ep_all[idx] = ep_o[j]
+            pr_all[idx] = pr_o[j]
 
     # Stage 1 & 2: Compiled candidate generation + feature extraction per hypothesis
     valid_hyps = []
@@ -677,24 +677,26 @@ def annotate_batch_v2(batch_data: Sequence, config, gd: dict) -> None:
     n_vh = len(valid_hyps)
     nn_logits_all = np.full((n_vh, max_k_batch + 1), -1e9, dtype=np.float32)
 
-    # Stage-3A ONNX in batches of 64
-    for a in range(0, n_vh, 64):
-        b = min(n_vh, a + 64)
-        bs = b - a
-        kb = max(h['K'] for h in valid_hyps[a:b])
+    # Stage-3A ONNX in length-bucketed batches of 32 (avoids O(80^2) padding for small K!)
+    vh_order = sorted(range(n_vh), key=lambda idx: valid_hyps[idx]['K'])
+    for a in range(0, n_vh, 32):
+        b_ids = vh_order[a:a + 32]
+        bs = len(b_ids)
+        kb = max(valid_hyps[idx]['K'] for idx in b_ids)
         cf_b = np.zeros((bs, kb, CAND_FEAT_DIM), dtype=np.float32)
         cm_b = np.zeros((bs, kb), dtype=bool)
         pf_b = np.zeros((bs, POOL_FEAT_DIM), dtype=np.float32)
-        for j, h in enumerate(valid_hyps[a:b]):
+        for j, idx in enumerate(b_ids):
+            h = valid_hyps[idx]
             k = h['K']
             cf_b[j, :k] = np.clip((h['cf_full'] - fc) / fs, -10.0, 10.0)
             cm_b[j, :k] = True
             pf_b[j] = h['pool_f']
         l_out = s3_sess.run(None, {'cand_feats': cf_b, 'cand_mask': cm_b, 'pool_feats': pf_b})[0]
-        for j, h in enumerate(valid_hyps[a:b]):
-            k = h['K']
-            nn_logits_all[a + j, :k] = l_out[j, :k]
-            nn_logits_all[a + j, max_k_batch] = l_out[j, kb]
+        for j, idx in enumerate(b_ids):
+            k = valid_hyps[idx]['K']
+            nn_logits_all[idx, :k] = l_out[j, :k]
+            nn_logits_all[idx, max_k_batch] = l_out[j, kb]
 
     # Stage-3B LightGBM over concatenated valid candidates (1 fast vectorized call)
     lgb_rows = []

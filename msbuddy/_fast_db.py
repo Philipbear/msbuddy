@@ -1170,13 +1170,23 @@ class FastFormulaStore:
         self.basic_mass = np.ascontiguousarray(gd['basic_db_mass'], dtype=np.float64)
         self.basic_idx = np.ascontiguousarray(gd['basic_db_idx'], dtype=np.int64)
         bf_obj = gd['basic_db_formula']
-        bf = bf_obj[:] if not isinstance(bf_obj, np.ndarray) else bf_obj
+        if hasattr(bf_obj, '_database') and hasattr(bf_obj, '_name'):
+            bf = bf_obj._database.materialize(bf_obj._name)
+            bf_obj._database._cache.clear()
+            bf_obj._database._cached_bytes = 0
+        else:
+            bf = bf_obj if isinstance(bf_obj, np.ndarray) else bf_obj[:]
         self.basic_form = np.ascontiguousarray(bf, dtype=np.int16)
 
         self.halogen_mass = np.ascontiguousarray(gd['halogen_db_mass'], dtype=np.float64)
         self.halogen_idx = np.ascontiguousarray(gd['halogen_db_idx'], dtype=np.int64)
         hf_obj = gd['halogen_db_formula']
-        hf = hf_obj[:] if not isinstance(hf_obj, np.ndarray) else hf_obj
+        if hasattr(hf_obj, '_database') and hasattr(hf_obj, '_name'):
+            hf = hf_obj._database.materialize(hf_obj._name)
+            hf_obj._database._cache.clear()
+            hf_obj._database._cached_bytes = 0
+        else:
+            hf = hf_obj if isinstance(hf_obj, np.ndarray) else hf_obj[:]
         self.halogen_form = np.ascontiguousarray(hf, dtype=np.int16)
 
         cf_obj = gd['common_frag_db']

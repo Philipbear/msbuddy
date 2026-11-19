@@ -735,9 +735,26 @@ class CandidateFormula:
         self.formula_feature_array = None  # formula feature array
         self.ms1_isotope_similarity = None
         self.exp_ms2_sum_int = exp_ms2_sum_int  # sum of MS2 intensity of peaks explained (during bottom-up search)
-        self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during subformula assignment
+        self._ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during subformula assignment
+        self._ms2_raw_explanation_lazy = None  # optional (idx_array, frag_arrs, charge) for lazy materialization
         self.db_existed = db_existed  # whether this formula is in the formula database
         self.adduct = None  # optional Adduct populated in adduct="auto" or v2 mode
+
+    @property
+    def ms2_raw_explanation(self):
+        if self._ms2_raw_explanation is None and self._ms2_raw_explanation_lazy is not None:
+            idx_arr, frag_arrs, charge = self._ms2_raw_explanation_lazy
+            self._ms2_raw_explanation = MS2Explanation(
+                idx_array=idx_arr,
+                explanation_list=[Formula._from_array(row.copy(), charge) for row in frag_arrs],
+            )
+            self._ms2_raw_explanation_lazy = None
+        return self._ms2_raw_explanation
+
+    @ms2_raw_explanation.setter
+    def ms2_raw_explanation(self, value):
+        self._ms2_raw_explanation = value
+        self._ms2_raw_explanation_lazy = None
         # self.optimal_formula = optimal_formula
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
 
