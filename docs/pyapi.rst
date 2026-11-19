@@ -8,6 +8,10 @@ supported element symbols to nonnegative integer counts.
 Formula functions
 ~~~~~~~~~~~~~~~~~
 
+For signed elemental changes between molecular-network nodes, including
+negative atom counts and adduct exchanges, see :doc:`delta`. Molecular
+``Formula`` objects continue to require nonnegative counts.
+
 .. function:: read_formula(formula: str)
 
    Parse a molecular formula string into an element-count dictionary. Supports
@@ -201,6 +205,22 @@ Classes
 
       :returns: A list of Python dictionaries. Each dictionary contains the summary information for a single :class:`msbuddy.base.MetaFeature` object.
 
+   .. method:: estimate_batch_fdr(fdr_threshold=0.05)
+
+      Pool calibrated top-1 probabilities across the complete annotated collection.
+      Returns a ``BatchFDRResult`` with aligned ``posterior_error_probabilities``,
+      ``q_values`` and ``selected`` flags, plus selected count, expected false
+      discoveries and estimated FDR. Missing candidates remain unselected. Ties
+      are selected together. This does not change candidate rankings or their
+      probabilities. Call after ``annotate_formula()``; command-line annotation
+      writes the same global q-values to its summary before clearing the data.
+
+      These are model-based estimates whose accuracy depends on calibration
+      and domain match, not a distribution-free FDR guarantee. The standalone
+      ``msbuddy.estimate_batch_fdr(probabilities, fdr_threshold=0.05)`` accepts
+      one calibrated top-formula probability per query, or ``None`` for no
+      annotation. Do not renormalize away absent-answer probability.
+
 
 Example Usage:
 
@@ -227,7 +247,7 @@ Example Usage:
 
    It is a class to store all the configurations for **msbuddy**.
 
-   :param ms_instr: str. Instrument family for mass tolerances and optional spectral metadata: "orbitrap", "fticr", "qtof" or "timstof". Default None uses ``ppm``, ``ms1_tol`` and ``ms2_tol``.
+   :param ms_instr: str. Instrument family for mass tolerances and optional spectral metadata: "orbitrap", "fticr" or "tof" ("qtof" and "timstof" are aliases). Default None uses ``ppm``, ``ms1_tol`` and ``ms2_tol``.
    :param use_spectral: bool. Use the compact CPU spectral ranker for supported settings (default True). False uses the established numerical rankers.
    :param ppm: bool. If True, the mass tolerance is in ppm. If False, the mass tolerance is in Da. Default is True.
    :param ms1_tol: float. The mass tolerance for MS1 spectra. Default is 5 ppm.
@@ -487,11 +507,20 @@ Example usage:
 
    .. attribute:: normed_estimated_prob
 
-      float. The normalized estimated formula probability considering all the candidate formulas for the same metabolic feature.
+      float. Formula probability retaining mass for an absent answer. The
+      reported candidates need not sum to one.
+
+   .. attribute:: posterior_error_probability
+
+      float or None. One minus this candidate's calibrated probability; None
+      before probability calculation. This is an individual error estimate.
 
    .. attribute:: estimated_fdr
 
-      float. The estimated FDR of the candidate formula.
+      float. Expected false fraction among this spectrum's candidate prefix
+      through this rank. At rank one, equal to ``posterior_error_probability``.
+      This legacy field does not pool annotations across spectra; use
+      ``Msbuddy.estimate_batch_fdr`` for that purpose.
 
 
 
@@ -506,7 +535,7 @@ Example usage:
    :param adduct: str. Adduct type. If omitted, the default adds or removes one proton per charge, such as [M+H]+ or [M+2H]2+.
    :param ms1: :class:`msbuddy.base.Spectrum` object. MS1 spectrum containing the isotopic pattern information. Default is None.
    :param ms2: :class:`msbuddy.base.Spectrum` object. MS/MS spectrum. Default is None.
-   :param instrument: Acquisition family ("orbitrap", "qtof" or "timstof"). Supplies model metadata without changing configured mass tolerances.
+   :param instrument: Acquisition family ("orbitrap" or "tof"; "qtof" and "timstof" map to "tof"). Supplies model metadata without changing configured mass tolerances.
    :param collision_energy: Energy string with units, or a numeric value with ``collision_energy_unit``. Unknown and stepped energies are masked.
    :param collision_energy_unit: "ev" or "nce" for numeric energy values. Default is None.
 

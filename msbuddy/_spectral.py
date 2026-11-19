@@ -9,7 +9,9 @@ from msbuddy._acquisition import collision_energy, instrument_family
 
 ADDUCTS = ('[M+H]+', '[M-H]-', '[M+Na]+', '[M+K]+', '[M+NH4]+', '[M+Cl]-',
            '[M+CH2O2-H]-', '[M+C2H4O2-H]-', '[2M+H]+', '[2M-H]-', '[2M+Na]+')
-INSTRUMENTS = ('orbitrap', 'qtof', 'timstof')
+# Keep the original three instrument slots in the frozen model schema.
+# TOF uses the former QTOF slot; the third slot is reserved and stays zero.
+INSTRUMENTS = ('orbitrap', 'tof')
 
 
 def validate(specification):
@@ -73,7 +75,7 @@ def in_scope(feature, config):
         return False
     if (config.ms1_tol, config.ms2_tol) not in ((5, 10), (10, 20)):
         return False
-    expected = (5, 10) if instrument == 'orbitrap' else (10, 20) if instrument in ('qtof', 'timstof') else None
+    expected = (5, 10) if instrument == 'orbitrap' else (10, 20) if instrument == 'tof' else None
     if expected is not None and (config.ms1_tol, config.ms2_tol) != expected:
         return False
     has_isotope = bool(feature.ms1_processed) and len(feature.ms1_processed) > 1

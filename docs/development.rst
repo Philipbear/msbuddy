@@ -34,6 +34,9 @@ The regression tests use synthetic inputs and do not download the databases or
 models. A full annotation run also requires the database files and LightGBM, as
 described in the installation and quick-start guides.
 
+See :doc:`candidate_audit` for labelled-library sampling, stage-specific recall,
+optional MassDesk fragment search, pruning ablations, and ranker experiments.
+
 GitHub Actions are currently disabled for this repository. If Actions are
 re-enabled, the ``Tests`` workflow runs only when started manually from the
 Actions tab; pushes and pull requests do not trigger it. Run the regression

@@ -45,8 +45,10 @@ Source codes are available at `GitHub <https://github.com/Philipbear/msbuddy>`_.
    datain
    dataout
    pyapi
+   delta
    cmdapi
    development
+   candidate_audit
    contact
 
 Citation

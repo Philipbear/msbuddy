@@ -1,6 +1,15 @@
 Migration guide
 ===============
 
+Unified TOF settings
+--------------------
+
+Use ``ms_instr="tof"`` for both QTOF and timsTOF instruments. Existing
+``qtof`` and ``timstof`` inputs still work and normalize to ``tof``. Both use
+10 ppm MS1 and 20 ppm MS2 tolerances. Per-query instrument metadata are also
+normalized to ``tof``. The frozen spectral model now uses the same instrument
+input for both, so timsTOF predictions can differ from earlier versions.
+
 Upgrading from 1.2 to 1.3
 -------------------------
 

@@ -76,28 +76,56 @@ class AcquisitionTests(unittest.TestCase):
 
     def test_instrument_is_explicit_and_unknown_tolerance_does_not_infer_it(self):
         self.assertEqual(instrument_family('Q-Exactive'), 'orbitrap')
-        self.assertEqual(instrument_family('timsTOF'), 'timstof')
+        for name in ('tof', 'QTOF', 'Q-TOF', 'timsTOF', 'time-of-flight'):
+            with self.subTest(name=name):
+                self.assertEqual(instrument_family(name), 'tof')
         self.assertIsNone(instrument_family('FTMS'))
+        self.assertIsNone(instrument_family('autofocus'))
         _, vector = encode(feature())
         self.assertFalse(vector[:3].any())
 
     def test_mgf_preserves_optional_metadata_and_precursor_type(self):
-        text = 'BEGIN IONS\nTITLE=x\nPEPMASS=250\nPRECURSOR_TYPE=[M+Na]+\nINSTRUMENT_TYPE=QTOF\nCOLLISION_ENERGY_EV=20\n40 1\nEND IONS\n'
+        text = ''.join('BEGIN IONS\nTITLE={}\nPEPMASS=250\nPRECURSOR_TYPE=[M+Na]+\n'
+                       'INSTRUMENT_TYPE={}\nCOLLISION_ENERGY_EV=20\n40 1\nEND IONS\n'.format(name, name)
+                       for name in ('QTOF', 'timsTOF', 'tof'))
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'input.mgf'
             path.write_text(text)
-            f, = load_mgf(path)
-        self.assertEqual(f.adduct.string, '[M+Na]+')
-        self.assertEqual((f.instrument, f.collision_energy, f.collision_energy_unit), ('qtof', 20., 'ev'))
+            features = load_mgf(path)
+        self.assertEqual(len(features), 3)
+        for f in features:
+            self.assertEqual(f.adduct.string, '[M+Na]+')
+            self.assertEqual((f.instrument, f.collision_energy, f.collision_energy_unit), ('tof', 20., 'ev'))
+
+    def test_tof_config_and_legacy_aliases_share_one_family_and_tolerance(self):
+        for name in ('tof', 'qtof', 'timstof', 'QTOF', 'timsTOF'):
+            with self.subTest(name=name):
+                config = MsbuddyConfig(ms_instr=name, ppm=False, ms1_tol=1, ms2_tol=2)
+                self.assertEqual((config.ms_instr, config.ppm, config.ms1_tol, config.ms2_tol),
+                                 ('tof', True, 10, 20))
+        for name in ('invalid', 'autofocus', 10):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'Invalid MS instrument'):
+                MsbuddyConfig(ms_instr=name)
 
     def test_config_update_preserves_metadata_and_explicit_tolerances(self):
         with patch('msbuddy.main.init_db', return_value={}):
             engine = Msbuddy(MsbuddyConfig(ms_instr='qtof', use_spectral=False))
             engine.update_config(ms1_tol=3)
-        self.assertEqual(engine.config.ms_instr, 'qtof')
+        self.assertEqual(engine.config.ms_instr, 'tof')
         self.assertEqual(engine.config.ms1_tol, 3)
         self.assertFalse(engine.config.use_spectral)
-        self.assertEqual((MsbuddyConfig(ms_instr='timstof').ms1_tol, MsbuddyConfig(ms_instr='timstof').ms2_tol), (10, 20))
+
+    def test_tof_metadata_uses_one_shared_model_slot(self):
+        expected_spectrum, expected = encode(feature(instrument='tof'))
+        np.testing.assert_array_equal(expected[:3], [0, 1, 0])
+        for name in ('qtof', 'Q-TOF', 'timstof', 'timsTOF'):
+            with self.subTest(name=name):
+                spectrum, metadata = encode(feature(instrument=name))
+                self.assertEqual(feature(instrument=name).instrument, 'tof')
+                np.testing.assert_array_equal(spectrum, expected_spectrum)
+                np.testing.assert_array_equal(metadata, expected)
+                _, default_metadata = encode(feature(), default_instrument=name)
+                np.testing.assert_array_equal(default_metadata, expected)
 
 
 class SpectralRuntimeTests(unittest.TestCase):
@@ -112,8 +140,11 @@ class SpectralRuntimeTests(unittest.TestCase):
                        MsbuddyConfig(max_candidates=10), MsbuddyConfig(ms1_tol=3),
                        MsbuddyConfig(max_isotope_cnt=6), MsbuddyConfig(ppm=False)]:
             self.assertFalse(in_scope(f, config))
-        self.assertFalse(in_scope(feature(instrument='qtof'), MsbuddyConfig()))
-        self.assertTrue(in_scope(feature(instrument='qtof'), MsbuddyConfig(ms_instr='qtof')))
+        for name in ('tof', 'qtof', 'timstof'):
+            with self.subTest(name=name):
+                self.assertFalse(in_scope(feature(instrument=name), MsbuddyConfig()))
+                self.assertTrue(in_scope(feature(instrument=name), MsbuddyConfig(ms_instr='tof')))
+                self.assertTrue(in_scope(feature(), MsbuddyConfig(ms_instr=name)))
 
     def test_equivalent_adduct_spelling_encodes_identically(self):
         a, b = feature(), feature()

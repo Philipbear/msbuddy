@@ -21,6 +21,15 @@ _PUBLIC_API = {
     'enumerate_subformulas': ('.utils', 'enumerate_subformulas'),
     'SUPPORTED_ELEMENTS': ('.utils', 'SUPPORTED_ELEMENTS'),
     'UnsupportedElementError': ('.utils', 'UnsupportedElementError'),
+    'DeltaFormula': ('.delta', 'DeltaFormula'),
+    'DeltaCandidate': ('.delta', 'DeltaCandidate'),
+    'DeltaMassResult': ('.delta', 'DeltaMassResult'),
+    'DeltaTransformation': ('.delta', 'DeltaTransformation'),
+    'DeltaSearchSpaceError': ('.delta', 'DeltaSearchSpaceError'),
+    'annotate_delta_mass': ('.delta', 'annotate_delta_mass'),
+    'annotate_network_delta': ('.delta', 'annotate_network_delta'),
+    'BatchFDRResult': ('.confidence', 'BatchFDRResult'),
+    'estimate_batch_fdr': ('.confidence', 'estimate_batch_fdr'),
 }
 
 # These submodules were also exposed by the original eager imports.

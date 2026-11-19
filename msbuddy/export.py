@@ -44,6 +44,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
             'formula_rank_1': individual_result['formula_rank_1'],
             'estimated_fdr': individual_result['estimated_fdr'] if individual_result[
                                                                        'estimated_fdr'] is not None else 'NA',
+            'posterior_error_probability': individual_result['posterior_error_probability'],
             'formula_rank_2': individual_result['formula_rank_2'],
             'formula_rank_3': individual_result['formula_rank_3'],
             'formula_rank_4': individual_result['formula_rank_4'],
@@ -75,6 +76,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                     'estimated_prob': 'NA',
                     'normalized_estimated_prob': 'NA',
                     'estimated_fdr': 'NA',
+                    'posterior_error_probability': 'NA',
                     'ms2_explanation_idx': 'NA',
                     'ms2_explanation': 'NA'
                 })
@@ -108,6 +110,7 @@ def write_batch_results_cmd(buddy_data, output_path: pathlib.Path, write_details
                     'estimated_prob': cf.estimated_prob if cf.estimated_prob is not None else 'NA',
                     'normalized_estimated_prob': cf.normed_estimated_prob if cf.normed_estimated_prob is not None else 'NA',
                     'estimated_fdr': cf.estimated_fdr if cf.estimated_fdr is not None else 'NA',
+                    'posterior_error_probability': cf.posterior_error_probability,
                     'ms2_explanation_idx': ms2_explan_idx,
                     'ms2_explanation': ms2_explan_str
                 })

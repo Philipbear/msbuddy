@@ -1,6 +1,11 @@
 msbuddy changelog
 =================
 
+Unreleased (local review)
+- Add separate posterior error probabilities and batch q-values for top formula annotations.
+- Pool confidence across all processing chunks, preserve absent-answer mass, and select tied probabilities together.
+- Clarify that the legacy estimated_fdr field describes a within-spectrum candidate prefix.
+
 0.1.2 (2023-10-03)
 - First release of a working version on PyPI.
 
@@ -97,6 +102,14 @@ Now we use a learning-to-rank model to rank the formula candidates.
   candidates, so their evidence survives the pre-ranking cutoff.
 - Add regression coverage for candidate merging and retention at the
   350-candidate cutoff.
+
+Unreleased
+- Add research tools for candidate-recall audits, optional MassDesk search,
+  neutral-loss tolerance experiments, and formula-disjoint ranker comparisons.
+- Add signed delta-formula search and molecular-network annotation propagation,
+  with separate neutral/adduct changes and explicit charge/multimer handling.
+- Add bounded de novo delta searches, multi-step transformation hypotheses,
+  JSON results and optional balanced ranking for known-formula network anchors.
 
 1.1.0 (2026-11-14)
 - Replace the four evidence-mode ranking models and add explicit element/adduct

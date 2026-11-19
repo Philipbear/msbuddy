@@ -96,7 +96,7 @@ class MsbuddyConfig:
                  max_candidates=None,
                  use_spectral: bool = True):
         """
-        :param ms_instr: orbitrap, qtof, timstof, fticr, or None
+        :param ms_instr: orbitrap, tof, fticr, or None; qtof and timstof are aliases for tof
         :param ppm: whether ppm is used for m/z tolerance
         :param ms1_tol: MS1 m/z tolerance
         :param ms2_tol: MS2 m/z tolerance
@@ -118,25 +118,28 @@ class MsbuddyConfig:
             recommended budget, or 350 with legacy models
         :param use_spectral: use the compact CPU spectral ranker when supported by the loaded bundle
         """
-        if ms_instr is None or ms_instr == "None":
+        aliases = {'orbitrap': 'orbitrap', 'fticr': 'fticr', 'tof': 'tof',
+                   'qtof': 'tof', 'timstof': 'tof'}
+        if ms_instr is None or ms_instr == 'None':
+            self.ms_instr = None
             self.ppm = ppm
             self.ms1_tol = ms1_tol
             self.ms2_tol = ms2_tol
-        elif ms_instr in ["orbitrap", "fticr", "qtof", "timstof"]:
+        elif isinstance(ms_instr, str) and ms_instr.lower() in aliases:
+            self.ms_instr = aliases[ms_instr.lower()]
             self.ppm = True
-            if ms_instr == "orbitrap":
+            if self.ms_instr == 'orbitrap':
                 self.ms1_tol = 5
                 self.ms2_tol = 10
-            elif ms_instr == "fticr":
+            elif self.ms_instr == 'fticr':
                 self.ms1_tol = 2
                 self.ms2_tol = 5
             else:
                 self.ms1_tol = 10
                 self.ms2_tol = 20
         else:
-            raise ValueError("Invalid MS instrument. Please choose from 'orbitrap', 'fticr', 'qtof', 'timstof' and None.")
+            raise ValueError("Invalid MS instrument. Please choose from 'orbitrap', 'fticr', 'tof' and None.")
 
-        self.ms_instr = None if ms_instr in (None, 'None') else ms_instr
         if not isinstance(use_spectral, bool):
             raise ValueError('use_spectral must be True or False.')
         self.use_spectral = use_spectral
@@ -438,6 +441,12 @@ class Msbuddy:
 
         tqdm.write("Writing summary results to tsv file...")
         result_summary_df_all = pd.concat(result_summary_batches, ignore_index=True, axis=0)
+        # Pool only after every processing chunk has completed. A q-value must
+        # not depend on the internal annotation batch size.
+        from msbuddy.confidence import estimate_batch_fdr
+        probabilities = [None if pd.isna(value) else 1. - float(value)
+                         for value in result_summary_df_all['posterior_error_probability']]
+        result_summary_df_all['batch_q_value'] = estimate_batch_fdr(probabilities).q_values
         result_summary_df_all.to_csv(output_path / 'msbuddy_result_summary.tsv', sep="\t", index=False)
         self.data = None
 
@@ -509,7 +518,32 @@ class Msbuddy:
         for mf in self.data:
             result_summary_list.append(mf.summarize_result())
 
+        for result, q_value in zip(result_summary_list, self.estimate_batch_fdr().q_values):
+            result['batch_q_value'] = q_value
+
         return result_summary_list
+
+    def estimate_batch_fdr(self, fdr_threshold: float = 0.05):
+        """Estimate top-1 batch error after annotating the full loaded collection.
+
+        This does not change candidate rankings or per-query confidence. The
+        estimates require calibrated probabilities and are not an automatic
+        frequentist guarantee under distribution shift.
+        """
+        from msbuddy.confidence import estimate_batch_fdr
+        if not self.data or any(feature is None for feature in self.data):
+            raise ValueError('Annotated data must be available; call annotate_formula first.')
+        probabilities = []
+        for feature in self.data:
+            candidates = feature.candidate_formula_list or []
+            if not candidates:
+                probabilities.append(None)
+                continue
+            probability = candidates[0].normed_estimated_prob
+            if probability is None:
+                raise ValueError('Candidates have no calibrated probabilities; call annotate_formula first.')
+            probabilities.append(probability)
+        return estimate_batch_fdr(probabilities, fdr_threshold)
 
     def mass_to_formula(self, mass: float, mass_tol: float = 10., ppm: bool = True,
                         halogen: bool = True, dbe_cutoff: float = 0.0,
@@ -653,7 +687,7 @@ if __name__ == '__main__':
 
     start = time.time()
 
-    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "qtof", "orbitrap" and "fticr"
+    msb_config = MsbuddyConfig(ms_instr='orbitrap',  # supported: "tof", "orbitrap" and "fticr"
                                halogen=True, parallel=True, n_cpu=10)
 
     msb_engine = Msbuddy(msb_config)

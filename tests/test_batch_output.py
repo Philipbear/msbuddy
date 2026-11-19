@@ -52,7 +52,8 @@ class BatchOutputTests(unittest.TestCase):
         engine.data = [SimpleNamespace(identifier=f'id{i}', mz=100 + i) for i in range(5)]
 
         def write_batch(data, output_path, write_details, start, end):
-            return pd.DataFrame([{'identifier': item.identifier, 'mz': item.mz}
+            return pd.DataFrame([{'identifier': item.identifier, 'mz': item.mz,
+                                  'posterior_error_probability': None}
                                  for item in data[start:end]])
 
         def annotate_batch(batch, total):
@@ -65,7 +66,8 @@ class BatchOutputTests(unittest.TestCase):
                 engine.annotate_formula_cmd(Path(directory))
             summary = (Path(directory) / 'msbuddy_result_summary.tsv').read_text(encoding='utf-8')
 
-        self.assertEqual(summary, 'identifier\tmz\nid0\t100\nid1\t101\nid2\t102\nid3\t103\nid4\t104\n')
+        self.assertEqual(summary, 'identifier\tmz\tposterior_error_probability\tbatch_q_value\n'
+                         'id0\t100\t\t\nid1\t101\t\t\nid2\t102\t\t\nid3\t103\t\t\nid4\t104\t\t\n')
         self.assertIsNone(engine.data)
         engine.add_data(MetaFeature('next', 200, 1))
         self.assertEqual([feature.identifier for feature in engine.data], ['next'])

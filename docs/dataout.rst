@@ -9,6 +9,25 @@ All the top 5 formulas will be included in the ``results``.
    # retrieve the annotation result summary
    results = msb_engine.get_summary()
 
+The summary includes ``posterior_error_probability`` for each top formula and
+``batch_q_value`` pooled across the full loaded collection. To select annotations
+at a desired model-estimated false fraction:
+
+.. code-block:: python
+
+   confidence = msb_engine.estimate_batch_fdr(fdr_threshold=0.05)
+   selected = [row for row, keep in zip(results, confidence.selected) if keep]
+
+The individual error probability and pooled q-value answer different questions.
+The legacy ``estimated_fdr`` is a within-spectrum candidate-prefix estimate;
+at rank one it equals the individual error probability. These quantities depend
+on calibrated model probabilities and do not guarantee FDR under arbitrary
+changes in chemistry or acquisition conditions. Compute pooled q-values once
+over the collection you intend to report, rather than separately per processing
+chunk. Empty candidate sets are excluded from selections and have missing
+q-values. Candidate detail files contain individual probabilities; global
+q-values are in the summary file.
+
 In case you want to access all the annotation results, you can iterate through the :class:`msbuddy.base.CandidateFormula` objects stored in each :class:`msbuddy.base.MetaFeature`.
 
 .. code-block:: python

@@ -20,7 +20,7 @@ Alternatively, you can use the ``-usi`` option for a single USI string (from QTO
 
 .. code-block:: bash
 
-        msbuddy -usi <usi_string> -output <output_folder> -ms qtof
+        msbuddy -usi <usi_string> -output <output_folder> -ms tof
 
 or the ``-csv`` option for a csv file containing a list of USI strings:
 
@@ -58,7 +58,7 @@ For USI string, the output folder is required.
 
 
 .. note::
-    In all cases, ``-ms`` option is strongly recommended ('qtof', 'orbitrap' or 'fticr').
+    In all cases, ``-ms`` option is strongly recommended ('tof', 'orbitrap' or 'fticr').
 
 
 Option naming

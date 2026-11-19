@@ -171,7 +171,9 @@ class CandidateSpace:
 
 def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
                           db_mode: int, ele_lower_limit: np.array, ele_upper_limit: np.array,
-                          max_isotope_cnt: int, gd: dict, *, candidate_limit=None) -> MetaFeature:
+                          max_isotope_cnt: int, gd: dict, *, trace=None,
+                          fragment_query=None, propagate_loss_tolerance=False,
+                          candidate_limit=None) -> MetaFeature:
     """
     Generate candidate formulas for a metabolic feature.
     :param mf: MetaFeature object
@@ -183,23 +185,38 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     :param ele_upper_limit: upper limit of each element
     :param max_isotope_cnt: maximum isotope count, used for MS1 isotope pattern matching
     :param gd: global dictionary
+    :param trace: optional diagnostic callback receiving stage names and formula arrays
+    :param fragment_query: optional experimental replacement for query_fragnl_mass
+    :param propagate_loss_tolerance: include precursor and fragment uncertainty in neutral-loss queries
     :return: fill in list of candidate formulas (CandidateFormula) in metaFeature
     """
 
     # if MS2 data missing or non-singly charged species, query precursor mass directly
     if not mf.ms2_processed or abs(mf.adduct.charge) > 1:
+        query_options = {'trace': trace} if trace is not None else {}
         cf_list, _ = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol,
-                                                    ele_lower_limit, ele_upper_limit, db_mode, gd)
+                                                    ele_lower_limit, ele_upper_limit, db_mode, gd,
+                                                    **query_options)
 
     else:
         # if MS2 data available, generate candidate space with MS2 data
+        query_options = {}
+        if trace is not None:
+            query_options['trace'] = trace
+        if fragment_query is not None:
+            query_options['fragment_query'] = fragment_query
+        if propagate_loss_tolerance:
+            query_options['propagate_loss_tolerance'] = True
         ms2_cand_form_ls, ms2_cand_form_str_ls = _gen_candidate_formula_from_ms2(mf, ppm, ms1_tol, ms2_tol,
                                                                                  ele_lower_limit,
-                                                                                 ele_upper_limit, db_mode, gd)
+                                                                                 ele_upper_limit, db_mode, gd,
+                                                                                 **query_options)
 
         # query precursor mass, for fill in db_existed
+        query_options = {'trace': trace} if trace is not None else {}
         ms1_cand_form_ls, ms1_cand_form_str_ls = _gen_candidate_formula_from_mz(mf, ppm, ms1_tol, ele_lower_limit,
-                                                                                ele_upper_limit, db_mode, gd)
+                                                                                ele_upper_limit, db_mode, gd,
+                                                                                **query_options)
 
         cf_list = _merge_cand_form_list(ms1_cand_form_ls, ms2_cand_form_ls,
                                         ms1_cand_form_str_ls, ms2_cand_form_str_ls)
@@ -212,6 +229,9 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
         #     # fill in db_existed
         #     cf_list = _fill_in_db_existence(ms1_cand_form_ls, ms2_cand_form_ls,
         #                                     ms1_cand_form_str_ls, ms2_cand_form_str_ls)
+
+    if trace is not None:
+        trace('merged', arrays=(candidate.formula.array for candidate in cf_list))
 
     # Empty or physically invalid formulas can otherwise cause division by
     # zero during ranking or fail during subformula/isotope generation.
@@ -229,6 +249,8 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
     if invalid_count:
         logging.warning('Skipped %s invalid candidate formula(s) for spectrum %s.', invalid_count, mf.identifier)
     cf_list = valid_candidates
+    if trace is not None:
+        trace('valid', arrays=(candidate.formula.array for candidate in cf_list))
 
     # calculate mz error
     cf_list = _calc_mz_error(cf_list, mf.mz, ppm)
@@ -241,10 +263,15 @@ def gen_candidate_formula(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: f
 
     ms2_available = mf.ms2_processed
 
+    if trace is not None:
+        trace('pre_pruning', arrays=(candidate.formula.array for candidate in cf_list), candidates=cf_list)
+
     # retain top candidate formulas
     from msbuddy._candidate_selection import select_candidates
     mf.candidate_formula_list = select_candidates(mf, cf_list, ppm, ms1_tol, ms2_tol, gd,
                                                   limit=candidate_limit)
+    if trace is not None:
+        trace('retained', arrays=(candidate.formula.array for candidate in mf.candidate_formula_list))
 
     return mf
 
@@ -431,7 +458,7 @@ def _calc_ms1_iso_sim(cand_form, meta_feature, max_isotope_cnt) -> float:
 def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
                                    ppm: bool, ms1_tol: float,
                                    lower_limit: np.array, upper_limit: np.array,
-                                   db_mode: int, gd: dict) -> Tuple[List[CandidateFormula], List[str]]:
+                                   db_mode: int, gd: dict, *, trace=None) -> Tuple[List[CandidateFormula], List[str]]:
     """
     Generate candidate formulas for a metabolic feature with precursor mz only
     :param meta_feature: MetaFeature object
@@ -446,6 +473,8 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     # query precursor mz
     neutral_formulas, charged_formulas = query_precursor_mass(meta_feature.mz, meta_feature.adduct,
                                                               ms1_tol, ppm, db_mode, gd)
+    if trace is not None:
+        trace('precursor_database', arrays=(formula.array for formula in neutral_formulas))
     # filter out formulas that exceed element limits
     neutral_forms, charged_forms = [], []
     for m, f in enumerate(neutral_formulas):
@@ -458,13 +487,17 @@ def _gen_candidate_formula_from_mz(meta_feature: MetaFeature,
     cand_form_list = [CandidateFormula(formula=form, charged_formula=charged_form, exp_ms2_sum_int=0.0,
                                        db_existed=True) for form, charged_form in zip(neutral_forms, charged_forms)]
     cand_form_str_list = [form_arr_to_str(cf.formula.array) for cf in cand_form_list]
+    if trace is not None:
+        trace('precursor_filtered', arrays=(formula.array for formula in neutral_forms))
 
     return cand_form_list, cand_form_str_list
 
 
 def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, ms2_tol: float,
                                     lower_limit: np.array, upper_limit: np.array,
-                                    db_mode: int, gd) -> Tuple[List[CandidateFormula], List[str]]:
+                                    db_mode: int, gd, *, trace=None,
+                                    fragment_query=None, propagate_loss_tolerance=False
+                                    ) -> Tuple[List[CandidateFormula], List[str]]:
     """
     Generate candidate formulas for a metabolic feature with MS2 data, then apply element limits
     :param mf: MetaFeature object
@@ -499,8 +532,16 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
         nl_mz = mf.mz - frag_mz
 
         # query mass in formula database
+        query_options = {'query': fragment_query} if fragment_query is not None else {}
+        if propagate_loss_tolerance:
+            fragment_abs_tol = abs(frag_mz) * ms2_tol * 1e-6 if ppm else ms2_tol
+            query_options['loss_tol'] = ms1_abs_tol + fragment_abs_tol
         frag_form_list, nl_form_list = _query_frag_nl_pair(frag_mz, nl_mz, mf.adduct.pos_mode, na_bool, k_bool,
-                                                           ms2_tol, ppm, db_mode, gd)
+                                                           ms2_tol, ppm, db_mode, gd, **query_options)
+        if trace is not None:
+            trace('fragment_query', index=i, fragment_mz=frag_mz, loss_mass=nl_mz,
+                  fragments=frag_form_list, losses=nl_form_list,
+                  loss_tolerance_da=query_options.get('loss_tol', abs(nl_mz) * ms2_tol * 1e-6 if ppm else ms2_tol))
         if frag_form_list is None or nl_form_list is None:
             continue
 
@@ -532,12 +573,17 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
                                              pre_form_arr.astype(int), frag.array, nl.array,
                                              frag_int, i)
 
+    if trace is not None:
+        trace('ms2_stitched', arrays=(candidate.pre_neutral_array for candidate in candidate_space_list))
+
     # element limit check, SENIOR rules, O/P check, DBE check
     candidate_list = [cs for cs in candidate_space_list
                       if _element_check(cs.pre_neutral_array, lower_limit, upper_limit)
                       and _senior_rules(cs.pre_neutral_array) and _o_p_check(cs.pre_neutral_array)
                       and _dbe_check(cs.pre_neutral_array)
                       and _adduct_loss_check(cs.pre_neutral_array, mf.adduct.loss_formula)]
+    if trace is not None:
+        trace('ms2_filtered', arrays=(candidate.pre_neutral_array for candidate in candidate_list))
 
     # remove candidate space variable to save memory
     del candidate_space_list
@@ -553,7 +599,8 @@ def _gen_candidate_formula_from_ms2(mf: MetaFeature, ppm: bool, ms1_tol: float, 
 
 def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: bool, k_bool: bool,
                         ms2_tol: float, ppm: bool,
-                        db_mode: int, gd) -> Tuple[Union[List[Formula], None], Union[List[Formula], None]]:
+                        db_mode: int, gd, *, query=None,
+                        loss_tol=None) -> Tuple[Union[List[Formula], None], Union[List[Formula], None]]:
     """
     query fragment and neutral loss formulas from database
     :param frag_mz: fragment m/z
@@ -567,21 +614,23 @@ def _query_frag_nl_pair(frag_mz: float, nl_mz: float, pos_mode: bool, na_bool: b
     :param gd: global dictionary
     :return: fragment formula list, neutral loss formula list
     """
+    lookup = query_fragnl_mass if query is None else query
+    loss_query_tol, loss_ppm = (ms2_tol, ppm) if loss_tol is None else (loss_tol, False)
     if nl_mz < frag_mz:
         # search neutral loss first, for faster search
-        nl_form_list = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
-                                         ms2_tol, ppm, db_mode, gd)
+        nl_form_list = lookup(nl_mz, False, pos_mode, na_bool, k_bool,
+                                         loss_query_tol, loss_ppm, db_mode, gd)
         if nl_form_list:
-            frag_form_list = query_fragnl_mass(frag_mz, True, pos_mode,
+            frag_form_list = lookup(frag_mz, True, pos_mode,
                                                na_bool, k_bool, ms2_tol, ppm, db_mode, gd)
         else:
             return None, None
     else:
-        frag_form_list = query_fragnl_mass(frag_mz, True, pos_mode, na_bool, k_bool,
+        frag_form_list = lookup(frag_mz, True, pos_mode, na_bool, k_bool,
                                            ms2_tol, ppm, db_mode, gd)
         if frag_form_list:
-            nl_form_list = query_fragnl_mass(nl_mz, False, pos_mode, na_bool, k_bool,
-                                             ms2_tol, ppm, db_mode, gd)
+            nl_form_list = lookup(nl_mz, False, pos_mode, na_bool, k_bool,
+                                             loss_query_tol, loss_ppm, db_mode, gd)
         else:
             return None, None
 
@@ -772,7 +821,6 @@ def _assign_targeted_explanation(mf, cf, ppm, ms2_tol):
     result.exp_ms2_sum_int = cf.exp_ms2_sum_int
     result.db_existed = cf.db_existed
     return result
-
 
 
 @njit

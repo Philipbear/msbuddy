@@ -731,7 +731,7 @@ class CandidateFormula:
         self.mz_error = mz_error  # mz error in ppm or Da, depending on config
         self.estimated_prob = None  # estimated probability (ML score, not normalized)
         self.normed_estimated_prob = None  # coherent posterior mass; may sum to less than one across candidates
-        self.estimated_fdr = None  # estimated FDR
+        self.estimated_fdr = None  # expected false fraction of this query's candidate prefix
         self.formula_feature_array = None  # formula feature array
         self.ms1_isotope_similarity = None
         self.exp_ms2_sum_int = exp_ms2_sum_int  # sum of MS2 intensity of peaks explained (during bottom-up search)
@@ -739,6 +739,13 @@ class CandidateFormula:
         self.db_existed = db_existed  # whether this formula is in the formula database
         # self.optimal_formula = optimal_formula
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
+
+    @property
+    def posterior_error_probability(self):
+        """Estimated error for this candidate, including absent-formula mass."""
+        if self.normed_estimated_prob is None:
+            return None
+        return 1. - self.normed_estimated_prob
 
     def __str__(self):
         cf_str = form_arr_to_str(self.formula.array) + \
@@ -774,7 +781,7 @@ class MetaFeature:
         :param adduct: adduct string, e.g., "[M+H]+" (str)
         :param ms1: MS1 spectrum (Spectrum class)
         :param ms2: MS2 spectrum (Spectrum class)
-        :param instrument: optional orbitrap, qtof or timstof acquisition family
+        :param instrument: optional orbitrap or tof acquisition family (qtof and timstof map to tof)
         :param collision_energy: optional energy with explicit units in its string or collision_energy_unit
         :param collision_energy_unit: ev or nce; unspecified numeric units are masked
         """
@@ -852,12 +859,14 @@ class MetaFeature:
         :return: dict
         """
         result = {'identifier': self.identifier, 'mz': self.mz, 'rt': self.rt, 'adduct': self.adduct.string,
-                  'formula_rank_1': None, 'estimated_fdr': None, 'formula_rank_2': None, 'formula_rank_3': None,
+                  'formula_rank_1': None, 'estimated_fdr': None, 'posterior_error_probability': None,
+                  'formula_rank_2': None, 'formula_rank_3': None,
                   'formula_rank_4': None, 'formula_rank_5': None}
 
         if self.candidate_formula_list:
             result['formula_rank_1'] = form_arr_to_str(self.candidate_formula_list[0].formula.array)
             result['estimated_fdr'] = self.candidate_formula_list[0].estimated_fdr
+            result['posterior_error_probability'] = self.candidate_formula_list[0].posterior_error_probability
             if len(self.candidate_formula_list) > 1:
                 result['formula_rank_2'] = form_arr_to_str(self.candidate_formula_list[1].formula.array)
             if len(self.candidate_formula_list) > 2:

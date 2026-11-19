@@ -25,8 +25,9 @@ for the lossless numerical format.
 Optional acquisition metadata
 -----------------------------
 
-``MsbuddyConfig(ms_instr=...)`` accepts ``orbitrap``, ``qtof``, ``timstof`` and
-``fticr``. It selects the documented mass tolerances. For mixed or manually
+``MsbuddyConfig(ms_instr=...)`` accepts ``orbitrap``, ``tof`` and ``fticr``.
+Both ``qtof`` and ``timstof`` are accepted as aliases for ``tof``. It selects
+the documented mass tolerances. For mixed or manually
 configured inputs, ``MetaFeature(instrument=..., collision_energy=...,
 collision_energy_unit=...)`` can supply a per-query instrument and energy.
 Per-query metadata do not override the engine's mass tolerances.
@@ -36,7 +37,10 @@ Energy units must be explicit: ``"30 nce"``, ``"20 eV"``, or a number with
 Ranged or stepped energies are masked. Supported MGF keys include
 ``INSTRUMENT_TYPE``, ``COLLISION_ENERGY`` and ``COLLISION_ENERGY_EV``.
 Missing metadata remain valid inputs; instrument type is not inferred from
-mass tolerance.
+mass tolerance. QTOF and timsTOF metadata both use the same TOF model input.
+The existing model was trained with separate indicators; the unified TOF input
+uses the former QTOF indicator. Its predictions for timsTOF inputs can therefore
+change, and the original per-instrument evaluation does not validate this change.
 
 Candidate budgets
 -----------------
@@ -75,6 +79,16 @@ top-1 calls by this error probability and average accepted values to estimate
 the pooled false fraction. These estimates depend on calibration and domain
 match; they are not distribution-free FDR guarantees.
 
+Use ``engine.estimate_batch_fdr(fdr_threshold=0.05)`` after annotating the full
+collection to perform this pooling. The returned ``q_values`` align with input
+spectra and select the largest complete confidence prefix whose mean posterior
+error is at most the threshold. Equal-confidence annotations are selected
+together; spectra with no candidates have no q-value and are never selected.
+``get_summary()`` and the command-line summary include ``batch_q_value`` and
+``posterior_error_probability``. Command-line q-values pool all processing
+batches. A q-value describes the selected collection, not the error probability
+of that individual annotation. Adding or removing queries can change q-values.
+
 Calibration for the compact models and the standard isotope-only and
 mass-only compatibility modes uses a positive query-dependent temperature and
 an absent-answer state. The winning formula's precursor-mass fit and observed
@@ -100,7 +114,7 @@ Compatibility
 
 The compact models are validated for singly charged ppm inputs below 1500 m/z,
 supported monomer/multimer adducts, and precursor/fragment tolerances of
-5/10 ppm or 10/20 ppm. Known Orbitrap metadata use 5/10 ppm; QTOF/timsTOF use
+5/10 ppm or 10/20 ppm. Known Orbitrap metadata use 5/10 ppm; TOF metadata use
 10/20 ppm. The validated preprocessing uses four maximum isotope peaks,
 0.02 Da isotope bins, 1% denoising and six peaks per 50 Da.
 

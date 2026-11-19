@@ -53,8 +53,8 @@ lower MS2-only accuracy. See the [complete validation report](https://github.com
 for paired intervals, missing-metadata results, confidence checks and limitations.
 
 Acquisition metadata are optional. Set `MsbuddyConfig(ms_instr="orbitrap")`
-or the appropriate instrument family to configure mass tolerances and provide
-the instrument hint. `MetaFeature` also accepts `instrument`, `collision_energy`
+or `ms_instr="tof"` (for QTOF and timsTOF) to configure mass tolerances and provide
+the instrument hint. The older `qtof` and `timstof` settings remain supported as aliases for `tof`. `MetaFeature` also accepts `instrument`, `collision_energy`
 and `collision_energy_unit` (`"ev"` or `"nce"`). MGF fields
 `INSTRUMENT_TYPE` and `COLLISION_ENERGY=30 nce` are recognized. Unknown or
 stepped energies are masked; bare numbers need explicit units.
@@ -100,6 +100,30 @@ See the [migration guide](https://github.com/Philipbear/msbuddy/blob/main/docs/m
 
 ## Python usage 
 
+### Signed differences between network nodes (unreleased)
+
+Available from this checkout, the development API annotates **target minus source** with signed atom
+counts, including `-H+Na`, without downloading a model or database:
+
+```python
+from msbuddy import annotate_delta_mass, annotate_network_delta
+
+changes = annotate_delta_mass(21.98194425, tolerance=0.001)
+print(changes[0].formula)  # -H+Na: a possible adduct exchange
+
+edge = annotate_network_delta(
+    181.0706645565, 203.0526088063, '[M+H]+', '[M+Na]+',
+    source_formula='C6H12O6', preset='broad',
+)
+print(edge[0].formula, edge.adduct_delta)  # 0, -H+Na
+```
+
+The network function accounts for charge and multimers and separates neutral
+formula changes from adduct changes. Its search is complete within explicit
+bounds; multi-step labels are hypotheses, and ranking scores are not FDR
+estimates. See the [delta API guide](docs/delta.rst) for search presets,
+mass tolerances, and annotation propagation.
+
 ### Quick start ([docs](https://msbuddy.readthedocs.io/en/latest/quickstart.html))
 As a quick start, we here load a mgf file and annotate the molecular formula for each query.
 All the configurations are specified in the [`MsbuddyConfig`](https://msbuddy.readthedocs.io/en/latest/pyapi.html#msbuddy.MsbuddyConfig) class.
@@ -109,7 +133,7 @@ Parallel computing is supported.
 from msbuddy import Msbuddy, MsbuddyConfig
 
 # instantiate a MsbuddyConfig object
-msb_config = MsbuddyConfig(ms_instr='orbitrap', # supported: "qtof", "orbitrap", "fticr" or None
+msb_config = MsbuddyConfig(ms_instr='orbitrap', # supported: "tof", "orbitrap", "fticr" or None
                                                 # custom MS1 and MS2 tolerance will be used if None
                            ppm=True,  # use ppm for mass tolerance
                            ms1_tol=5,  # MS1 tolerance in ppm or Da
@@ -128,6 +152,15 @@ msb_engine.annotate_formula()
 # retrieve the annotation result summary
 result = msb_engine.get_summary()
 ```
+
+The result summary reports `posterior_error_probability` for each top formula
+and `batch_q_value` across the complete loaded collection. After annotation,
+`msb_engine.estimate_batch_fdr(fdr_threshold=0.05)` returns aligned selection
+flags and the estimated false fraction of the selected top annotations.
+These estimates depend on probability calibration and the application domain.
+The legacy `estimated_fdr` field describes a candidate prefix within one
+spectrum; at rank one it is the individual error probability, not a batch
+q-value. See the [confidence documentation](https://msbuddy.readthedocs.io/en/latest/models.html#probability-and-fdr-interpretation).
 See [demo mgf file](https://github.com/Philipbear/msbuddy/tree/main/demo).
 One of the following fields is recommended to be included, which will be used as the query identifier: `TITLE`, `FEATURE_ID`, `SPECTRUMID`, or `SPECTRUM_ID`.
 
@@ -189,7 +222,7 @@ msbuddy -usi <usi_string> -output <output_folder> -ms fticr
 ```
 or a csv file ([template files](https://github.com/Philipbear/msbuddy/tree/main/demo)) containing multiple USI strings (QTOF in this example):
 ```bash
-msbuddy -csv <csv_file> -output <output_folder> -ms qtof -details
+msbuddy -csv <csv_file> -output <output_folder> -ms tof -details
 ```
 
 For mgf file or csv file, you can omit the `-output` option, and results will be written in the same folder as the input file.
@@ -228,6 +261,10 @@ Run `python -m benchmarks.benchmark_workflows` to measure synthetic input
 loading, candidate matching, feature assembly, and subformula mass calculation.
 See the [development guide](https://github.com/Philipbear/msbuddy/blob/main/docs/development.rst) for the project layout and
 benchmark options.
+
+The [candidate-audit guide](docs/candidate_audit.rst) covers labelled-library
+sampling, optional MassDesk fragment search, candidate-recall diagnostics,
+and formula-disjoint ranker experiments.
 
 ## Links
 [**msbuddy documentation**](https://msbuddy.readthedocs.io/en/latest/)

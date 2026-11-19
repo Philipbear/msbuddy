@@ -129,6 +129,26 @@ class DataConfigurationTests(unittest.TestCase):
             else:
                 self.assertNotIn('Cl', ranges)
 
+    def test_cli_and_nextflow_accept_the_shared_tof_setting(self):
+        import main_nextflow
+
+        for instrument in ('tof', 'qtof', 'timstof'):
+            with self.subTest(instrument=instrument), tempfile.TemporaryDirectory() as directory:
+                with patch.object(sys, 'argv', ['msbuddy', '--mgf', 'input.mgf',
+                                              '--output', directory, '--ms-instr', instrument]), \
+                     patch('msbuddy.main_cmd.Msbuddy', return_value=MagicMock()) as engine:
+                    main_cmd.main()
+                config = engine.call_args.args[0]
+                self.assertEqual((config.ms_instr, config.ms1_tol, config.ms2_tol), ('tof', 10, 20))
+
+                with patch.object(sys, 'argv', ['main_nextflow', '-input', 'input.mgf',
+                                              '-ms', instrument]), \
+                     patch('main_nextflow.Msbuddy', return_value=MagicMock()) as engine, \
+                     patch('os.path.exists', return_value=True):
+                    main_nextflow.main()
+                config = engine.call_args.args[0]
+                self.assertEqual((config.ms_instr, config.ms1_tol, config.ms2_tol), ('tof', 10, 20))
+
     def test_csv_accepts_headered_and_headerless_usi_lists(self):
         examples = [
             ('usi,adduct\nmzspec:a,[M+H]+\nmzspec:b,[M+Na]+\n',

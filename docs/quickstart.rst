@@ -8,7 +8,7 @@ As a quick start, we here load MS/MS spectra from a mgf file, perform molecular 
    from msbuddy import Msbuddy, MsbuddyConfig
 
    # create a MsbuddyConfig object
-   msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "qtof", "orbitrap", "fticr" or None
+   msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "tof", "orbitrap", "fticr" or None
                                                    # custom MS1 and MS2 tolerance will be used if None
                                                    # highly recommended to fill in the instrument type
                               ppm=True,  # use ppm for mass tolerance
@@ -48,7 +48,9 @@ Within the result summary, ``results`` is a list of Python dictionaries. ``indiv
 - ``rt``: Retention time in seconds
 - ``adduct``: Adduct type
 - ``formula_rank_1``: Molecular formula annotation ranked in the first place
-- ``estimated_fdr``: Estimated false discovery rate (FDR)
+- ``estimated_fdr``: Expected false fraction of the candidate prefix within one spectrum; at rank one, its posterior error probability
+- ``posterior_error_probability``: Probability that the top formula is wrong, including an absent answer
+- ``batch_q_value``: Mean posterior error across top annotations at least as confident as this one, pooled over the full loaded collection
 - ``formula_rank_2``: Molecular formula annotation ranked in the second place
 - ``formula_rank_3``: Molecular formula annotation ranked in the third place
 - ``formula_rank_4``: Molecular formula annotation ranked in the fourth place
@@ -81,7 +83,7 @@ If parallel computing is needed, you can specify the number of CPUs to be used, 
    if __name__ == '__main__':
        from msbuddy import Msbuddy, MsbuddyConfig
        # create a MsbuddyConfig object
-       msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "qtof", "orbitrap" and "fticr"
+       msb_config = MsbuddyConfig(ms_instr="orbitrap", # supported: "tof", "orbitrap" and "fticr"
                                                        # highly recommended to fill in the instrument type
                                   halogen=True,
                                   parallel=True, # enable parallel computing
