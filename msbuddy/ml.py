@@ -39,7 +39,7 @@ def _gen_arr_from_buddy_data(buddy_data) -> (np.array, np.array, np.array):
             np.asarray([formula.mass for formula in formulas], dtype=float))
 
 
-@njit
+@njit(cache=True)
 def _gen_form_feature(all_cf_arr, dbe_arr, mass_arr) -> np.array:
     """
     generate formula features for ML
@@ -348,7 +348,7 @@ def _calc_subformula_score(frag_form_arr, gd) -> (float, float):
     return subform_score, subform_common_loss_score
 
 
-@njit
+@njit(cache=True)
 def _subformula_check(all_frag_arr: np.array, nl_db: np.array):
     """
     check if a formula is subformula of another formula
@@ -392,7 +392,7 @@ def _calc_log_p_norm_many(values: np.ndarray, sigma: float) -> np.ndarray:
                        dtype=float, count=len(probabilities))
 
 
-@njit
+@njit(cache=True)
 def _calc_log_p_norm_helper(arr_norm_p) -> np.array:
     """
     calculate log(p) for a single element, where p is the probability of a normal distribution

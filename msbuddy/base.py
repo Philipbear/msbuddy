@@ -110,7 +110,7 @@ class Formula:
         return form_arr_to_str(self.array)
 
 
-@njit
+@njit(cache=True)
 def calc_formula_dbe(arr):
     """
     calculate dbe of a formula
@@ -122,7 +122,7 @@ def calc_formula_dbe(arr):
     return dbe
 
 
-@njit
+@njit(cache=True)
 def calc_formula_mass(array, charge, isotope):
     """
     calculate monoisotopic mass of a formula, charge adjusted
@@ -137,7 +137,7 @@ def calc_formula_mass(array, charge, isotope):
     return mass
 
 
-@njit
+@njit(cache=True)
 def senior_rules(form_arr: np.array) -> bool:
     """
     Filter formulas by SENIOR rules.
@@ -661,7 +661,7 @@ class ProcessedMS2:
             self.int_array = self.int_array / np.max(self.int_array)
 
 
-@njit
+@njit(cache=True)
 def ms2_denoise(mz_arr, int_arr, top_n=6, per_mass_range=50):
     """
     keep top_n peaks in each per_mass_range
@@ -737,6 +737,7 @@ class CandidateFormula:
         self.exp_ms2_sum_int = exp_ms2_sum_int  # sum of MS2 intensity of peaks explained (during bottom-up search)
         self.ms2_raw_explanation = ms2_raw_explanation  # ms2 explanation during subformula assignment
         self.db_existed = db_existed  # whether this formula is in the formula database
+        self.adduct = None  # optional Adduct populated in adduct="auto" or v2 mode
         # self.optimal_formula = optimal_formula
         # self.ms2_refined_explanation = ms2_refined_explanation  # re-annotate frags using global optim.
 
@@ -794,6 +795,12 @@ class MetaFeature:
         except (TypeError, ValueError, OverflowError) as exc:
             raise ValueError("Charge must be a nonzero integer.") from exc
         charge = integer_charge
+        try:
+            mz_float = float(mz)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Precursor m/z must be a positive finite number.") from exc
+        if not np.isfinite(mz_float) or mz_float <= 0:
+            raise ValueError("Precursor m/z must be a positive finite number.")
         self.identifier = identifier
         self.mz = mz
         self.rt = rt
@@ -802,14 +809,21 @@ class MetaFeature:
         self.collision_energy, self.collision_energy_unit = normalize_energy(collision_energy, collision_energy_unit)
 
         pos_mode = charge > 0
-        if adduct is None and abs(charge) > 1:
-            magnitude = abs(charge)
-            sign = '+' if pos_mode else '-'
-            adduct = f'[M{sign}{magnitude}H]{magnitude}{sign}'
-        self.adduct = Adduct(adduct, pos_mode)  # type: Adduct
-        if self.adduct.charge != charge:
-            logging.warning('Reported charge %s differs from adduct %s (charge %s); using the adduct charge.',
-                            charge, self.adduct.string, self.adduct.charge)
+        self.adduct_auto = False
+        if isinstance(adduct, str) and adduct.strip().lower() == 'auto':
+            if abs(charge) != 1:
+                raise ValueError("adduct='auto' currently supports singly charged ions (charge=1 or charge=-1).")
+            self.adduct_auto = True
+            self.adduct = Adduct('[M+H]+' if pos_mode else '[M-H]-', pos_mode)
+        else:
+            if adduct is None and abs(charge) > 1:
+                magnitude = abs(charge)
+                sign = '+' if pos_mode else '-'
+                adduct = f'[M{sign}{magnitude}H]{magnitude}{sign}'
+            self.adduct = Adduct(adduct, pos_mode)  # type: Adduct
+            if self.adduct.charge != charge:
+                logging.warning('Reported charge %s differs from adduct %s (charge %s); using the adduct charge.',
+                                charge, self.adduct.string, self.adduct.charge)
 
         self.ms1_raw = ms1
         self.ms1_processed = None  # type: ProcessedMS1 or None

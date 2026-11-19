@@ -210,7 +210,7 @@ def enumerate_subform_arr(form_arr: List[int]) -> np.ndarray:
     return enumerate_subformula(form_arr)
 
 
-@njit
+@njit(cache=True)
 def enumerate_subformula(pre_charged_arr: np.array) -> np.array:
     """
     Enumerate all subformulas of a candidate formula. (Numba version)
@@ -252,7 +252,7 @@ word_lengths = np.array([len(word) for word in ["C", "H", "Br", "Cl", "F", "I", 
                         dtype=np.int16)
 
 
-@njit
+@njit(cache=True)
 def _form_arr_to_str(form_arr: np.array):
     """
     Inner func: convert formula array to string. (Numba version)
@@ -285,11 +285,16 @@ def _ascii_to_str(ascii_arr) -> str:
 
 def form_arr_to_str(form_arr) -> str:
     """
-    Convert formula array to string. (Numba version)
+    Convert formula array to string.
     :param form_arr: formula np.array
     :return: formula string
     """
-    return _ascii_to_str(_form_arr_to_str(form_arr))
+    parts = []
+    for symbol, count in zip(SUPPORTED_ELEMENTS, form_arr):
+        c = int(count)
+        if c:
+            parts.append(symbol if c <= 1 else f'{symbol}{c}')
+    return ''.join(parts)
 
 
 def read_formula_str(x: str) -> dict:

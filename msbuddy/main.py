@@ -397,12 +397,15 @@ class Msbuddy:
         subformula annotation -> learned ranking -> uncertainty estimation
         :return: None. Update self.data
         """
-        n_batch = self._annotate_formula_prepare()
+        if not self.data:
+            raise ValueError("No data loaded.")
 
         self._dependencies = init_ml_models(
             self._dependencies,
             data_dir=self.config.data_dir,
             data_files=self.config.data_files)  # ml models initialization
+
+        n_batch = self._annotate_formula_prepare()
 
         # loop over batches
         for n in range(n_batch):
@@ -418,12 +421,15 @@ class Msbuddy:
         :param write_details: whether to write out detailed results
         :return: None
         """
-        n_batch = self._annotate_formula_prepare()
+        if not self.data:
+            raise ValueError("No data loaded.")
 
         self._dependencies = init_ml_models(
             self._dependencies,
             data_dir=self.config.data_dir,
             data_files=self.config.data_files)  # ml models initialization
+
+        n_batch = self._annotate_formula_prepare()
 
         output_path.mkdir(parents=True, exist_ok=True)
 
@@ -459,11 +465,11 @@ class Msbuddy:
             raise ValueError("No data loaded.")
 
         cnt_pre = len(self.data)
-        # select MetaFeatures with precursor 1 < mass < 1500
-        self.data = [mf for mf in self.data if 1 < mf.mz < 1500]
+        mz_upper = 5000 if self._dependencies.get('model_v2_loaded') else 1500
+        self.data = [mf for mf in self.data if 1 < mf.mz < mz_upper]
         cnt_post = len(self.data)
         if cnt_pre != cnt_post:
-            tqdm.write(f"{cnt_pre - cnt_post} spectra with precursor mz > 1500 are removed.")
+            tqdm.write(f"{cnt_pre - cnt_post} spectra with precursor mz > {mz_upper} are removed.")
 
         if not self.data:
             raise ValueError("No data loaded.")
@@ -491,6 +497,29 @@ class Msbuddy:
         tqdm.write(f"Batch {n + 1}/{n_batch}:")
         # get batch data
         start_idx, end_idx = _get_batch(self.data, self.config.batch_size, n)
+
+        if self._dependencies.get('model_v2_loaded') and self.config.use_spectral:
+            from msbuddy._v2_engine import annotate_batch_v2
+            batch = self.data[start_idx:end_idx]
+            v2_items = [mf for mf in batch if abs(mf.adduct.charge) == 1 and bool(mf.ms2_raw)]
+            other_idx = [i for i, mf in enumerate(batch) if not (abs(mf.adduct.charge) == 1 and bool(mf.ms2_raw))]
+            if v2_items:
+                annotate_batch_v2(v2_items, self.config, self._dependencies)
+            if other_idx:
+                # Handle MS2-less or multiply-charged queries via standard fallback
+                orig_data = self.data
+                try:
+                    self.data = [batch[i] for i in other_idx]
+                    self._preprocess_and_generate_candidate_formula(0, len(self.data))
+                    self._assign_subformula_annotation(0, len(self.data))
+                    if 'model_ms1_ms2' in self._dependencies or 'model_compatibility_files' in self._dependencies:
+                        predict_formula_probability(self.data, 0, len(self.data), self.config, self._dependencies)
+                        calc_fdr(self.data, 0, len(self.data))
+                    for pos_i, orig_i in enumerate(other_idx):
+                        batch[orig_i] = self.data[pos_i]
+                finally:
+                    self.data = orig_data
+            return start_idx, end_idx
 
         # data preprocessing and candidate space generation
         self._preprocess_and_generate_candidate_formula(start_idx, end_idx)

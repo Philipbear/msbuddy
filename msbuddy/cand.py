@@ -293,7 +293,7 @@ def _calc_mz_error(cf_list: List[CandidateFormula], precursor_mz: float, ppm: bo
     return cf_list
 
 
-@njit
+@njit(cache=True)
 def _find_closest_mass_idx(mass: float, mass_arr: np.array) -> int:
     """
     find the closest mass in mass_arr to mass
@@ -324,7 +324,7 @@ def calc_isotope_pattern(formula: Formula, iso_peaks: Union[int, None] = 4) -> n
     return int_arr
 
 
-@njit
+@njit(cache=True)
 def calc_isotope_similarity(int_arr_x, int_arr_y, iso_num: int) -> float:
     """
     calculate isotope similarity between two ms1 isotope patterns
@@ -351,7 +351,7 @@ def calc_isotope_similarity(int_arr_x, int_arr_y, iso_num: int) -> float:
     return sim_score
 
 
-@njit
+@njit(cache=True)
 def _element_check(form_array: np.array, lower_limit: np.array, upper_limit: np.array) -> bool:
     """
     check whether a formula satisfies the element restriction
@@ -365,7 +365,7 @@ def _element_check(form_array: np.array, lower_limit: np.array, upper_limit: np.
     return True
 
 
-@njit
+@njit(cache=True)
 def _senior_rules(form: np.array) -> bool:
     """
     check whether a formula satisfies the senior rules
@@ -394,7 +394,7 @@ def _senior_rules(form: np.array) -> bool:
     return True
 
 
-@njit
+@njit(cache=True)
 def _o_p_check(form: np.array) -> bool:
     """
     check whether a formula satisfies the O/P ratio rule
@@ -409,7 +409,7 @@ def _o_p_check(form: np.array) -> bool:
     return True
 
 
-@njit
+@njit(cache=True)
 def _dbe_check(form: np.array) -> bool:
     """
     check whether a formula DBE >= 0
@@ -665,7 +665,7 @@ def _add_to_candidate_space_list(candidate_space_list: List[CandidateSpace], can
         candidate.exp_frag_idx_ls.append(frag_idx)
 
 
-@njit
+@njit(cache=True)
 def _valid_precursor_array(pre_arr: np.array) -> bool:
     """
     check adduct M
@@ -751,7 +751,7 @@ def _retain_top_cand_form(cf_list: List[CandidateFormula], ms1_tol: float, ms1_i
         return cf_list[:top_n]
 
 
-@njit
+@njit(cache=True)
 def _form_array_equal(arr1: np.array, arr2: np.array) -> bool:
     """
     check whether two formula arrays are equal
@@ -823,7 +823,7 @@ def _assign_targeted_explanation(mf, cf, ppm, ms2_tol):
     return result
 
 
-@njit
+@njit(cache=True)
 def _calc_subform_mass(subform_arr: np.array, adduct_charge: int) -> np.array:
     """
     Calculate mass of each subformula.
@@ -844,7 +844,7 @@ def _calc_subform_mass(subform_arr: np.array, adduct_charge: int) -> np.array:
     return mass_arr
 
 
-@njit
+@njit(cache=True)
 def _dbe_subform_filter(subform_arr: np.array, cutoff: float) -> np.array:
     """
     Filter subformulas by DBE.
@@ -858,7 +858,7 @@ def _dbe_subform_filter(subform_arr: np.array, cutoff: float) -> np.array:
     return dbe_bool_arr
 
 
-@njit
+@njit(cache=True)
 def _senior_subform_filter(subform_arr: np.array) -> np.array:
     """
     Filter subformulas by SENIOR rules.
@@ -874,7 +874,7 @@ def _senior_subform_filter(subform_arr: np.array) -> np.array:
     return senior_bool_arr
 
 
-@njit
+@njit(cache=True)
 def _valid_subform_check(subform_arr: np.array, pre_charged_arr: np.array) -> np.array:
     """
     Check whether a subformula (frag and loss) is valid. e.g., 'C2', 'N4', 'P2'; O >= 2*P

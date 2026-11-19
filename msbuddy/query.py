@@ -128,24 +128,22 @@ def check_formula_existence(form_arr, pos_mode: bool, frag: bool, gd) -> Tuple[b
     # recalculated target mass
     target_mass = calc_formula_mass(form_arr, 0, 0)
 
-    # query database, use a tiny mass tolerance (1e-5)
+    # query database, use a tiny mass tolerance (1e-4) via mass-only binary search
+    # (100% identical to decoding formula rows, with zero .msbdb block decompression).
     mass_tol = 1e-4
     db_mode = 0 if not halogen_bool else 1
-    start_idx, end_idx = _mass_bin_bounds(target_mass, mass_tol)
-
-    db_start_idx, db_end_idx = _get_formula_db_idx(start_idx, end_idx, db_mode, gd)
-    if db_mode == 0:
-        results_mass, results_formula = _matching_database_rows('basic', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
-    else:
-        results_mass, results_formula = _matching_database_rows('halogen', db_start_idx, db_end_idx, target_mass, mass_tol, gd)
-    forms = _func_a(results_mass, results_formula, target_mass, mass_tol, None)
-
-    db_existed_bool = len(forms) > 0
+    prefix = 'basic' if db_mode == 0 else 'halogen'
+    from msbuddy._fast_db import common_nl_lookup_fast, get_common_loss_keys, mass_exists_fast
+    masses = gd[prefix + '_db_mass']
+    idx = gd[prefix + '_db_idx']
+    db_existed_bool = bool(mass_exists_fast(
+        np.asarray(masses, dtype=np.float64), np.asarray(idx, dtype=np.int64), float(target_mass), mass_tol
+    ))
 
     if frag and form_arr[0] == 0:
         common_bool = common_frag_from_array(form_arr, gd['common_frag_db'])
     else:
-        common_bool = common_nl_from_array(form_arr, gd['common_loss_db'])
+        common_bool = bool(common_nl_lookup_fast(np.asarray(form_arr, dtype=np.int16), get_common_loss_keys(gd)))
 
     return db_existed_bool, common_bool
 
@@ -492,7 +490,7 @@ def _func_c(target_mass, mass_tol, start_idx, end_idx, fragment: bool, radical: 
     return forms
 
 
-@njit
+@njit(cache=True)
 def convert_na_k(form_arr: np.array) -> np.array:
     """
     convert formula to Na K converted form, Na K into H
@@ -506,7 +504,7 @@ def convert_na_k(form_arr: np.array) -> np.array:
     return form_arr
 
 
-@njit
+@njit(cache=True)
 def convert_neutral(form_arr: np.array, pos_mode: bool) -> np.array:
     """
     convert charged formula into neutral formula, for fragments
@@ -522,7 +520,7 @@ def convert_neutral(form_arr: np.array, pos_mode: bool) -> np.array:
     return form_arr
 
 
-@njit
+@njit(cache=True)
 def common_frag_from_array(form_arr: np.array, frag_db: np.array) -> bool:
     """
     a helper function for checking whether a formula is a common fragment, numba accelerated
@@ -542,7 +540,7 @@ def common_frag_from_array(form_arr: np.array, frag_db: np.array) -> bool:
     return False
 
 
-@njit
+@njit(cache=True)
 def common_nl_from_array(form_arr: np.array, nl_db: np.array) -> bool:
     """
     a helper function for checking whether a formula is a common neutral loss, numba accelerated

@@ -282,20 +282,24 @@ def init_ml_models(global_dict, data_dir=None, data_files=None) -> dict:
     """
 
     # check if ml models exist
-    if 'model_ms1_ms2' in global_dict or global_dict.get('model_core_loaded'):
+    if 'model_ms1_ms2' in global_dict or global_dict.get('model_core_loaded') or global_dict.get('model_v2_loaded'):
         return global_dict
 
     files = _resolve_data_paths(data_dir, data_files)
     custom_files = set(data_files or {})
 
-    # load ml
-    bundle = check_download_joblibload(
-            DATA_FILES['ml_model']['url'], files['ml_model'],
-            download_missing='ml_model' not in custom_files,
-            expected_sha256=DATA_FILES['ml_model'].get('sha256') if 'ml_model' not in custom_files else None)
+    # load ml (supports packed joblib bundles and unpacked format_version=4 bundle directories)
+    if files['ml_model'].is_dir():
+        from msbuddy._v2_engine import load_v2_bundle_dir
+        bundle = load_v2_bundle_dir(files['ml_model'])
+    else:
+        bundle = check_download_joblibload(
+                DATA_FILES['ml_model']['url'], files['ml_model'],
+                download_missing='ml_model' not in custom_files,
+                expected_sha256=DATA_FILES['ml_model'].get('sha256') if 'ml_model' not in custom_files else None)
     if isinstance(bundle, dict):
         _load_versioned_models(bundle, global_dict)
-        if global_dict.get('model_core_loaded'):
+        if global_dict.get('model_core_loaded') and 'compatibility' in bundle:
             specification = bundle['compatibility']
             compatibility_path = files['ml_compatibility']
             if 'ml_model' in custom_files and 'ml_compatibility' not in custom_files:
@@ -314,6 +318,18 @@ def init_ml_models(global_dict, data_dir=None, data_files=None) -> dict:
 
 
 def _load_versioned_models(bundle, dependencies):
+    if bundle.get('format_version') == 4:
+        from msbuddy._v2_engine import validate_v2_bundle
+        validate_v2_bundle(bundle)
+        dependencies.update(
+            model_v2=bundle,
+            model_v2_loaded=True,
+            model_v2_cache={},
+            model_core_loaded=True,
+            model_feature_version=4,
+            model_bundle_version=bundle.get('version', '2.0.0'),
+        )
+        return
     if bundle.get('format_version') == 3:
         _load_compact_models(bundle, dependencies)
         return
