@@ -382,12 +382,12 @@ def generate_candidates_fast_numba(
                 ht_slot = np.full(ht_size, -1, dtype=np.int32)
                 for ci in range(n_cand):
                     hv = (cand_lo[ci] ^ (cand_hi[ci] * np.uint64(0x9E3779B97F4A7C15))) & np.uint64(ht_mask)
-                    s = int(hv)
+                    s = np.int64(hv)
                     while ht_slot[s] != -1:
                         s = (s + 1) & ht_mask
                     ht_slot[s] = ci
             hv = (klo ^ (khi * np.uint64(0x9E3779B97F4A7C15))) & np.uint64(ht_mask)
-            s = int(hv)
+            s = np.int64(hv)
             found = -1
             while ht_slot[s] != -1:
                 ci = ht_slot[s]
@@ -483,12 +483,12 @@ def generate_candidates_fast_numba(
                         ht_slot = np.full(ht_size, -1, dtype=np.int32)
                         for ci in range(n_cand):
                             hv = (cand_lo[ci] ^ (cand_hi[ci] * np.uint64(0x9E3779B97F4A7C15))) & np.uint64(ht_mask)
-                            s = int(hv)
+                            s = np.int64(hv)
                             while ht_slot[s] != -1:
                                 s = (s + 1) & ht_mask
                             ht_slot[s] = ci
                     hv = (klo ^ (khi * np.uint64(0x9E3779B97F4A7C15))) & np.uint64(ht_mask)
-                    s = int(hv)
+                    s = np.int64(hv)
                     found = -1
                     while ht_slot[s] != -1:
                         ci = ht_slot[s]
@@ -562,32 +562,40 @@ def compute_ms2_evidence_fast(
         return ms2_feats, best_frags, best_found
 
     pos_mode = adduct_charge > 0
+    targets = np.empty(n_valid_peaks, dtype=np.float32)
+    tols = np.empty(n_valid_peaks, dtype=np.float32)
     total_int = 0.0
     for i in range(n_valid_peaks):
+        targets[i] = np.float32(peak_mzs[i])
+        tols[i] = np.float32(float(peak_mzs[i]) * ms2_tol * 1e-6 if ppm else ms2_tol)
         total_int += float(peak_ints[i])
     if total_int <= 0.0:
         total_int = 1.0
 
-    # Prepare target masses and tolerances per valid peak
-    targets = np.empty(n_valid_peaks, dtype=np.float64)
-    tols = np.empty(n_valid_peaks, dtype=np.float64)
-    for i in range(n_valid_peaks):
-        pmz = float(peak_mzs[i])
-        targets[i] = pmz + float(adduct_charge) * MASS_E
-        tols[i] = pmz * ms2_tol / 1e6 if ppm else ms2_tol
-
     tmp_f = np.empty(12, dtype=np.int16)
     tmp_nl = np.empty(12, dtype=np.int16)
     delta_arr = np.empty(12, dtype=np.int16)
-    exp_arrs = np.empty((n_valid_peaks, 12), dtype=np.int16)
 
     for k in range(K):
-        ch = cand_charged[k]
-        pre_dbe = _dbe_12(ch)
-        pre_h2c = float(ch[1]) / float(ch[0]) if ch[0] > 0 else 0.0
-
+        found, formulas, masses = closest_subformulas(
+            cand_charged[k], targets, tols, targets, adduct_charge
+        )
         n_exp = 0
         exp_int_sum = 0.0
+        for i in range(n_valid_peaks):
+            if found[i]:
+                best_found[k, i] = True
+                for e in range(12):
+                    best_frags[k, i, e] = formulas[i, e]
+                n_exp += 1
+                exp_int_sum += float(peak_ints[i])
+
+        if n_exp == 0:
+            continue
+
+        pre_dbe = _dbe_12(cand_neutral[k])
+        pre_h2c = float(cand_neutral[k, 1]) / float(cand_neutral[k, 0]) if cand_neutral[k, 0] > 0 else 0.0
+
         db_f_cnt = 0; db_nl_cnt = 0; db_fnl_cnt = 0
         db_f_int = 0.0; db_nl_int = 0.0; db_fnl_int = 0.0
         cm_f_cnt = 0; cm_nl_cnt = 0; cm_fnl_cnt = 0
@@ -595,58 +603,44 @@ def compute_ms2_evidence_fast(
         rad_cnt = 0
         w_dbe = 0.0; w_h2c = 0.0; w_err = 0.0; w_nl_dbe_diff = 0.0
 
+        exp_arrs = np.empty((n_exp, 12), dtype=np.int16)
+        ei = 0
         for i in range(n_valid_peaks):
-            sub_arr = closest_subformulas(ch, ELEM_MASSES_F64, targets[i], tols[i], True, False)
-            if len(sub_arr) > 0:
-                best_found[k, i] = True
-                for e in range(12):
-                    best_frags[k, i, e] = np.int16(sub_arr[0, e])
-                    exp_arrs[n_exp, e] = np.int16(sub_arr[0, e])
-                n_exp += 1
-                exp_int_sum += float(peak_ints[i])
-
-        if n_exp == 0:
-            ms2_feats[k, 21] = float(n_valid_peaks)
-            continue
-
-        inv_exp_int = 1.0 / max(exp_int_sum, 1e-12)
-        for i in range(n_valid_peaks):
-            if not best_found[k, i]:
+            if not found[i]:
                 continue
             pint = float(peak_ints[i])
-            w_p = pint * inv_exp_int
-            f_mass = 0.0
+            norm_w = pint / exp_int_sum
+
             for e in range(12):
-                v = int(best_frags[k, i, e])
-                tmp_f[e] = np.int16(v)
-                tmp_nl[e] = np.int16(int(ch[e]) - v)
-                f_mass += float(v) * ELEM_MASSES_F64[e]
-            f_mz = f_mass - float(adduct_charge) * MASS_E
-            err = (float(peak_mzs[i]) - f_mz) / max(f_mz, 1.0) * 1e6 if ppm else (float(peak_mzs[i]) - f_mz)
-            sd = max(ms2_tol / 3.0, 1e-6)
-            log_p = -0.5 * min((err / sd) ** 2, 25.0)
+                tmp_f[e] = formulas[i, e]
+                exp_arrs[ei, e] = formulas[i, e]
+                tmp_nl[e] = cand_charged[k, e] - formulas[i, e]
+            ei += 1
 
-            f_dbe = _dbe_12(tmp_f)
-            nl_dbe = _dbe_12(tmp_nl)
-            f_h2c = float(tmp_f[1]) / float(tmp_f[0]) if tmp_f[0] > 0 else 0.0
-            is_rad = (int(round(f_dbe * 2.0)) % 2) == 0
-            if is_rad:
+            fdbe = _dbe_12(tmp_f)
+            if (fdbe % 1.0) == 0.0:
                 rad_cnt += 1
+            w_dbe += fdbe * norm_w
+            fh2c = float(tmp_f[1]) / float(tmp_f[0]) if tmp_f[0] > 0 else pre_h2c
+            w_h2c += fh2c * norm_w
+            w_nl_dbe_diff += (fdbe - (pre_dbe - fdbe + 1.0)) * norm_w
 
-            w_dbe += w_p * (f_dbe - pre_dbe)
-            w_h2c += w_p * (f_h2c - pre_h2c)
-            w_err += w_p * log_p
-            w_nl_dbe_diff += w_p * (nl_dbe - pre_dbe)
+            fmass = float(masses[i])
+            raw_mz = float(peak_mzs[i])
+            err_val = abs((fmass - raw_mz) / fmass * 1e6) if (ppm and fmass > 0.0) else abs(fmass - raw_mz)
+            z_err = err_val / max(ms2_tol / 3.0, 1e-6)
+            p_tail = math.erfc(z_err / 1.41421356237)
+            lp = math.log(max(p_tail, 1e-12))
+            if lp < -2.0:
+                lp = -2.0
+            w_err += lp * norm_w
 
             # Fast mass-only DB existence + common check for fragment
             f_halo = (tmp_f[2] + tmp_f[3] + tmp_f[4] + tmp_f[5]) > 0
             tmp_f[1] = tmp_f[1] + tmp_f[8] + tmp_f[6]
             tmp_f[8] = 0; tmp_f[6] = 0
-            if not is_rad:
-                if pos_mode:
-                    tmp_f[1] -= 1
-                else:
-                    tmp_f[1] += 1
+            if (_dbe_12(tmp_f) % 2.0) != 0.0:
+                tmp_f[1] = tmp_f[1] - 1 if pos_mode else tmp_f[1] + 1
             f_nm = 0.0
             for e in range(12):
                 f_nm += float(tmp_f[e]) * ELEM_MASSES_F64[e]
