@@ -54,6 +54,7 @@ OXYANION_NEUTRAL_MASSES = np.array([78.958507, 96.969072, 79.956816, 96.959553],
 
 QUERY_META_60_DIM = 60
 MS1_FEAT_DIM = 12
+MS2_V3_FEAT_DIM = 48
 
 
 @njit(cache=True, nogil=True)
@@ -745,6 +746,395 @@ def compute_ms2_evidence_fast(
         ms2_feats[k, 21] = float(n_valid_peaks)
         ms2_feats[k, 22] = math.sqrt(exp_cnt_pct)
         ms2_feats[k, 23] = math.sqrt(exp_int_pct)
+
+    return ms2_feats, best_frags, best_found
+
+
+@njit(cache=True, nogil=True)
+def compute_ms2_evidence_fast_v3(
+    cand_neutral: np.ndarray,     # (K, 12) int16
+    cand_charged: np.ndarray,     # (K, 12) int16
+    peak_mzs: np.ndarray,         # (N,) float32
+    peak_ints: np.ndarray,        # (N,) float32
+    n_valid_peaks: int,
+    adduct_charge: int,
+    ppm: bool,
+    ms2_tol: float,
+    b_mass: np.ndarray, b_idx: np.ndarray,
+    h_mass: np.ndarray, h_idx: np.ndarray,
+    common_loss_keys: np.ndarray,
+    common_frag_db: np.ndarray,
+):
+    """Compute 48 MS2 physics features + assigned fragment arrays for msbuddy 2.0 v3 (format_version=5).
+
+    Cols 0..23 match compute_ms2_evidence_fast bit-for-bit; cols 24..47 append:
+      24..27: MS1-MS2 internal self-recalibration (wmean/wmed/wstd signed ppm, tight <=3 ppm int)
+      28..33: Pool-relative IDF discriminative peak explanation
+      34..36: Fast O(M^2) subformula-nesting DAG (common-loss edge support, chain depth, weighted nesting)
+      37..47: Assigned subformula & neutral-loss heteroatom / Na+ balance
+    """
+    K = cand_neutral.shape[0]
+    ms2_feats = np.zeros((K, MS2_V3_FEAT_DIM), dtype=np.float32)
+    best_frags = np.zeros((K, max(n_valid_peaks, 1), 12), dtype=np.int16)
+    best_found = np.zeros((K, max(n_valid_peaks, 1)), dtype=np.bool_)
+
+    if K == 0 or n_valid_peaks == 0:
+        return ms2_feats, best_frags, best_found
+
+    pos_mode = adduct_charge > 0
+    targets = np.empty(n_valid_peaks, dtype=np.float32)
+    tols = np.empty(n_valid_peaks, dtype=np.float32)
+    total_int = 0.0
+    for i in range(n_valid_peaks):
+        targets[i] = np.float32(peak_mzs[i])
+        tols[i] = np.float32(float(peak_mzs[i]) * ms2_tol * 1e-6 if ppm else ms2_tol)
+        total_int += float(peak_ints[i])
+    if total_int <= 0.0:
+        total_int = 1.0
+
+    k_found = np.zeros((K, n_valid_peaks), dtype=np.uint8)
+    k_dbfnl = np.zeros((K, n_valid_peaks), dtype=np.uint8)
+    k_cm = np.zeros((K, n_valid_peaks), dtype=np.uint8)
+    k_fit = np.zeros((K, n_valid_peaks), dtype=np.float32)
+
+    tmp_f = np.empty(12, dtype=np.int16)
+    tmp_nl = np.empty(12, dtype=np.int16)
+    delta_arr = np.empty(12, dtype=np.int16)
+
+    for k in range(K):
+        found, formulas, masses = closest_subformulas(
+            cand_charged[k], targets, tols, targets, adduct_charge
+        )
+        n_exp = 0
+        exp_int_sum = 0.0
+        for i in range(n_valid_peaks):
+            if found[i]:
+                best_found[k, i] = True
+                for e in range(12):
+                    best_frags[k, i, e] = formulas[i, e]
+                n_exp += 1
+                exp_int_sum += float(peak_ints[i])
+                k_found[k, i] = 1
+
+        if n_exp == 0:
+            continue
+
+        pre_dbe = _dbe_12(cand_neutral[k])
+        pre_c = float(cand_neutral[k, 0])
+        pre_h2c = float(cand_neutral[k, 1]) / pre_c if pre_c > 0.0 else 0.0
+        pre_n2c = float(cand_neutral[k, 7]) / (pre_c + 1.0)
+        pre_o2c = float(cand_neutral[k, 9]) / (pre_c + 1.0)
+
+        db_f_cnt = 0; db_nl_cnt = 0; db_fnl_cnt = 0
+        db_f_int = 0.0; db_nl_int = 0.0; db_fnl_int = 0.0
+        cm_f_cnt = 0; cm_nl_cnt = 0; cm_fnl_cnt = 0
+        cm_f_int = 0.0; cm_nl_int = 0.0; cm_fnl_int = 0.0
+        rad_cnt = 0
+        w_dbe = 0.0; w_h2c = 0.0; w_err = 0.0; w_nl_dbe_diff = 0.0
+
+        w_signed_ppm = 0.0
+        w_signed_ppm_sq = 0.0
+        tight_3ppm_int = 0.0
+        frag_n_int = 0.0; frag_o_int = 0.0; frag_s_int = 0.0; frag_halo_int = 0.0; frag_na_int = 0.0
+        nl_n_int = 0.0; nl_o_int = 0.0; nl_s_int = 0.0; nl_halo_int = 0.0
+        w_frag_n2c = 0.0; w_frag_o2c = 0.0
+
+        exp_arrs = np.empty((n_exp, 12), dtype=np.int16)
+        exp_ints_arr = np.empty(n_exp, dtype=np.float64)
+        exp_sppm_arr = np.empty(n_exp, dtype=np.float64)
+        ei = 0
+
+        for i in range(n_valid_peaks):
+            if not found[i]:
+                continue
+            pint = float(peak_ints[i])
+            norm_w = pint / exp_int_sum
+
+            for e in range(12):
+                tmp_f[e] = formulas[i, e]
+                exp_arrs[ei, e] = formulas[i, e]
+                tmp_nl[e] = cand_charged[k, e] - formulas[i, e]
+
+            if tmp_f[7] > 0:
+                frag_n_int += pint
+            if tmp_f[9] > 0:
+                frag_o_int += pint
+            if tmp_f[11] > 0:
+                frag_s_int += pint
+            if (tmp_f[2] + tmp_f[3] + tmp_f[4] + tmp_f[5]) > 0:
+                frag_halo_int += pint
+            if tmp_f[8] > 0:
+                frag_na_int += pint
+
+            if tmp_nl[7] > 0:
+                nl_n_int += pint
+            if tmp_nl[9] > 0:
+                nl_o_int += pint
+            if tmp_nl[11] > 0:
+                nl_s_int += pint
+            if (tmp_nl[2] + tmp_nl[3] + tmp_nl[4] + tmp_nl[5]) > 0:
+                nl_halo_int += pint
+
+            fc = float(tmp_f[0])
+            w_frag_n2c += (float(tmp_f[7]) / (fc + 1.0)) * norm_w
+            w_frag_o2c += (float(tmp_f[9]) / (fc + 1.0)) * norm_w
+
+            fdbe = _dbe_12(tmp_f)
+            if (fdbe % 1.0) == 0.0:
+                rad_cnt += 1
+            w_dbe += fdbe * norm_w
+            fh2c = float(tmp_f[1]) / fc if fc > 0.0 else pre_h2c
+            w_h2c += fh2c * norm_w
+            w_nl_dbe_diff += (fdbe - (pre_dbe - fdbe + 1.0)) * norm_w
+
+            fmass = float(masses[i])
+            raw_mz = float(peak_mzs[i])
+            sppm = ((raw_mz - fmass) / fmass * 1e6) if fmass > 0.0 else 0.0
+            err_val = abs(sppm) if ppm else abs(raw_mz - fmass)
+            if abs(sppm) <= 3.0:
+                tight_3ppm_int += pint
+
+            w_signed_ppm += sppm * norm_w
+            w_signed_ppm_sq += (sppm * sppm) * norm_w
+            exp_ints_arr[ei] = pint
+            exp_sppm_arr[ei] = sppm
+            ei += 1
+
+            z_err = err_val / max(ms2_tol / 3.0, 1e-6)
+            k_fit[k, i] = np.float32(math.exp(-0.5 * min(z_err * z_err, 16.0)))
+            p_tail = math.erfc(z_err / 1.41421356237)
+            lp = math.log(max(p_tail, 1e-12))
+            if lp < -2.0:
+                lp = -2.0
+            w_err += lp * norm_w
+
+            f_halo = (tmp_f[2] + tmp_f[3] + tmp_f[4] + tmp_f[5]) > 0
+            tmp_f[1] = tmp_f[1] + tmp_f[8] + tmp_f[6]
+            tmp_f[8] = 0; tmp_f[6] = 0
+            if (_dbe_12(tmp_f) % 2.0) != 0.0:
+                tmp_f[1] = tmp_f[1] - 1 if pos_mode else tmp_f[1] + 1
+            f_nm = 0.0
+            for e in range(12):
+                f_nm += float(tmp_f[e]) * ELEM_MASSES_F64[e]
+            f_db = mass_exists_fast(h_mass, h_idx, f_nm, 1e-4) if f_halo else mass_exists_fast(b_mass, b_idx, f_nm, 1e-4)
+
+            if tmp_f[0] == 0:
+                f_cm = False
+                for cf_i in range(common_frag_db.shape[0]):
+                    hd = int(common_frag_db[cf_i, 1]) - int(tmp_f[1])
+                    if -1 <= hd <= 1:
+                        eq_cf = True
+                        for e in range(2, 12):
+                            if common_frag_db[cf_i, e] != tmp_f[e]:
+                                eq_cf = False
+                                break
+                        if eq_cf:
+                            f_cm = True
+                            break
+                    elif hd > 1:
+                        break
+            else:
+                f_cm = common_nl_lookup_fast(tmp_f, common_loss_keys)
+
+            nl_halo = (tmp_nl[2] + tmp_nl[3] + tmp_nl[4] + tmp_nl[5]) > 0
+            tmp_nl[1] = tmp_nl[1] + tmp_nl[8] + tmp_nl[6]
+            tmp_nl[8] = 0; tmp_nl[6] = 0
+            nl_nm = 0.0
+            for e in range(12):
+                nl_nm += float(tmp_nl[e]) * ELEM_MASSES_F64[e]
+            nl_db = mass_exists_fast(h_mass, h_idx, nl_nm, 1e-4) if nl_halo else mass_exists_fast(b_mass, b_idx, nl_nm, 1e-4)
+            nl_cm = common_nl_lookup_fast(tmp_nl, common_loss_keys)
+
+            if f_db:
+                db_f_cnt += 1; db_f_int += pint
+            if nl_db:
+                db_nl_cnt += 1; db_nl_int += pint
+            if f_db or nl_db:
+                db_fnl_cnt += 1; db_fnl_int += pint
+            if f_db and nl_db:
+                k_dbfnl[k, i] = 1
+            if f_cm:
+                cm_f_cnt += 1; cm_f_int += pint
+            if nl_cm:
+                cm_nl_cnt += 1; cm_nl_int += pint
+            if f_cm or nl_cm:
+                cm_fnl_cnt += 1; cm_fnl_int += pint
+                k_cm[k, i] = 1
+
+        ord_p = np.arange(n_exp)
+        for a in range(1, n_exp):
+            key_idx = ord_p[a]
+            key_val = exp_sppm_arr[key_idx]
+            b = a - 1
+            while b >= 0 and exp_sppm_arr[ord_p[b]] > key_val:
+                ord_p[b + 1] = ord_p[b]
+                b -= 1
+            ord_p[b + 1] = key_idx
+        half_w = 0.5 * exp_int_sum
+        cum_w = 0.0
+        w_med_ppm = w_signed_ppm
+        for a in range(n_exp):
+            cum_w += exp_ints_arr[ord_p[a]]
+            if cum_w >= half_w:
+                w_med_ppm = exp_sppm_arr[ord_p[a]]
+                break
+        w_std_ppm = math.sqrt(max(w_signed_ppm_sq - w_signed_ppm * w_signed_ppm, 0.0))
+
+        sub_cnt = 0
+        sub_cm_cnt = 0
+        dag_int_nest = 0.0
+        dag_int_pair_tot = 0.0
+        has_cm_edge = np.zeros(n_exp, dtype=np.uint8)
+        dp_depth = np.ones(n_exp, dtype=np.int16)
+        max_chain = 1
+        if n_exp > 1:
+            for a in range(n_exp):
+                ia = exp_ints_arr[a]
+                for b in range(a + 1, n_exp):
+                    w_ab = ia * exp_ints_arr[b]
+                    dag_int_pair_tot += w_ab
+                    all_ge = True
+                    sum_non_c = 0
+                    sum_non_n = 0
+                    for e in range(12):
+                        d = exp_arrs[b, e] - exp_arrs[a, e]
+                        if d < 0:
+                            all_ge = False
+                            break
+                        delta_arr[e] = d
+                        if e != 0:
+                            sum_non_c += d
+                        if e != 7:
+                            sum_non_n += d
+                    if all_ge and sum_non_c > 0 and sum_non_n > 0:
+                        sub_cnt += 1
+                        dag_int_nest += w_ab
+                        cand_d = dp_depth[a] + 1
+                        if cand_d > dp_depth[b]:
+                            dp_depth[b] = cand_d
+                            if cand_d > max_chain:
+                                max_chain = cand_d
+                        if common_nl_lookup_fast(delta_arr, common_loss_keys):
+                            sub_cm_cnt += 1
+                            has_cm_edge[a] = 1
+                            has_cm_edge[b] = 1
+            denom = float(n_exp * (n_exp - 1))
+            sub_score = 2.0 * sub_cnt / denom
+            sub_cm_score = 2.0 * sub_cm_cnt / denom
+            dag_int_nest_frac = dag_int_nest / max(dag_int_pair_tot, 1e-12)
+            cm_edge_int = 0.0
+            for a in range(n_exp):
+                if has_cm_edge[a] == 1:
+                    cm_edge_int += exp_ints_arr[a]
+            dag_cm_int_sup = cm_edge_int / exp_int_sum
+            dag_chain_frac = float(max_chain) / float(n_exp)
+        else:
+            sub_score = 0.0
+            sub_cm_score = 0.0
+            dag_int_nest_frac = 0.0
+            dag_cm_int_sup = 0.0
+            dag_chain_frac = 0.0
+
+        inv_nv = 1.0 / float(n_valid_peaks)
+        inv_ti = 1.0 / total_int
+        inv_ei = 1.0 / exp_int_sum
+        exp_cnt_pct = float(n_exp) * inv_nv
+        exp_int_pct = exp_int_sum * inv_ti
+
+        ms2_feats[k, 0] = exp_cnt_pct
+        ms2_feats[k, 1] = exp_int_pct
+        ms2_feats[k, 2] = float(db_f_cnt) * inv_nv
+        ms2_feats[k, 3] = float(db_nl_cnt) * inv_nv
+        ms2_feats[k, 4] = float(db_fnl_cnt) * inv_nv
+        ms2_feats[k, 5] = db_f_int * inv_ti
+        ms2_feats[k, 6] = db_nl_int * inv_ti
+        ms2_feats[k, 7] = db_fnl_int * inv_ti
+        ms2_feats[k, 8] = float(cm_f_cnt) * inv_nv
+        ms2_feats[k, 9] = float(cm_nl_cnt) * inv_nv
+        ms2_feats[k, 10] = float(cm_fnl_cnt) * inv_nv
+        ms2_feats[k, 11] = cm_f_int * inv_ti
+        ms2_feats[k, 12] = cm_nl_int * inv_ti
+        ms2_feats[k, 13] = cm_fnl_int * inv_ti
+        ms2_feats[k, 14] = sub_score
+        ms2_feats[k, 15] = sub_cm_score
+        ms2_feats[k, 16] = float(rad_cnt) / float(n_exp)
+        ms2_feats[k, 17] = w_dbe
+        ms2_feats[k, 18] = w_h2c
+        ms2_feats[k, 19] = w_err
+        ms2_feats[k, 20] = w_nl_dbe_diff
+        ms2_feats[k, 21] = float(n_valid_peaks)
+        ms2_feats[k, 22] = math.sqrt(exp_cnt_pct)
+        ms2_feats[k, 23] = math.sqrt(exp_int_pct)
+
+        ms2_feats[k, 24] = np.float32(max(-30.0, min(30.0, w_signed_ppm)))
+        ms2_feats[k, 25] = np.float32(max(-30.0, min(30.0, w_med_ppm)))
+        ms2_feats[k, 26] = np.float32(min(30.0, w_std_ppm))
+        ms2_feats[k, 27] = np.float32(tight_3ppm_int * inv_ti)
+
+        ms2_feats[k, 34] = np.float32(dag_cm_int_sup)
+        ms2_feats[k, 35] = np.float32(dag_chain_frac)
+        ms2_feats[k, 36] = np.float32(dag_int_nest_frac)
+
+        ms2_feats[k, 37] = np.float32(frag_n_int * inv_ei)
+        ms2_feats[k, 38] = np.float32(frag_o_int * inv_ei)
+        ms2_feats[k, 39] = np.float32(frag_s_int * inv_ei)
+        ms2_feats[k, 40] = np.float32(frag_halo_int * inv_ei)
+        ms2_feats[k, 41] = np.float32(frag_na_int * inv_ei)
+        ms2_feats[k, 42] = np.float32(nl_n_int * inv_ei)
+        ms2_feats[k, 43] = np.float32(nl_o_int * inv_ei)
+        ms2_feats[k, 44] = np.float32(nl_s_int * inv_ei)
+        ms2_feats[k, 45] = np.float32(nl_halo_int * inv_ei)
+        ms2_feats[k, 46] = np.float32(w_frag_n2c - pre_n2c)
+        ms2_feats[k, 47] = np.float32(w_frag_o2c - pre_o2c)
+
+    inv_K = 1.0 / float(K)
+    idf_exp = np.empty(n_valid_peaks, dtype=np.float64)
+    idf_db = np.empty(n_valid_peaks, dtype=np.float64)
+    idf_cm = np.empty(n_valid_peaks, dtype=np.float64)
+    is_disc = np.zeros(n_valid_peaks, dtype=np.uint8)
+    tot_w_idf_exp = 0.0; tot_w_idf_db = 0.0; tot_w_idf_cm = 0.0; tot_w_disc = 0.0
+    for i in range(n_valid_peaks):
+        c_f = 0; c_d = 0; c_c = 0
+        for k in range(K):
+            c_f += k_found[k, i]
+            c_d += k_dbfnl[k, i]
+            c_c += k_cm[k, i]
+        df_f = float(c_f) * inv_K
+        df_d = float(c_d) * inv_K
+        df_c = float(c_c) * inv_K
+        ie = -math.log(max(df_f, inv_K))
+        idb = -math.log(max(df_d, inv_K))
+        icm = -math.log(max(df_c, inv_K))
+        idf_exp[i] = ie; idf_db[i] = idb; idf_cm[i] = icm
+        pint = float(peak_ints[i])
+        tot_w_idf_exp += pint * ie
+        tot_w_idf_db += pint * idb
+        tot_w_idf_cm += pint * icm
+        if df_f > 0.0 and df_f <= 0.45:
+            is_disc[i] = 1
+            tot_w_disc += pint
+
+    for k in range(K):
+        s_ie = 0.0; s_idb = 0.0; s_icm = 0.0; s_disc = 0.0; s_fit_idf = 0.0; best_disc = 0.0
+        for i in range(n_valid_peaks):
+            pint = float(peak_ints[i])
+            if k_found[k, i] == 1:
+                s_ie += pint * idf_exp[i]
+                s_fit_idf += pint * idf_exp[i] * float(k_fit[k, i])
+                if is_disc[i] == 1:
+                    s_disc += pint
+                    if pint > best_disc:
+                        best_disc = pint
+            if k_dbfnl[k, i] == 1:
+                s_idb += pint * idf_db[i]
+            if k_cm[k, i] == 1:
+                s_icm += pint * idf_cm[i]
+        ms2_feats[k, 28] = np.float32(s_ie / tot_w_idf_exp) if tot_w_idf_exp > 1e-12 else 0.0
+        ms2_feats[k, 29] = np.float32(s_disc / tot_w_disc) if tot_w_disc > 1e-12 else 0.0
+        ms2_feats[k, 30] = np.float32(s_idb / tot_w_idf_db) if tot_w_idf_db > 1e-12 else 0.0
+        ms2_feats[k, 31] = np.float32(s_icm / tot_w_idf_cm) if tot_w_idf_cm > 1e-12 else 0.0
+        ms2_feats[k, 32] = np.float32(s_fit_idf / tot_w_idf_exp) if tot_w_idf_exp > 1e-12 else 0.0
+        ms2_feats[k, 33] = np.float32(best_disc)
 
     return ms2_feats, best_frags, best_found
 

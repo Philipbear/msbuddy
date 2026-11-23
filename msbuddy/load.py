@@ -318,7 +318,7 @@ def init_ml_models(global_dict, data_dir=None, data_files=None) -> dict:
 
 
 def _load_versioned_models(bundle, dependencies):
-    if bundle.get('format_version') == 4:
+    if bundle.get('format_version') in (4, 5):
         from msbuddy._v2_engine import validate_v2_bundle
         validate_v2_bundle(bundle)
         dependencies.update(
@@ -326,7 +326,7 @@ def _load_versioned_models(bundle, dependencies):
             model_v2_loaded=True,
             model_v2_cache={},
             model_core_loaded=True,
-            model_feature_version=4,
+            model_feature_version=int(bundle['format_version']),
             model_bundle_version=bundle.get('version', '2.0.0'),
         )
         return

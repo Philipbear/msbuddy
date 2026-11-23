@@ -5,23 +5,29 @@ Version 2.0 (development)
 -------------------------
 
 ``msbuddy 2.0`` replaces the separate mode-gated rankers with one unified
-four-stage CPU engine packaged as a single checksum-verified ``format_version=4``
-``.joblib`` bundle (CPU ONNX Runtime + LightGBM; PyTorch and CUDA are not
-required):
+four-stage CPU engine packaged as a single checksum-verified ``format_version=5``
+(backward-compatible with ``format_version=4``) ``.joblib`` bundle (CPU ONNX
+Runtime + LightGBM; PyTorch and CUDA are not required):
 
-1. **Stage 0 (Exact-Mass Spectral Transformer, ONNX)** predicts element-count
-   distributions (continuous ``C``/``H`` and zero-inflated hurdle negative
-   binomials over ``Br, Cl, F, I, K, N, Na, O, P, S``) and global properties
-   from top-64 exact-mass MS/MS peaks and 60-dimensional query metadata.
-2. **Stage 1–2 (Compiled ``nogil`` Numba Engine)** streams
-   ``formula_db_v0.3.0.msbdb`` directly into contiguous ``int16`` arrays
-   (~520 MB peak RSS), performs fast candidate generation and exact
-   subformula/neutral-loss assignment, and computes optional MS1 isotope
-   pattern features across shared-memory threads when ``parallel=True``.
-3. **Stage 3–4 (Hybrid Set Reranker + Absent-Mass Calibration)** combines a
-   permutation-equivariant ``PureSetReranker`` (ONNX, with an explicit
-   ``[ABSENT]`` token) and ``LightGBM`` LambdaRank, calibrated with temperature
-   and absent-bias scaling ``(T, b_null)``.
+1. **Stage 0 (Exact-Mass Spectral Transformer + Isobaric Contrastive Alignment,
+   ONNX)** predicts element-count distributions (continuous ``C``/``H`` and
+   zero-inflated hurdle negative binomials over ``Br, Cl, F, I, K, N, Na, O, P, S``),
+   global properties, and a 128-d L2-normalized contrastive spectrum embedding
+   ``z_spec`` from top-64 exact-mass MS/MS peaks and 60-dimensional query metadata.
+2. **Stage 1–2 (Compiled ``nogil`` Numba Engine + Batched ``FormulaEncoderV3``)**
+   streams ``formula_db_v0.3.0.msbdb`` directly into contiguous ``int16`` arrays
+   (~520 MB peak RSS), performs fast two-pass candidate generation and
+   contrastive shortlisting (protecting physics-only candidates), assigns exact
+   subformulas/neutral losses with 48-dimensional MS/MS physics (internal
+   MS1–MS2 self-recalibration, pool-IDF discriminative peaks, subformula-nesting
+   DAG support, and heteroatom/adduct fragment balance), and computes optional
+   MS1 isotope pattern features across a single shared-memory thread pool when
+   ``parallel=True``.
+3. **Stage 3–4 (FiLM-Conditioned Hybrid Set Reranker + Absent-Mass Calibration)**
+   combines a permutation-equivariant ``PureSetRerankerV3`` (ONNX, FiLM-conditioned
+   on the 97-d physical spectrum context with an explicit ``[ABSENT]`` token) and
+   ``LightGBM`` LambdaRank trained with scaffold-clustered 5-fold OOF stacking,
+   calibrated with temperature and absent-bias scaling ``(T, b_null)``.
 
 Halogens (``F, Cl, Br, I``) remain enabled by default with zero compound-class
 or PFAS-specific heuristics. Standard instrument tolerances remain

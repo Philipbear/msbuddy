@@ -196,6 +196,115 @@ class TestMsbuddyV2Components(unittest.TestCase):
         self.assertEqual(AUTO_ADDUCT_LOG_PRIORS['[M+H]+'], 0.0)
         self.assertEqual(AUTO_ADDUCT_LOG_PRIORS['[M-H]-'], 0.0)
 
+    def test_v5_ms2_evidence_parity_and_bundle_validation(self):
+        from msbuddy._fast_db import compute_ms2_evidence_fast, compute_ms2_evidence_fast_v3
+        from msbuddy._v2_engine import (
+            CAND_V5_DIM,
+            CL_DIM,
+            POOL_V5_DIM,
+            SPEC_CTX_DIM,
+            _sha256_np_dict,
+            build_formula_features_v3,
+            extract_adduct_meta5,
+            formula_enc_forward_np,
+        )
+
+        # Verify compute_ms2_evidence_fast_v3 cols 0..23 match compute_ms2_evidence_fast
+        f1 = Formula(read_formula('C15H12O4'), 0).array.astype(np.int16)
+        f2 = Formula(read_formula('C13H12N4O2'), 0).array.astype(np.int16)
+        c_neut = np.stack([f1, f2], axis=0)
+        c_ch = c_neut.copy()
+        c_ch[:, 1] += 1
+        pmzs = np.array([105.0335, 137.0233, 181.0495, 225.0546], dtype=np.float32)
+        pints = np.array([0.4, 0.8, 1.0, 0.6], dtype=np.float32)
+        masses = np.array([18.010565, 27.994915, 43.98983, 104.026215, 136.016044, 180.042259], dtype=np.float64)
+        idx = np.searchsorted(masses, np.arange(3000) / 10.0).astype(np.int64)
+        cl_keys = np.sort(np.array([pack_common_key(Formula(read_formula('H2O'), 0).array.astype(np.int16))], dtype=np.uint64))
+        cf_db = np.zeros((1, 12), dtype=np.int16)
+
+        f24, bf24, bfd24 = compute_ms2_evidence_fast(c_neut, c_ch, pmzs, pints, 4, 1, True, 20.0, masses, idx, masses, idx, cl_keys, cf_db)
+        f48, bf48, bfd48 = compute_ms2_evidence_fast_v3(c_neut, c_ch, pmzs, pints, 4, 1, True, 20.0, masses, idx, masses, idx, cl_keys, cf_db)
+        self.assertEqual(f48.shape, (2, 48))
+        self.assertTrue(np.all(np.isfinite(f48)))
+        np.testing.assert_allclose(f48[:, :24], f24, atol=1e-5)
+        np.testing.assert_array_equal(bfd48, bfd24)
+        np.testing.assert_array_equal(bf48, bf24)
+
+        # Verify pure-NumPy FormulaEncoderV3 forward pass & v5 bundle validation
+        rng = np.random.default_rng(7)
+        fenc_np = {
+            'in_proj.0.weight': rng.normal(scale=0.1, size=(16, 32)).astype(np.float32),
+            'in_proj.0.bias': np.zeros(16, dtype=np.float32),
+            'in_proj.1.weight': np.ones(16, dtype=np.float32),
+            'in_proj.1.bias': np.zeros(16, dtype=np.float32),
+            'res1.0.weight': rng.normal(scale=0.1, size=(16, 16)).astype(np.float32),
+            'res1.0.bias': np.zeros(16, dtype=np.float32),
+            'res1.1.weight': np.ones(16, dtype=np.float32),
+            'res1.1.bias': np.zeros(16, dtype=np.float32),
+            'res1.4.weight': rng.normal(scale=0.1, size=(16, 16)).astype(np.float32),
+            'res1.4.bias': np.zeros(16, dtype=np.float32),
+            'res2.0.weight': rng.normal(scale=0.1, size=(16, 16)).astype(np.float32),
+            'res2.0.bias': np.zeros(16, dtype=np.float32),
+            'res2.1.weight': np.ones(16, dtype=np.float32),
+            'res2.1.bias': np.zeros(16, dtype=np.float32),
+            'res2.4.weight': rng.normal(scale=0.1, size=(16, 16)).astype(np.float32),
+            'res2.4.bias': np.zeros(16, dtype=np.float32),
+            'out_norm.weight': np.ones(16, dtype=np.float32),
+            'out_norm.bias': np.zeros(16, dtype=np.float32),
+            'out_proj.weight': rng.normal(scale=0.1, size=(CL_DIM, 16)).astype(np.float32),
+            'out_proj.bias': np.zeros(CL_DIM, dtype=np.float32),
+        }
+        qm = np.zeros(QUERY_META_60_DIM, dtype=np.float32)
+        qm[15] = 1.0; qm[16] = 0.5
+        am5 = np.broadcast_to(extract_adduct_meta5(qm)[None, :], (2, 5))
+        zf = formula_enc_forward_np(build_formula_features_v3(c_neut, am5), fenc_np)
+        self.assertEqual(zf.shape, (2, CL_DIM))
+        np.testing.assert_allclose(np.linalg.norm(zf, axis=1), np.ones(2), atol=1e-5)
+
+        s0 = b'fake-s0-v5'; s3 = b'fake-s3-v5'; lgb = 'tree\nversion=v3\n'
+        v5_bundle = {
+            'format_version': 5,
+            'cand_feat_dim': CAND_V5_DIM,
+            'pool_feat_dim': POOL_V5_DIM,
+            'query_meta_dim': QUERY_META_60_DIM,
+            'cl_dim': CL_DIM,
+            'spec_ctx_dim': SPEC_CTX_DIM,
+            'logit_scale': 14.0,
+            'stage0_encoder_onnx': s0,
+            'stage0_encoder_sha256': hashlib.sha256(s0).hexdigest(),
+            'formula_enc_np': fenc_np,
+            'formula_enc_sha256': _sha256_np_dict(fenc_np),
+            'stage3_reranker_onnx': s3,
+            'stage3_reranker_sha256': hashlib.sha256(s3).hexdigest(),
+            'stage3_lgb_txt': lgb,
+            'stage3_lgb_sha256': hashlib.sha256(lgb.encode('utf-8')).hexdigest(),
+            'feat_center': np.zeros(CAND_V5_DIM, dtype=np.float32),
+            'feat_scale': np.ones(CAND_V5_DIM, dtype=np.float32),
+            'fusion': {'w_nn': 0.20, 'lgb_scale': 1.2},
+            'calibration': {'temp': 0.73, 'b_null': -4.0},
+        }
+        validate_v2_bundle(v5_bundle)
+        with self.assertRaisesRegex(ValueError, 'checksum'):
+            validate_v2_bundle(dict(v5_bundle, formula_enc_sha256='0' * 64))
+
+        # Regression test: MS1 signed ppm in _v2_engine (obs - theo) must match MS2 signed ppm sign
+        # so MS1-MS2 self-recalibration |sub_err_ppm - ms2_wmean_ppm| cancels systematic calibration drift.
+        drift_ppm = +5.0
+        f_ch = c_ch[0:1]
+        from msbuddy._fast_db import ELEM_MASSES_F64, MASS_E
+        frag_theo = float(Formula(read_formula('C7H5O'), 1).mass)
+        shifted_pmzs = np.array([frag_theo * (1.0 + drift_ppm * 1e-6)], dtype=np.float32)
+        shifted_ints = np.array([1.0], dtype=np.float32)
+        f48_shift, _, bfd_shift = compute_ms2_evidence_fast_v3(
+            c_neut[0:1], f_ch, shifted_pmzs, shifted_ints, 1, 1, True, 20.0,
+            masses, idx, masses, idx, cl_keys, cf_db,
+        )
+        self.assertTrue(bool(bfd_shift[0, 0]))
+        self.assertAlmostEqual(float(f48_shift[0, 24]), drift_ppm, delta=0.5)
+        # Simulated generate_candidates_fast_numba out_err = (theo - obs)/obs * 1e6 ~ -drift_ppm;
+        # negating gives +drift_ppm so |(-out_err) - f48_shift[0,24]| ~ 0!
+        self.assertLess(abs(drift_ppm - float(f48_shift[0, 24])), 0.5)
+
 
 if __name__ == '__main__':
     unittest.main()

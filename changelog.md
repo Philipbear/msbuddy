@@ -2,10 +2,16 @@ msbuddy changelog
 =================
 
 Unreleased (2.0.0 development)
-- Introduce the unified `msbuddy 2.0` four-stage CPU engine (Exact-Mass Spectral
-  Transformer ONNX + compiled `nogil` Numba candidate/subformula/MS1 engine +
-  `PureSetReranker` ONNX & `LightGBM` LambdaRank hybrid + calibrated `[ABSENT]`
-  posteriors) packaged as a single SHA-256-verified `format_version=4` bundle.
+- Introduce the unified `msbuddy 2.0` four-stage CPU engine (`format_version=5`,
+  backward-compatible with `format_version=4`): 5-objective Exact-Mass Spectral
+  Transformer with joint isobaric-contrastive alignment (`ONNX`), two-pass
+  compiled `nogil` Numba candidate generation + batched `FormulaEncoderV3`
+  shortlisting, 48-d compiled MS/MS physics (`MS1–MS2` internal self-recalibration,
+  pool-IDF discriminative peak weighting, subformula-nesting DAG support, and
+  heteroatom/adduct fragment balance) + 12-d analytical MS1 isotope engine,
+  FiLM-conditioned `PureSetRerankerV3` (`ONNX`) & `LightGBM` LambdaRank hybrid
+  trained via scaffold-clustered 5-fold OOF stacking, and calibrated `[ABSENT]`
+  posteriors in a single SHA-256-verified `.joblib` bundle.
 - Stream `formula_db_v0.3.0.msbdb` directly into contiguous `int16` arrays to
   eliminate transient `int64` loading spikes (~520 MB peak RSS) and add
   shared-memory `ThreadPoolExecutor` multi-threading (`parallel=True`) without
