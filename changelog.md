@@ -1,7 +1,20 @@
 msbuddy changelog
 =================
 
-Unreleased (local review)
+Unreleased (2.0.0 development)
+- Introduce the unified `msbuddy 2.0` four-stage CPU engine (Exact-Mass Spectral
+  Transformer ONNX + compiled `nogil` Numba candidate/subformula/MS1 engine +
+  `PureSetReranker` ONNX & `LightGBM` LambdaRank hybrid + calibrated `[ABSENT]`
+  posteriors) packaged as a single SHA-256-verified `format_version=4` bundle.
+- Stream `formula_db_v0.3.0.msbdb` directly into contiguous `int16` arrays to
+  eliminate transient `int64` loading spikes (~520 MB peak RSS) and add
+  shared-memory `ThreadPoolExecutor` multi-threading (`parallel=True`) without
+  duplicating database memory across processes.
+- Add opt-in multi-adduct disambiguation via `adduct="auto"` with Bayesian
+  adduct prevalence log-priors for positive and negative modes (default
+  known-adduct behavior and probabilities are unchanged).
+- Match Stage-0 stacked `[sin, cos]` Fourier peak channel ordering between
+  training and ONNX inference and add regression unit tests.
 - Add separate posterior error probabilities and batch q-values for top formula annotations.
 - Pool confidence across all processing chunks, preserve absent-answer mass, and select tied probabilities together.
 - Clarify that the legacy estimated_fdr field describes a within-spectrum candidate prefix.

@@ -1,6 +1,51 @@
 Model update and confidence estimates
 ============================================
 
+Version 2.0 (development)
+-------------------------
+
+``msbuddy 2.0`` replaces the separate mode-gated rankers with one unified
+four-stage CPU engine packaged as a single checksum-verified ``format_version=4``
+``.joblib`` bundle (CPU ONNX Runtime + LightGBM; PyTorch and CUDA are not
+required):
+
+1. **Stage 0 (Exact-Mass Spectral Transformer, ONNX)** predicts element-count
+   distributions (continuous ``C``/``H`` and zero-inflated hurdle negative
+   binomials over ``Br, Cl, F, I, K, N, Na, O, P, S``) and global properties
+   from top-64 exact-mass MS/MS peaks and 60-dimensional query metadata.
+2. **Stage 1–2 (Compiled ``nogil`` Numba Engine)** streams
+   ``formula_db_v0.3.0.msbdb`` directly into contiguous ``int16`` arrays
+   (~520 MB peak RSS), performs fast candidate generation and exact
+   subformula/neutral-loss assignment, and computes optional MS1 isotope
+   pattern features across shared-memory threads when ``parallel=True``.
+3. **Stage 3–4 (Hybrid Set Reranker + Absent-Mass Calibration)** combines a
+   permutation-equivariant ``PureSetReranker`` (ONNX, with an explicit
+   ``[ABSENT]`` token) and ``LightGBM`` LambdaRank, calibrated with temperature
+   and absent-bias scaling ``(T, b_null)``.
+
+Halogens (``F, Cl, Br, I``) remain enabled by default with zero compound-class
+or PFAS-specific heuristics. Standard instrument tolerances remain
+``5 / 10 ppm`` (Orbitrap), ``10 / 20 ppm`` (Q-TOF / timsTOF), and ``2 / 5 ppm``
+(FTICR).
+
+Opt-in multi-adduct disambiguation (``adduct="auto"``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Known-adduct annotation remains the default. When polarity is known but the
+adduct form is unknown, passing ``adduct="auto"`` expands each query across
+common positive adducts (``[M+H]+``, ``[M+Na]+``, ``[M+NH4]+``, ``[M+K]+``,
+``[M-H2O+H]+``, ``[2M+H]+``, ``[2M+Na]+``) or negative adducts (``[M-H]-``,
+``[M+Cl]-``, ``[M+CH2O2-H]-``, ``[M+C2H4O2-H]-``, ``[2M-H]-``). Fixed Bayesian
+adduct prevalence log-priors are added during ``adduct="auto"`` scoring only to
+resolve MS/MS-isobaric adduct aliases (such as ``[M+H]+`` of ``M`` versus
+``[M'-H2O+H]+`` of ``M + H2O``) before joint softmax normalization against one
+shared ``[ABSENT]`` anchor. The top-ranked adduct is stored on
+``MetaFeature.adduct``. Known-adduct queries do not apply adduct priors and
+preserve identical posterior probabilities.
+
+Version 1.3
+-----------
+
 Version 1.3 uses one 749,644-parameter spectral encoder and one shared
 candidate scorer for MS2 and joint MS1+MS2 annotation. The scorer combines
 the spectrum representation, soft atom-count likelihoods, accurate fragment

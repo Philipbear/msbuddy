@@ -31,6 +31,32 @@ LightGBM and the CPU ONNX Runtime are inference dependencies. PyTorch and CUDA
 are not required. Python 3.8 or newer is supported; Python 3.8 uses NumPy 1.x
 and a compatible ONNX Runtime version.
 
+## Unified hybrid engine in 2.0 (development)
+
+`msbuddy 2.0` introduces a unified four-stage CPU engine packaged into a single
+SHA-256-verified `.joblib` bundle (`~16.7 MB`, no PyTorch or GPU required):
+
+- **Stage 0 (Exact-Mass Spectral Transformer, ONNX):** Encodes top-64 exact-mass
+  MS/MS peaks (stacked 7-scale Fourier mass/neutral-loss features and local
+  isotope-twin ratios) and 60-dimensional query/chemistry metadata to predict
+  per-element distributions and physicochemical properties.
+- **Stage 1–2 (Compiled `nogil` Numba Engine):** Streams `formula_db_v0.3.0.msbdb`
+  into contiguous `int16` memory (~520 MB peak RSS) for binary-search candidate
+  generation, exact subformula/neutral-loss assignment, and optional MS1 isotope
+  scoring across shared-memory threads (`parallel=True`, >220 spectra/s on 16–32
+  CPU cores).
+- **Stage 3–4 (Hybrid Set Reranker + Calibrated Absent-Mass Posteriors):** Combines
+  a permutation-equivariant `PureSetReranker` (ONNX, with an explicit `[ABSENT]`
+  token) and a `LightGBM` LambdaRank scorer, calibrated via two-parameter
+  temperature and absent-bias scaling for posterior probabilities and batch FDR.
+- **Opt-in multi-adduct disambiguation (`adduct="auto"`):** Default behavior is
+  unchanged when an adduct is specified or omitted (`[M+H]+`/`[M-H]-`). Passing
+  `adduct="auto"` expands each query across a polarity-specific adduct panel
+  (including common adducts and dimers), applies Bayesian adduct prevalence
+  log-priors to resolve MS/MS-isobaric aliases, normalizes candidates jointly
+  against one `[ABSENT]` anchor, and writes the top-ranked adduct back to
+  `MetaFeature.adduct`.
+
 ## Compact models and databases in 1.3
 
 MS2 and joint MS1+MS2 ranking share one 749,644-parameter spectral encoder

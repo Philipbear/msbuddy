@@ -48,7 +48,10 @@ unsupported element raises ``UnsupportedElementError`` instead. Candidate
 formulas with invalid atom counts or nonpositive or nonfinite masses are
 skipped with a warning.
 When an adduct is omitted, the default adds or removes one proton per reported
-charge, for example ``[M+2H]2+`` for charge ``2+``. If a supplied adduct has a
+charge, for example ``[M+2H]2+`` for charge ``2+``. Passing ``adduct="auto"``
+opts into multi-adduct disambiguation in ``msbuddy 2.0`` across common
+polarity-specific adducts and dimers (with Bayesian prevalence log-priors); the
+highest-ranked adduct is written back to ``MetaFeature.adduct``. If a supplied adduct has a
 different charge from the reported charge, msbuddy warns and uses the adduct's
 charge. If an MGF spectrum supplies no polarity in its charge, ion mode, or
 adduct, msbuddy warns and assumes positive mode.
