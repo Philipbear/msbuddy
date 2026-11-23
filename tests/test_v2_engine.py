@@ -168,6 +168,34 @@ class TestMsbuddyV2Components(unittest.TestCase):
             finally:
                 db.close()
 
+    def test_v2_peak_fourier_stacked_channel_order_and_auto_adduct_priors(self):
+        import math
+        from msbuddy._v2_engine import (
+            AUTO_ADDUCT_LOG_PRIORS,
+            AUTO_ADDUCTS_NEG,
+            AUTO_ADDUCTS_POS,
+            PEAK_WAVELENGTHS,
+        )
+
+        mzs = np.array([123.4567, 250.1234], dtype=np.float64)
+        ints = np.array([50.0, 100.0], dtype=np.float64)
+        pmz = 350.25
+        pf, _, _, _, _, nv = featurize_peaks_v2(mzs, ints, pmz)
+        self.assertEqual(nv, 2)
+        two_pi = 2.0 * math.pi
+        losses = pmz - mzs
+        # Channels 5..11: sin(mz), 12..18: cos(mz), 19..25: sin(nl), 26..32: cos(nl)
+        for j, wl in enumerate(PEAK_WAVELENGTHS):
+            self.assertAlmostEqual(float(pf[0, 5 + j]), math.sin((two_pi / wl) * mzs[0]), places=5)
+            self.assertAlmostEqual(float(pf[0, 12 + j]), math.cos((two_pi / wl) * mzs[0]), places=5)
+            self.assertAlmostEqual(float(pf[0, 19 + j]), math.sin((two_pi / wl) * losses[0]), places=5)
+            self.assertAlmostEqual(float(pf[0, 26 + j]), math.cos((two_pi / wl) * losses[0]), places=5)
+
+        for a in AUTO_ADDUCTS_POS + AUTO_ADDUCTS_NEG:
+            self.assertIn(a, AUTO_ADDUCT_LOG_PRIORS)
+        self.assertEqual(AUTO_ADDUCT_LOG_PRIORS['[M+H]+'], 0.0)
+        self.assertEqual(AUTO_ADDUCT_LOG_PRIORS['[M-H]-'], 0.0)
+
 
 if __name__ == '__main__':
     unittest.main()

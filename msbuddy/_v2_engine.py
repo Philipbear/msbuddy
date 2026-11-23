@@ -56,6 +56,22 @@ AUTO_ADDUCTS_POS = (
 AUTO_ADDUCTS_NEG = (
     '[M-H]-', '[M+Cl]-', '[M+CH2O2-H]-', '[M+C2H4O2-H]-', '[2M-H]-',
 )
+# Bayesian adduct prevalence log-priors applied only during adduct="auto"
+# disambiguation to resolve MS/MS-isobaric aliases (e.g. [M+H]+ vs [M'-H2O+H]+).
+AUTO_ADDUCT_LOG_PRIORS = {
+    '[M+H]+': 0.0,
+    '[M+Na]+': -0.9,
+    '[M+NH4]+': -1.8,
+    '[M-H2O+H]+': -2.8,
+    '[M+K]+': -2.8,
+    '[2M+H]+': -1.0,
+    '[2M+Na]+': -1.0,
+    '[M-H]-': 0.0,
+    '[M+CH2O2-H]-': -1.8,
+    '[M+C2H4O2-H]-': -2.4,
+    '[M+Cl]-': -2.0,
+    '[2M-H]-': -1.0,
+}
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -230,13 +246,13 @@ def featurize_peaks_v2(
 
             two_pi = 2.0 * math.pi
             for wl in PEAK_WAVELENGTHS:
-                ang = (two_pi / wl) * mzs
-                peak_feats[:n_valid, col] = np.sin(ang).astype(np.float32); col += 1
-                peak_feats[:n_valid, col] = np.cos(ang).astype(np.float32); col += 1
+                peak_feats[:n_valid, col] = np.sin((two_pi / wl) * mzs).astype(np.float32); col += 1
             for wl in PEAK_WAVELENGTHS:
-                ang = (two_pi / wl) * losses
-                peak_feats[:n_valid, col] = np.sin(ang).astype(np.float32); col += 1
-                peak_feats[:n_valid, col] = np.cos(ang).astype(np.float32); col += 1
+                peak_feats[:n_valid, col] = np.cos((two_pi / wl) * mzs).astype(np.float32); col += 1
+            for wl in PEAK_WAVELENGTHS:
+                peak_feats[:n_valid, col] = np.sin((two_pi / wl) * losses).astype(np.float32); col += 1
+            for wl in PEAK_WAVELENGTHS:
+                peak_feats[:n_valid, col] = np.cos((two_pi / wl) * losses).astype(np.float32); col += 1
 
             peak_feats[:n_valid, col] = np.sqrt(irel).astype(np.float32); col += 1
             peak_feats[:n_valid, col] = (np.log1p(irel * 100.0) / math.log(101.0)).astype(np.float32); col += 1
@@ -763,10 +779,12 @@ def annotate_batch_v2(batch_data: Sequence, config, gd: dict) -> None:
         raw_idx_map = peak_cache[fi][7]
 
         # Collect all (hyp, k, log_odds) entries
+        is_auto = getattr(mf, 'adduct_auto', False) and len(hyps) > 1
         flat_entries = []
         for h in hyps:
+            prior_shift = AUTO_ADDUCT_LOG_PRIORS.get(h['adduct'].string, -1.5) if is_auto else 0.0
             for k in range(h['K']):
-                flat_entries.append((h, k, float(h['log_odds'][k])))
+                flat_entries.append((h, k, float(h['log_odds'][k]) + prior_shift))
         log_odds_arr = np.array([e[2] for e in flat_entries], dtype=np.float64)
         # Joint softmax with shared [ABSENT] anchor at 0.0
         all_s = np.append(log_odds_arr, 0.0)
