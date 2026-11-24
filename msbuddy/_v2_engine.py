@@ -68,21 +68,23 @@ AUTO_ADDUCTS_POS = (
 AUTO_ADDUCTS_NEG = (
     '[M-H]-', '[M+Cl]-', '[M+CH2O2-H]-', '[M+C2H4O2-H]-', '[2M-H]-',
 )
-# Bayesian adduct prevalence log-priors applied only during adduct="auto"
-# disambiguation to resolve MS/MS-isobaric aliases (e.g. [M+H]+ vs [M'-H2O+H]+).
+# Bayesian adduct prevalence & baseline-offset log-priors applied only during
+# opt-in adduct="auto" disambiguation (calibrated to format_version=5 log-odds
+# scale to suppress rare/isobaric and half-mass dimer false positives while
+# leaving known-adduct scoring untouched).
 AUTO_ADDUCT_LOG_PRIORS = {
     '[M+H]+': 0.0,
-    '[M+Na]+': -0.9,
-    '[M+NH4]+': -1.8,
-    '[M-H2O+H]+': -2.8,
-    '[M+K]+': -2.8,
-    '[2M+H]+': -1.0,
-    '[2M+Na]+': -1.0,
+    '[M+Na]+': -2.5,
+    '[M+NH4]+': -5.5,
+    '[M-H2O+H]+': -6.0,
+    '[M+K]+': -6.0,
+    '[2M+H]+': -3.5,
+    '[2M+Na]+': -4.2,
     '[M-H]-': 0.0,
-    '[M+CH2O2-H]-': -1.8,
-    '[M+C2H4O2-H]-': -2.4,
-    '[M+Cl]-': -2.0,
-    '[2M-H]-': -1.0,
+    '[M+CH2O2-H]-': -5.5,
+    '[M+C2H4O2-H]-': -6.5,
+    '[M+Cl]-': -3.2,
+    '[2M-H]-': -2.5,
 }
 
 
