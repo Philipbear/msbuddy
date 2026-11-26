@@ -18,45 +18,73 @@
 pip install msbuddy
 ```
 
-The standard public-library model (`ml_v2.0.0.joblib`, 21.4 MB) and lossless formula databases (`v0.4.0`, 18.4 MB) download automatically on first use (~39.8 MB total in version 2.0). Inference runs on CPU via ONNX Runtime and LightGBM; PyTorch and CUDA are not required. Python 3.8 or newer is supported.
+The model and formula databases (~40 MB total) download automatically on first use. Runs on CPU only; PyTorch and GPU/CUDA are not required. Python 3.8 or newer is supported.
 
 ## What's new in 2.0
 
-- **Unified four-stage CPU engine (`format_version=5`):** Combines an Exact-Mass Spectral Transformer with isobaric-contrastive alignment (`ONNX`), two-pass compiled `nogil` Numba candidate generation + batched `FormulaEncoderV3` shortlisting, 48-d compiled MS/MS physics (with internal MS1–MS2 self-recalibration) + 12-d analytical MS1 isotope scoring, and a FiLM-conditioned `PureSetRerankerV3` (`ONNX`) + `LightGBM` LambdaRank hybrid with calibrated `[ABSENT]` posteriors.
-- **Fast shared-memory parallelism:** Streams `formula_db_v0.4.0.msbdb` directly into contiguous `int16` arrays (~520 MB peak RSS) and executes `parallel=True` across a shared-memory thread pool without duplicating database memory.
-- **Opt-in multi-adduct disambiguation (`adduct="auto"`):** Default known-adduct behavior (`[M+H]+`/`[M-H]-` when omitted) is unchanged. Passing `adduct="auto"` on singly charged queries ranks across common polarity-specific adducts and dimers with Bayesian prevalence log-priors against one shared `[ABSENT]` anchor and writes the top-ranked adduct back to `MetaFeature.adduct`.
-- **Pooled batch FDR & signed delta-formula APIs:** `get_summary()` and `estimate_batch_fdr()` report `posterior_error_probability` and collection-wide `batch_q_value`, and `annotate_delta_mass()` / `annotate_network_delta()` annotate signed elemental differences between molecular-network nodes without downloading a model or database.
-- **Full evidence-mode fallback:** MS1-only, mass-only, multiply-charged, and `use_spectral=False` queries lazily load the optional compatibility bundle (`ml_compatibility_v1.3.0.joblib`).
+- **Higher annotation accuracy:** Improved formula ranking across positive and negative modes, diverse adducts/dimers, and halogenated compounds (F, Cl, Br, and I are searched by default).
+- **Fast, lightweight CPU runtime:** Scales cleanly across CPU cores with low memory usage—no GPU required.
+- **Optional automatic adduct selection (`adduct="auto"`):** Uses your provided adduct by default (or `[M+H]+` / `[M-H]-` when omitted), with opt-in multi-adduct disambiguation when the adduct form is unknown.
+- **Batch-level confidence:** Reports per-feature posterior error probability (`posterior_error_probability`) and dataset-wide `batch_q_value` via `estimate_batch_fdr()`.
 
 ## Python quick start
+
+### 1. Annotate an MGF file
 
 ```python
 from msbuddy import Msbuddy, MsbuddyConfig
 
-engine = Msbuddy(MsbuddyConfig(ms_instr="orbitrap"))
+engine = Msbuddy(MsbuddyConfig(ms_instr="orbitrap"))  # we also support "tof" and "fticr"
 engine.load_mgf("input_file.mgf")
 engine.annotate_formula()
 results = engine.get_summary()
 ```
 
-Use `ms_instr="tof"` for both QTOF and timsTOF, or `"fticr"` as appropriate. The older `"qtof"` and `"timstof"` settings remain accepted aliases for `"tof"`. Acquisition metadata are optional. See the [quick start](https://msbuddy.readthedocs.io/en/latest/quickstart.html) and [configuration guide](https://msbuddy.readthedocs.io/en/latest/config.html) for other inputs and settings.
+Halogens (F, Cl, Br, and I) are searched by default; set `MsbuddyConfig(halogen=False)` only when prior knowledge rules out halogens. See the [demo MGF](demo/input_file.mgf), [quick start](https://msbuddy.readthedocs.io/en/latest/quickstart.html), and [configuration guide](https://msbuddy.readthedocs.io/en/latest/config.html) for more options.
 
-Halogens (F, Cl, Br, and I) are searched by default. Set `MsbuddyConfig(halogen=False)` only when prior knowledge rules out halogens. Reported confidence values (`posterior_error_probability`, `batch_q_value`, and legacy `estimated_fdr`) are model-based estimates; see [model settings and confidence](https://msbuddy.readthedocs.io/en/latest/models.html) for details.
-
-MS/MS spectra can also be loaded by [USI](https://msbuddy.readthedocs.io/en/latest/datain.html). A [demo MGF](demo/input_file.mgf) and [API reference](https://msbuddy.readthedocs.io/en/latest/pyapi.html) are available. The API also supports direct formula mass searches, fragment subformula annotation, and signed molecular-network delta annotation:
+### 2. Annotate from USIs
 
 ```python
-from msbuddy import annotate_delta_mass, annotate_network_delta
+from msbuddy import Msbuddy, MsbuddyConfig
 
-changes = annotate_delta_mass(21.98194425, tolerance=0.001)
-print(changes[0].formula)  # -H+Na
-
-edge = annotate_network_delta(
-    181.0706645565, 203.0526088063, "[M+H]+", "[M+Na]+",
-    source_formula="C6H12O6", preset="broad",
-)
-print(edge[0].formula, edge.adduct_delta)  # 0 -H+Na
+engine = Msbuddy(MsbuddyConfig(ms_instr="orbitrap"))
+engine.load_usi([
+    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740036",
+    "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00003740037",
+])
+engine.annotate_formula()
+results = engine.get_summary()
 ```
+
+### 3. Annotate a list of spectra via Python API
+
+```python
+from msbuddy import MetaFeature, Msbuddy, MsbuddyConfig, Spectrum
+
+features = [
+    MetaFeature(
+        identifier="feature_1",
+        mz=181.0707,
+        charge=1,
+        adduct="[M+H]+",  # optional; defaults to [M+H]+ / [M-H]-, or use "auto"
+        ms1=Spectrum([181.0707, 182.0741], [100.0, 6.7]),  # optional MS1 isotope pattern
+        ms2=Spectrum([109.0284, 127.0390, 145.0495, 163.0601], [30.0, 60.0, 100.0, 80.0]),
+    ),
+    MetaFeature(
+        identifier="feature_2",
+        mz=179.0561,
+        charge=-1,
+        ms2=Spectrum([89.0244, 101.0244, 119.0350, 161.0455], [100.0, 40.0, 70.0, 30.0]),
+    ),
+]
+
+engine = Msbuddy(MsbuddyConfig(ms_instr="orbitrap"))
+engine.add_data(features)
+engine.annotate_formula()
+results = engine.get_summary()
+```
+
+See the [API reference](https://msbuddy.readthedocs.io/en/latest/pyapi.html) for direct mass-to-formula search (`mass_to_formula`, `mz_to_formula`) and fragment subformula assignment (`assign_subformula`).
 
 ## Command line
 
@@ -70,7 +98,7 @@ Run `msbuddy --help` for options. The [command-line guide](https://msbuddy.readt
 
 See the [migration guide](https://msbuddy.readthedocs.io/en/latest/migration.html) when upgrading older scripts. Release details are in the [version updates](https://msbuddy.readthedocs.io/en/latest/updates.html) and [changelog](changelog.md).
 
-The annotation pipeline is in `msbuddy/` and tests are in `tests/`. Run `python -m unittest discover -s tests -v` after installing development dependencies. See the [development guide](https://msbuddy.readthedocs.io/en/latest/development.html) and [candidate-audit guide](docs/candidate_audit.rst).
+The annotation pipeline is in `msbuddy/` and tests are in `tests/`. Run `python -m unittest discover -s tests -v` after installing development dependencies. See the [development guide](https://msbuddy.readthedocs.io/en/latest/development.html).
 
 ## Citation
 
