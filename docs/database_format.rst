@@ -1,22 +1,19 @@
 Lossless formula database format
 ================================
 
-The version 0.3.0 databases store the same formula rows, masses, indexes,
-ordering and duplicate entries as version 0.2.4. They change the storage
-format rather than the chemical contents.
-
-The formula asset is 22,990,650 bytes, compared with 436,457,267 bytes for the
-legacy asset. The common-fragment and neutral-loss asset is 2,496 bytes,
-compared with 68,290 bytes. Every decoded array retains its original dtype
-and shape. Every stored mass restores the original IEEE 754 bit pattern.
+The current databases use lossless indexed storage. Version 0.4.0 changes
+compression and block size while preserving formula rows, masses, indexes,
+ordering and duplicates. Every decoded array retains its dtype and shape,
+including the original IEEE 754 mass bits. Sizes and validation results are
+in :ref:`update-1-4` and :ref:`update-1-3`.
 
 Storage and loading
 -------------------
 
 The ``.msbdb`` files are deterministic ZIP archives containing a versioned
-JSON manifest and independently compressed blocks of 4,096 rows. The
-manifest records the arrays, dtypes, dimensions, block layout and SHA-256
-checksums.
+JSON manifest and independently compressed blocks. Version 0.4.0 uses
+8,192-row LZMA blocks for the formula database. The manifest records the
+arrays, dtypes, dimensions, block layout and SHA-256 checksums.
 
 Integer formula columns use the smallest exact unsigned representation
 after subtracting a stored column offset. Constant columns require no row
@@ -49,20 +46,3 @@ Then pass the resulting paths through ``MsbuddyConfig(data_files=...)``.
 Legacy joblib files are Python pickle objects and should come from a trusted
 source. The numerical archive reader itself does not deserialize Python
 objects.
-
-Validation and runtime
-----------------------
-
-Release checks compare every array block against the legacy files, including
-all 4,194,390 formula rows, both complete mass arrays, both index arrays and
-the common-fragment and neutral-loss arrays. Query comparisons cover
-precursor and fragment searches, radicals, adducts, duplicates and boundaries
-above the indexed mass range. Threaded and spawned-process access are tested.
-
-In five fresh-process trials per format on one machine, median peak process
-memory during database loading decreased from 535 MB to 223 MB. Median loader
-time increased from 0.067 to 0.198 seconds. These measurements exclude model
-loading and candidate generation; operating-system file caches were not
-controlled. A separate 8,644-query check preserved all results and found
-slightly higher individual lookup latency with lazy decoding. These are
-loader and lookup measurements, not an end-to-end speed claim.

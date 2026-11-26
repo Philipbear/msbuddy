@@ -517,10 +517,11 @@ Example usage:
 
    .. attribute:: estimated_fdr
 
-      float. Expected false fraction among this spectrum's candidate prefix
-      through this rank. At rank one, equal to ``posterior_error_probability``.
+      float. Model-based expected false fraction among this spectrum's candidate
+      prefix through this rank. At rank one, equal to ``posterior_error_probability``.
       This legacy field does not pool annotations across spectra; use
-      ``Msbuddy.estimate_batch_fdr`` for that purpose.
+      ``Msbuddy.estimate_batch_fdr`` for that purpose. See :ref:`update-2-0` and
+      :doc:`models` for confidence details and validation limits.
 
 
 

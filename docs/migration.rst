@@ -1,15 +1,15 @@
 Migration guide
 ===============
 
-Upgrading from 1.3 to 2.0
+Upgrading from 1.4 to 2.0
 -------------------------
 
 ``msbuddy 2.0.0`` downloads the unified public-library model bundle
 (``ml_v2.0.0.joblib``, 21.4 MB) automatically while reusing the existing
-lossless ``.msbdb`` databases (``formula_db_v0.3.0.msbdb`` and
-``common_db_v0.3.0.msbdb``, 23.0 MB total). Existing custom databases and
-earlier ``format_version=2/3/4`` or legacy model bundles remain supported via
-``data_files`` or ``--ml-model``.
+lossless ``.msbdb`` databases (``formula_db_v0.4.0.msbdb`` and
+``common_db_v0.4.0.msbdb``, 18.4 MB total; ~39.8 MB combined). Existing custom
+databases and earlier ``format_version=2/3/4`` or legacy model bundles remain
+supported via ``data_files`` or ``--ml-model``.
 
 - **Parallel execution:** ``parallel=True`` now uses a shared-memory thread pool
   for the unified v2.0 engine instead of duplicating database memory across
@@ -27,14 +27,14 @@ earlier ``format_version=2/3/4`` or legacy model bundles remain supported via
   ``use_spectral=False`` queries lazily load ``ml_compatibility_v1.3.0.joblib``;
   use ``download_data(include_compatibility=True)`` for offline preparation.
 
-Unified TOF settings
---------------------
+Upgrading from 1.4.0 to 1.4.1
+-----------------------------
 
 Use ``ms_instr="tof"`` for both QTOF and timsTOF instruments. Existing
 ``qtof`` and ``timstof`` inputs still work and normalize to ``tof``. Both use
 10 ppm MS1 and 20 ppm MS2 tolerances. Per-query instrument metadata are also
 normalized to ``tof``. The frozen spectral model now uses the same instrument
-input for both, so timsTOF predictions can differ from earlier versions.
+input for both, so timsTOF predictions can differ from version 1.4.0.
 
 Upgrading from 1.2 to 1.3
 -------------------------
@@ -53,7 +53,7 @@ can be overridden with ``data_files['ml_compatibility']``.
 Halogens remain enabled by default. The default fluorine range increases from
 ``(0, 20)`` to ``(0, 80)``; explicit bounds remain effective. If prior knowledge
 rules out halogens, set ``halogen=False`` or ``--no-halogen``. Acquisition
-metadata remain optional. See :doc:`model_report_1_3` for accuracy and confidence
+metadata remain optional. See :ref:`update-1-3` for accuracy and confidence
 checks, including the external PFAS MS2 limitation.
 
 Changes introduced in 1.0

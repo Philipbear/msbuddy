@@ -48,7 +48,7 @@ Within the result summary, ``results`` is a list of Python dictionaries. ``indiv
 - ``rt``: Retention time in seconds
 - ``adduct``: Adduct type
 - ``formula_rank_1``: Molecular formula annotation ranked in the first place
-- ``estimated_fdr``: Expected false fraction of the candidate prefix within one spectrum; at rank one, its posterior error probability
+- ``estimated_fdr``: Expected false fraction of the candidate prefix within one spectrum; at rank one, its posterior error probability. See :doc:`models` and :ref:`update-2-0` for confidence details and limitations.
 - ``posterior_error_probability``: Probability that the top formula is wrong, including an absent answer
 - ``batch_q_value``: Mean posterior error across top annotations at least as confident as this one, pooled over the full loaded collection
 - ``formula_rank_2``: Molecular formula annotation ranked in the second place

@@ -13,10 +13,11 @@ msbuddy changelog
   12-d analytical MS1 isotope engine, FiLM-conditioned `PureSetRerankerV3`
   (`ONNX`) & `LightGBM` LambdaRank hybrid trained via scaffold-clustered 5-fold
   OOF stacking, and calibrated `[ABSENT]` posteriors.
-- Stream `formula_db_v0.3.0.msbdb` directly into contiguous `int16` arrays to
-  eliminate transient `int64` loading spikes (~520 MB peak RSS) and add
-  shared-memory `ThreadPoolExecutor` multi-threading (`parallel=True`) without
-  duplicating database memory across processes.
+- Stream the lossless `.msbdb` formula database (`formula_db_v0.4.0.msbdb`,
+  18.4 MB; 39.8 MB total default download with `ml_v2.0.0.joblib`) directly into
+  contiguous `int16` arrays to eliminate transient `int64` loading spikes
+  (~520 MB peak RSS) and add shared-memory `ThreadPoolExecutor` multi-threading
+  (`parallel=True`) without duplicating database memory across processes.
 - Retain on-demand fallback to `ml_compatibility_v1.3.0.joblib` for MS1-only,
   mass-only, multiply-charged, and `use_spectral=False` queries.
 - Add opt-in multi-adduct disambiguation via `adduct="auto"` with Bayesian
@@ -182,3 +183,25 @@ Now we use a learning-to-rank model to rank the formula candidates.
   isotope-only and mass-only modes, with bounded observable contexts.
 - Publish frozen accuracy and error-rate comparisons, including the smaller
   external PFAS MS2 limitation, and retain the 25/50 MS2/joint candidate budgets.
+
+1.4.0 (2026-11-16)
+- Ship the compact hybrid spectral scorer selected in the 1.4 research review.
+  Keep the candidate policy and optional compatibility route unchanged.
+- Compress the unchanged scorer and calibration losslessly into an 8.75 MB
+  standard model bundle. Repack the lossless formula database into 8,192-row
+  indexed blocks with standard-library LZMA, reducing it to 18.41 MB while
+  preserving every formula, index and stored mass bit.
+- Reduce the standard model plus database download to 27.16 MB; the large
+  compatibility weights remain an optional on-demand download.
+- Report the fresh accuracy results and the external confidence limitation:
+  nominal 5% FDR selections are not validated across sources, particularly
+  for halogen-rich MS2 data. No general 5% FDR guarantee is claimed.
+
+1.4.1 (2026-11-16)
+- Unify QTOF and timsTOF as the ``tof`` instrument family, with unchanged
+  10/20 ppm tolerances. The former settings remain supported aliases.
+- Normalize per-feature and MGF metadata to the same TOF family and use one
+  model input while retaining compatibility with existing spectral bundles.
+- Update the CLI, Nextflow wrapper, documentation, and regression coverage.
+- The frozen model uses its former QTOF indicator for all TOF inputs; timsTOF
+  predictions can change and the original validation does not cover this change.
