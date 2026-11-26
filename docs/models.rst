@@ -35,8 +35,14 @@ Halogens (``F, Cl, Br, I``) remain enabled by default with zero compound-class
 or PFAS-specific heuristics. Standard instrument tolerances remain
 ``5 / 10 ppm`` (Orbitrap), ``10 / 20 ppm`` (Q-TOF / timsTOF), and ``2 / 5 ppm``
 (FTICR). Queries without MS/MS spectra (MS1-only or mass-only), multiply-charged
-precursors, or runs configured with ``use_spectral=False`` lazily fall back to
-the optional compatibility bundle (``ml_compatibility_v1.3.0.joblib``).
+precursors, or runs configured with ``use_spectral=False`` lazily load the
+compact compatibility bundle (``ml_compatibility_v2.0.1.joblib``, **3.23 MB**,
+bringing the total download across all modes to **43.1 MB**). MS1-only and
+precursor mass-only queries run through the compiled ``ms1_v2`` engine using
+shared-memory ``FastFormulaDB`` and 12-d analytical Numba isotope features
+(including fine-structure M+1/M+2 shifts) with calibrated ``[ABSENT]``
+posteriors, arbitrary charge/tolerance/adduct support, and opt-in
+``adduct="auto"``.
 
 Opt-in multi-adduct disambiguation (``adduct="auto"``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

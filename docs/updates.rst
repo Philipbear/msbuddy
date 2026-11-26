@@ -4,7 +4,32 @@ Version updates and validation
 The sections below keep detailed release comparisons and limitations together.
 For a short change list, see the `changelog
 <https://github.com/Philipbear/msbuddy/blob/main/changelog.md>`_.
-Jump to :ref:`update-2-0`, :ref:`update-1-4`, or :ref:`update-1-3`.
+Jump to :ref:`update-2-0-1`, :ref:`update-2-0`, :ref:`update-1-4`, or :ref:`update-1-3`.
+
+.. _update-2-0-1:
+
+Version 2.0.1 (26 November 2026)
+--------------------------------
+
+``msbuddy 2.0.1`` keeps the default MS/MS model bundle (``ml_v2.0.0.joblib``,
+21.43 MB) and ``.msbdb`` formula databases (18.41 MB) unchanged, and replaces
+the optional 169.79 MB ``ml_compatibility_v1.3.0.joblib`` fallback bundle with
+a compact, 100% public-library-trained ``ml_compatibility_v2.0.1.joblib``
+(**3,232,610 bytes / 3.23 MB**, SHA-256 verified — **52.5× smaller**, reducing
+the complete all-modes download from 209.6 MB to **43.1 MB**):
+
+- **Compiled ``ms1_v2`` engine:** MS1 isotope-only and precursor mass-only
+  queries now run through shared-memory ``FastFormulaDB`` and 12-d analytical
+  Numba isotope features (intensity ratios, Gaussian isotope log-likelihood,
+  fine-structure M+1/M+2 mass-defect shifts, and pool-relative margins) with
+  calibrated ``[ABSENT]`` posteriors, arbitrary charge (``|z| >= 1``), ppm/Da
+  tolerances, and opt-in ``adduct="auto"`` (~6–8× faster than the legacy path,
+  improving average real LC-MS MS1-only top-1 accuracy by +4.0 percentage points
+  across four public LC-MS cohorts).
+- **Compact ``--no-spectral`` and multiply-charged MS/MS fallback:** Replaces
+  the four oversized legacy v0.3 LightGBM boosters (``num_leaves=1500–2000``,
+  426.7 MB uncompressed) with compact regularized boosters (``num_leaves=31``)
+  while preserving ``format_version=2`` compatibility.
 
 .. _update-2-0:
 

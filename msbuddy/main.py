@@ -506,23 +506,32 @@ class Msbuddy:
             if v2_items:
                 annotate_batch_v2(v2_items, self.config, self._dependencies)
             if other_idx:
-                # Handle MS2-less or multiply-charged queries via standard fallback
-                orig_data = self.data
-                try:
-                    self.data = [batch[i] for i in other_idx]
-                    if ('model_ms1_ms2' not in self._dependencies
-                            and 'model_compatibility_files' in self._dependencies):
-                        from msbuddy.load import init_compatibility_models
-                        init_compatibility_models(self._dependencies)
-                    self._preprocess_and_generate_candidate_formula(0, len(self.data))
-                    self._assign_subformula_annotation(0, len(self.data))
-                    if 'model_ms1_ms2' in self._dependencies or 'model_compatibility_files' in self._dependencies:
-                        predict_formula_probability(self.data, 0, len(self.data), self.config, self._dependencies)
-                        calc_fdr(self.data, 0, len(self.data))
-                    for pos_i, orig_i in enumerate(other_idx):
-                        batch[orig_i] = self.data[pos_i]
-                finally:
-                    self.data = orig_data
+                if ('model_ms1_ms2' not in self._dependencies
+                        and 'model_ms1_v2' not in self._dependencies
+                        and 'model_compatibility_files' in self._dependencies):
+                    from msbuddy.load import init_compatibility_models
+                    init_compatibility_models(self._dependencies)
+                ms1_v2_idx = ([i for i in other_idx if not bool(batch[i].ms2_raw)]
+                              if 'model_ms1_v2' in self._dependencies else [])
+                ms1_v2_set = set(ms1_v2_idx)
+                legacy_idx = [i for i in other_idx if i not in ms1_v2_set]
+                if ms1_v2_idx:
+                    from msbuddy._ms1_v2_engine import annotate_batch_ms1_v2
+                    annotate_batch_ms1_v2([batch[i] for i in ms1_v2_idx], self.config, self._dependencies)
+                if legacy_idx:
+                    # Handle multiply-charged MS2 queries or legacy compatibility bundles
+                    orig_data = self.data
+                    try:
+                        self.data = [batch[i] for i in legacy_idx]
+                        self._preprocess_and_generate_candidate_formula(0, len(self.data))
+                        self._assign_subformula_annotation(0, len(self.data))
+                        if 'model_ms1_ms2' in self._dependencies or 'model_compatibility_files' in self._dependencies:
+                            predict_formula_probability(self.data, 0, len(self.data), self.config, self._dependencies)
+                            calc_fdr(self.data, 0, len(self.data))
+                        for pos_i, orig_i in enumerate(legacy_idx):
+                            batch[orig_i] = self.data[pos_i]
+                    finally:
+                        self.data = orig_data
             return start_idx, end_idx
 
         if (self._dependencies.get('model_v2_loaded')

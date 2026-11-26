@@ -18,7 +18,7 @@
 pip install msbuddy
 ```
 
-The model and formula databases (~40 MB total) download automatically on first use. Runs on CPU only; PyTorch and GPU/CUDA are not required. Python 3.8 or newer is supported.
+The default model and formula databases (~40 MB total) download automatically on first use; optional MS1-only, mass-only, multiply-charged, and `--no-spectral` fallback models add only 3.2 MB (~43 MB for all modes combined). Runs on CPU only; PyTorch and GPU/CUDA are not required. Python 3.8 or newer is supported.
 
 ## What's new in 2.0
 

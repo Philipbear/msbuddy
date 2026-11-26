@@ -24,8 +24,10 @@ supported via ``data_files`` or ``--ml-model``.
   provide signed elemental-difference annotation without requiring a model or
   database download.
 - **Compatibility fallback:** MS1-only, mass-only, multiply-charged, and
-  ``use_spectral=False`` queries lazily load ``ml_compatibility_v1.3.0.joblib``;
-  use ``download_data(include_compatibility=True)`` for offline preparation.
+  ``use_spectral=False`` queries lazily load the compact
+  ``ml_compatibility_v2.0.1.joblib`` (**3.23 MB**, down from 169.8 MB in 1.3–2.0.0;
+  ~43.1 MB total across all modes); use ``download_data(include_compatibility=True)``
+  for offline preparation.
 
 Upgrading from 1.4.0 to 1.4.1
 -----------------------------

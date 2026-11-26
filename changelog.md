@@ -1,6 +1,26 @@
 msbuddy changelog
 =================
 
+2.0.1 (2026-11-26)
+- Rebuild the optional MS1-only, precursor mass-only, multiply-charged, and
+  `use_spectral=False` (`--no-spectral`) compatibility bundle from public
+  libraries only (`ml_compatibility_v2.0.1.joblib`, **3.23 MB** / 3.08 MiB,
+  SHA-256 verified), replacing the 169.8 MB `ml_compatibility_v1.3.0.joblib`
+  (**52.5× smaller**; total all-functions download reduced from 209.6 MB to
+  **43.1 MB**).
+- Add a compiled CPU `ms1_v2` engine (`msbuddy/_ms1_v2_engine.py`) backed by
+  shared-memory `FastFormulaDB` and 12-d analytical Numba MS1 isotope features
+  (intensity ratios, Gaussian isotope log-likelihood, fine-structure M+1/M+2
+  mass-defect shifts, and pool-relative margins) with calibrated `[ABSENT]`
+  posteriors, arbitrary charge (`|z| >= 1`), ppm/Da tolerances, and opt-in
+  `adduct="auto"` support for MS1-only and precursor mass-only queries.
+- Replace the oversized legacy v0.3 LightGBM fallback trees (`num_leaves=1500–2000`,
+  427 MB uncompressed) with compact regularized boosters (`num_leaves=31`) for
+  `--no-spectral` and multiply-charged MS/MS runs while retaining full
+  `format_version=2` compatibility.
+- Keep the default msbuddy 2.0 MS/MS bundle (`ml_v2.0.0.joblib`, 21.43 MB) and
+  `.msbdb` formula databases (18.41 MB) completely unchanged.
+
 2.0.0 (2026-11-26)
 - Release the unified `msbuddy 2.0` four-stage CPU engine (`format_version=5`,
   backward-compatible with `format_version=4`) with the public-library default

@@ -58,10 +58,10 @@ DATA_FILES = {
             'msbuddy_data_v2.0.0/ml_v2.0.0.joblib'),
     },
     'ml_compatibility': {
-        'sha256': 'b577caafd6b036e949e6ff28a50c6312da2cf2c5f83d69c330ab6d017628c263',
-        'filename': 'ml_compatibility_v1.3.0.joblib',
+        'sha256': '8b8a811971dc4eca394558501cac7c9f792e739f4c7e4ca1fd44c6faba77e3e4',
+        'filename': 'ml_compatibility_v2.0.1.joblib',
         'url': ('https://github.com/Philipbear/msbuddy/releases/download/'
-                'msbuddy_data_v1.3.0/ml_compatibility_v1.3.0.joblib'),
+                'msbuddy_data_v2.0.1/ml_compatibility_v2.0.1.joblib'),
     },
 }
 
@@ -399,6 +399,11 @@ def _load_versioned_models(bundle, dependencies):
         validate(bundle['spectral_models'])
         selected['model_spectral'] = bundle['spectral_models']
         selected['model_spectral_cache'] = {}
+    if 'ms1_v2' in bundle:
+        from msbuddy._ms1_v2_engine import validate_ms1_v2_spec
+        validate_ms1_v2_spec(bundle['ms1_v2'])
+        selected['model_ms1_v2'] = bundle['ms1_v2']
+        selected['model_ms1_v2_cache'] = {}
     dependencies.update(selected)
 
 
@@ -452,7 +457,8 @@ def init_compatibility_models(dependencies):
         raise ValueError('Optional compatibility bundle has no legacy fallback models.')
     dependencies.update({key: selected[key] for key in required})
     dependencies.update({key: selected[key] for key in selected if key.startswith('calibration_')})
-    for key in ('candidate_selector', 'candidate_limits', 'validated_adduct_signatures'):
+    for key in ('candidate_selector', 'candidate_limits', 'validated_adduct_signatures',
+                'model_ms1_v2', 'model_ms1_v2_cache'):
         if key in selected and key not in dependencies:
             dependencies[key] = selected[key]
     dependencies['legacy_dependencies'] = selected['legacy_dependencies']
