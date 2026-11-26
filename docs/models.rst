@@ -1,13 +1,15 @@
 Model update and confidence estimates
 ============================================
 
-Version 2.0 (development)
--------------------------
+Version 2.0
+-----------
 
 ``msbuddy 2.0`` replaces the separate mode-gated rankers with one unified
 four-stage CPU engine packaged as a single checksum-verified ``format_version=5``
-(backward-compatible with ``format_version=4``) ``.joblib`` bundle (CPU ONNX
-Runtime + LightGBM; PyTorch and CUDA are not required):
+(backward-compatible with ``format_version=4``) ``.joblib`` bundle
+(``ml_v2.0.0.joblib``, **21.4 MB**, trained on public libraries only; CPU ONNX
+Runtime + LightGBM; PyTorch and CUDA are not required; **44.4 MB** total with
+the 23.0 MB lossless ``.msbdb`` formula databases):
 
 1. **Stage 0 (Exact-Mass Spectral Transformer + Isobaric Contrastive Alignment,
    ONNX)** predicts element-count distributions (continuous ``C``/``H`` and
@@ -32,7 +34,9 @@ Runtime + LightGBM; PyTorch and CUDA are not required):
 Halogens (``F, Cl, Br, I``) remain enabled by default with zero compound-class
 or PFAS-specific heuristics. Standard instrument tolerances remain
 ``5 / 10 ppm`` (Orbitrap), ``10 / 20 ppm`` (Q-TOF / timsTOF), and ``2 / 5 ppm``
-(FTICR).
+(FTICR). Queries without MS/MS spectra (MS1-only or mass-only), multiply-charged
+precursors, or runs configured with ``use_spectral=False`` lazily fall back to
+the optional compatibility bundle (``ml_compatibility_v1.3.0.joblib``).
 
 Opt-in multi-adduct disambiguation (``adduct="auto"``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

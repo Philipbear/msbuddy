@@ -71,8 +71,7 @@ MS/MS spectra can also be loaded via their USIs:
                        adduct_list=['[M+H]+', '[M-H2O+H]+'])
 
 .. note::
-    **msbuddy** does not perform adduct annotation. Please make sure the adduct type is correctly specified in the input file if necessary, otherwise default adducts ([M+H]+, [M-H]-) will be used.
-    We claim that adduct annotation should be performed on the MS1 level, where chromatographic peak profiles must be involved.
+    By default, **msbuddy** assumes the supplied adduct (or ``[M+H]+`` / ``[M-H]-`` when omitted). When the polarity is known but the adduct form is uncertain for a singly charged precursor, ``msbuddy 2.0`` also supports opt-in multi-adduct disambiguation via ``MetaFeature(..., adduct="auto")``. For LC-MS workflows with chromatographic peak grouping, MS1-level adduct annotation remains recommended whenever available.
 
 
 If parallel computing is needed, you can specify the number of CPUs to be used, but the code has to be run in ``if __name__ == '__main__':`` block:

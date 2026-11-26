@@ -503,7 +503,9 @@ def predict_formula_probability(buddy_data, batch_start_idx: int, batch_end_idx:
     if gd.get('model_core_loaded'):
         from msbuddy._spectral import in_scope as spectral_in_scope
         needs_compatibility = any(
-            f.candidate_formula_list and (not f.ms2_processed or not spectral_in_scope(f, config))
+            f.candidate_formula_list and (
+                gd.get('model_v2_loaded') or not f.ms2_processed or not spectral_in_scope(f, config)
+            )
             for f in batch_data)
         if needs_compatibility:
             from msbuddy.load import init_compatibility_models

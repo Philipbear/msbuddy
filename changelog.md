@@ -1,29 +1,40 @@
 msbuddy changelog
 =================
 
-Unreleased (2.0.0 development)
-- Introduce the unified `msbuddy 2.0` four-stage CPU engine (`format_version=5`,
-  backward-compatible with `format_version=4`): 5-objective Exact-Mass Spectral
-  Transformer with joint isobaric-contrastive alignment (`ONNX`), two-pass
-  compiled `nogil` Numba candidate generation + batched `FormulaEncoderV3`
-  shortlisting, 48-d compiled MS/MS physics (`MS1–MS2` internal self-recalibration,
-  pool-IDF discriminative peak weighting, subformula-nesting DAG support, and
-  heteroatom/adduct fragment balance) + 12-d analytical MS1 isotope engine,
-  FiLM-conditioned `PureSetRerankerV3` (`ONNX`) & `LightGBM` LambdaRank hybrid
-  trained via scaffold-clustered 5-fold OOF stacking, and calibrated `[ABSENT]`
-  posteriors in a single SHA-256-verified `.joblib` bundle.
+2.0.0 (2026-11-26)
+- Release the unified `msbuddy 2.0` four-stage CPU engine (`format_version=5`,
+  backward-compatible with `format_version=4`) with the public-library default
+  model bundle (`ml_v2.0.0.joblib`, 21.4 MB, SHA-256 verified): 5-objective
+  Exact-Mass Spectral Transformer with joint isobaric-contrastive alignment
+  (`ONNX`), two-pass compiled `nogil` Numba candidate generation + batched
+  `FormulaEncoderV3` shortlisting, 48-d compiled MS/MS physics (`MS1–MS2`
+  internal self-recalibration, pool-IDF discriminative peak weighting,
+  subformula-nesting DAG support, and heteroatom/adduct fragment balance) +
+  12-d analytical MS1 isotope engine, FiLM-conditioned `PureSetRerankerV3`
+  (`ONNX`) & `LightGBM` LambdaRank hybrid trained via scaffold-clustered 5-fold
+  OOF stacking, and calibrated `[ABSENT]` posteriors.
 - Stream `formula_db_v0.3.0.msbdb` directly into contiguous `int16` arrays to
   eliminate transient `int64` loading spikes (~520 MB peak RSS) and add
   shared-memory `ThreadPoolExecutor` multi-threading (`parallel=True`) without
   duplicating database memory across processes.
+- Retain on-demand fallback to `ml_compatibility_v1.3.0.joblib` for MS1-only,
+  mass-only, multiply-charged, and `use_spectral=False` queries.
 - Add opt-in multi-adduct disambiguation via `adduct="auto"` with Bayesian
   adduct prevalence log-priors for positive and negative modes (default
   known-adduct behavior and probabilities are unchanged).
 - Match Stage-0 stacked `[sin, cos]` Fourier peak channel ordering between
   training and ONNX inference and add regression unit tests.
-- Add separate posterior error probabilities and batch q-values for top formula annotations.
-- Pool confidence across all processing chunks, preserve absent-answer mass, and select tied probabilities together.
-- Clarify that the legacy estimated_fdr field describes a within-spectrum candidate prefix.
+- Add separate posterior error probabilities and batch q-values (`estimate_batch_fdr`)
+  for top formula annotations; pool confidence across all processing chunks,
+  preserve absent-answer mass, select tied probabilities together, and clarify
+  that the legacy `estimated_fdr` field describes a within-spectrum candidate prefix.
+- Add signed delta-formula search (`annotate_delta_mass`) and molecular-network
+  annotation propagation (`annotate_network_delta`) with separate neutral/adduct
+  changes, explicit charge/multimer handling, bounded de novo delta searches,
+  and multi-step transformation hypotheses.
+- Add benchmark and candidate-audit tools (`benchmarks/candidate_audit.py`,
+  optional MassDesk search, neutral-loss tolerance experiments, and
+  formula-disjoint ranker comparisons).
 
 0.1.2 (2023-10-03)
 - First release of a working version on PyPI.
@@ -121,14 +132,6 @@ Now we use a learning-to-rank model to rank the formula candidates.
   candidates, so their evidence survives the pre-ranking cutoff.
 - Add regression coverage for candidate merging and retention at the
   350-candidate cutoff.
-
-Unreleased
-- Add research tools for candidate-recall audits, optional MassDesk search,
-  neutral-loss tolerance experiments, and formula-disjoint ranker comparisons.
-- Add signed delta-formula search and molecular-network annotation propagation,
-  with separate neutral/adduct changes and explicit charge/multimer handling.
-- Add bounded de novo delta searches, multi-step transformation hypotheses,
-  JSON results and optional balanced ranking for known-formula network anchors.
 
 1.1.0 (2026-11-14)
 - Replace the four evidence-mode ranking models and add explicit element/adduct

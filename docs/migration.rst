@@ -1,6 +1,32 @@
 Migration guide
 ===============
 
+Upgrading from 1.3 to 2.0
+-------------------------
+
+``msbuddy 2.0.0`` downloads the unified public-library model bundle
+(``ml_v2.0.0.joblib``, 21.4 MB) automatically while reusing the existing
+lossless ``.msbdb`` databases (``formula_db_v0.3.0.msbdb`` and
+``common_db_v0.3.0.msbdb``, 23.0 MB total). Existing custom databases and
+earlier ``format_version=2/3/4`` or legacy model bundles remain supported via
+``data_files`` or ``--ml-model``.
+
+- **Parallel execution:** ``parallel=True`` now uses a shared-memory thread pool
+  for the unified v2.0 engine instead of duplicating database memory across
+  processes.
+- **Opt-in multi-adduct disambiguation:** Known adducts (or default
+  ``[M+H]+`` / ``[M-H]-``) remain the default. Pass ``adduct="auto"`` on a
+  singly charged ``MetaFeature`` to rank across common polarity-specific adducts
+  and dimers jointly against one ``[ABSENT]`` anchor.
+- **Batch FDR and delta-formula APIs:** ``estimate_batch_fdr()`` and
+  ``batch_q_value`` pool top-1 posterior error across the complete loaded
+  collection, and ``annotate_delta_mass()`` / ``annotate_network_delta()``
+  provide signed elemental-difference annotation without requiring a model or
+  database download.
+- **Compatibility fallback:** MS1-only, mass-only, multiply-charged, and
+  ``use_spectral=False`` queries lazily load ``ml_compatibility_v1.3.0.joblib``;
+  use ``download_data(include_compatibility=True)`` for offline preparation.
+
 Unified TOF settings
 --------------------
 

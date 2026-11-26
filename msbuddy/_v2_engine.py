@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at https://github.com/Philipbear/msbuddy/blob/main/LICENSE
 # ==============================================================================
-"""msbuddy 2.0 unified CPU ONNX + LightGBM inference engine (format_version = 4).
+"""msbuddy 2.0 unified CPU ONNX + LightGBM inference engine (format_version = 4 or 5).
 
 Pipeline:
   Stage 0: Exact-Mass Sparse Peak-Set Transformer (ONNX, 60-dim universal query_meta)

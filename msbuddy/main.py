@@ -510,6 +510,10 @@ class Msbuddy:
                 orig_data = self.data
                 try:
                     self.data = [batch[i] for i in other_idx]
+                    if ('model_ms1_ms2' not in self._dependencies
+                            and 'model_compatibility_files' in self._dependencies):
+                        from msbuddy.load import init_compatibility_models
+                        init_compatibility_models(self._dependencies)
                     self._preprocess_and_generate_candidate_formula(0, len(self.data))
                     self._assign_subformula_annotation(0, len(self.data))
                     if 'model_ms1_ms2' in self._dependencies or 'model_compatibility_files' in self._dependencies:
@@ -520,6 +524,12 @@ class Msbuddy:
                 finally:
                     self.data = orig_data
             return start_idx, end_idx
+
+        if (self._dependencies.get('model_v2_loaded')
+                and 'model_ms1_ms2' not in self._dependencies
+                and 'model_compatibility_files' in self._dependencies):
+            from msbuddy.load import init_compatibility_models
+            init_compatibility_models(self._dependencies)
 
         # data preprocessing and candidate space generation
         self._preprocess_and_generate_candidate_formula(start_idx, end_idx)

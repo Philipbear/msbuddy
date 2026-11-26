@@ -33,7 +33,7 @@ from msbuddy.utils import UnsupportedElementError
 logging.basicConfig(level=logging.INFO)
 
 current_db_version = 'v0.3.0'
-current_model_version = 'v1.3.0'
+current_model_version = 'v2.0.0'
 
 DATA_FILES = {
     'common_db': {
@@ -51,11 +51,11 @@ DATA_FILES = {
             'msbuddy_database_v0.3.0/formula_db_v0.3.0.msbdb'),
     },
     'ml_model': {
-        'sha256': 'a0936a1c9f22cae54566e7e5588381661f35306cb66a75c03d2b623a7d4c8d13',
+        'sha256': 'e18e848eb0d817ac0c6358497cc809f5a08bb250578d22a6ffb333207b03f874',
         'filename': 'ml_' + current_model_version + '.joblib',
         'url': (
             'https://github.com/Philipbear/msbuddy/releases/download/'
-            'msbuddy_data_v1.3.0/ml_v1.3.0.joblib'),
+            'msbuddy_data_v2.0.0/ml_v2.0.0.joblib'),
     },
     'ml_compatibility': {
         'sha256': 'b577caafd6b036e949e6ff28a50c6312da2cf2c5f83d69c330ab6d017628c263',
@@ -308,6 +308,12 @@ def init_ml_models(global_dict, data_dir=None, data_files=None) -> dict:
                 'path': compatibility_path, 'url': specification['url'],
                 'download_missing': 'ml_compatibility' not in custom_files,
                 'expected_sha256': specification['sha256']}
+        elif global_dict.get('model_v2_loaded'):
+            specification = DATA_FILES['ml_compatibility']
+            global_dict['model_compatibility_files'] = {
+                'path': files['ml_compatibility'], 'url': specification['url'],
+                'download_missing': 'ml_compatibility' not in custom_files,
+                'expected_sha256': specification['sha256'] if 'ml_compatibility' not in custom_files else None}
     else:
         (global_dict['model_ms1_ms2'], global_dict['model_noms1_ms2'], global_dict['model_ms1_noms2'], global_dict[
             'model_noms1_noms2'], global_dict['platt_a_0'], global_dict['platt_b_0'], global_dict['platt_a_1'],
@@ -446,6 +452,9 @@ def init_compatibility_models(dependencies):
         raise ValueError('Optional compatibility bundle has no legacy fallback models.')
     dependencies.update({key: selected[key] for key in required})
     dependencies.update({key: selected[key] for key in selected if key.startswith('calibration_')})
+    for key in ('candidate_selector', 'candidate_limits', 'validated_adduct_signatures'):
+        if key in selected and key not in dependencies:
+            dependencies[key] = selected[key]
     dependencies['legacy_dependencies'] = selected['legacy_dependencies']
     dependencies['model_compatibility_loaded'] = True
     return dependencies

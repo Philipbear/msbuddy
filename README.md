@@ -31,24 +31,30 @@ LightGBM and the CPU ONNX Runtime are inference dependencies. PyTorch and CUDA
 are not required. Python 3.8 or newer is supported; Python 3.8 uses NumPy 1.x
 and a compatible ONNX Runtime version.
 
-## Unified hybrid engine in 2.0 (development)
+## Unified hybrid engine in 2.0
 
 `msbuddy 2.0` introduces a unified four-stage CPU engine packaged into a single
-SHA-256-verified `.joblib` bundle (`~16.7 MB`, no PyTorch or GPU required):
+SHA-256-verified `.joblib` bundle (`21.4 MB`, trained on public libraries only;
+no PyTorch or GPU required; `44.4 MB` total with the `23.0 MB` `.msbdb`
+formula databases):
 
-- **Stage 0 (Exact-Mass Spectral Transformer, ONNX):** Encodes top-64 exact-mass
-  MS/MS peaks (stacked 7-scale Fourier mass/neutral-loss features and local
-  isotope-twin ratios) and 60-dimensional query/chemistry metadata to predict
-  per-element distributions and physicochemical properties.
-- **Stage 1–2 (Compiled `nogil` Numba Engine):** Streams `formula_db_v0.3.0.msbdb`
-  into contiguous `int16` memory (~520 MB peak RSS) for binary-search candidate
-  generation, exact subformula/neutral-loss assignment, and optional MS1 isotope
-  scoring across shared-memory threads (`parallel=True`, >220 spectra/s on 16–32
-  CPU cores).
-- **Stage 3–4 (Hybrid Set Reranker + Calibrated Absent-Mass Posteriors):** Combines
-  a permutation-equivariant `PureSetReranker` (ONNX, with an explicit `[ABSENT]`
-  token) and a `LightGBM` LambdaRank scorer, calibrated via two-parameter
-  temperature and absent-bias scaling for posterior probabilities and batch FDR.
+- **Stage 0 (Exact-Mass Spectral Transformer + Contrastive Alignment, ONNX):**
+  Encodes top-64 exact-mass MS/MS peaks (stacked 7-scale Fourier
+  mass/neutral-loss features and local isotope-twin ratios) and 60-dimensional
+  query/chemistry metadata to predict per-element distributions, global
+  properties, and a 128-d contrastive spectrum embedding.
+- **Stage 1–2 (Compiled `nogil` Numba Engine + Batched `FormulaEncoderV3`):**
+  Streams `formula_db_v0.3.0.msbdb` into contiguous `int16` memory (~520 MB peak
+  RSS) for two-pass candidate generation and contrastive shortlisting, exact
+  subformula/neutral-loss assignment (48-d MS/MS physics with MS1–MS2 internal
+  self-recalibration), and analytical MS1 isotope scoring across shared-memory
+  threads (`parallel=True`, >220 spectra/s on 16–32 CPU cores).
+- **Stage 3–4 (FiLM-Conditioned Hybrid Set Reranker + Calibrated Absent-Mass Posteriors):**
+  Combines a permutation-equivariant `PureSetRerankerV3` (ONNX, with an explicit
+  `[ABSENT]` token) and a `LightGBM` LambdaRank scorer, calibrated via
+  two-parameter temperature and absent-bias scaling for posterior probabilities
+  and batch FDR. MS1-only, mass-only, multiply-charged, and `use_spectral=False`
+  queries fall back lazily to the optional compatibility bundle.
 - **Opt-in multi-adduct disambiguation (`adduct="auto"`):** Default behavior is
   unchanged when an adduct is specified or omitted (`[M+H]+`/`[M-H]-`). Passing
   `adduct="auto"` expands each query across a polarity-specific adduct panel
@@ -126,9 +132,9 @@ See the [migration guide](https://github.com/Philipbear/msbuddy/blob/main/docs/m
 
 ## Python usage 
 
-### Signed differences between network nodes (unreleased)
+### Signed differences between network nodes
 
-Available from this checkout, the development API annotates **target minus source** with signed atom
+The delta-formula API annotates **target minus source** with signed atom
 counts, including `-H+Na`, without downloading a model or database:
 
 ```python

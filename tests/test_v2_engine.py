@@ -305,6 +305,56 @@ class TestMsbuddyV2Components(unittest.TestCase):
         # negating gives +drift_ppm so |(-out_err) - f48_shift[0,24]| ~ 0!
         self.assertLess(abs(drift_ppm - float(f48_shift[0, 24])), 0.5)
 
+    def test_v2_bundle_wires_optional_compatibility_models_on_demand(self):
+        from pathlib import Path
+        from unittest.mock import patch
+        from msbuddy.load import DATA_FILES, init_compatibility_models, init_ml_models
+        from tests.test_compact_bundle import compatibility_bundle
+
+        s0 = b'fake-stage0-onnx'
+        s3 = b'fake-stage3-onnx'
+        lgb = 'tree\nversion=v3\n'
+        v4_bundle = {
+            'format_version': 4,
+            'version': '2.0.0',
+            'cand_feat_dim': CAND_FEAT_DIM,
+            'pool_feat_dim': POOL_FEAT_DIM,
+            'query_meta_dim': QUERY_META_60_DIM,
+            'stage0_encoder_onnx': s0,
+            'stage0_encoder_sha256': hashlib.sha256(s0).hexdigest(),
+            'stage3_reranker_onnx': s3,
+            'stage3_reranker_sha256': hashlib.sha256(s3).hexdigest(),
+            'stage3_lgb_txt': lgb,
+            'stage3_lgb_sha256': hashlib.sha256(lgb.encode('utf-8')).hexdigest(),
+            'feat_center': np.zeros(CAND_FEAT_DIM, dtype=np.float32),
+            'feat_scale': np.ones(CAND_FEAT_DIM, dtype=np.float32),
+            'fusion': {'w_nn': 0.3, 'lgb_scale': 1.0},
+            'calibration': {'temp': 1.0, 'b_null': -1.0},
+        }
+        with patch('msbuddy.load.check_download_joblibload', return_value=v4_bundle) as loader:
+            deps = init_ml_models({}, '/tmp/example')
+        self.assertEqual(loader.call_count, 1)
+        self.assertTrue(deps['model_v2_loaded'])
+        self.assertNotIn('model_ms1_ms2', deps)
+        self.assertEqual(deps['model_compatibility_files']['path'],
+                         Path('/tmp/example') / DATA_FILES['ml_compatibility']['filename'])
+        self.assertEqual(deps['model_compatibility_files']['expected_sha256'],
+                         DATA_FILES['ml_compatibility']['sha256'])
+        self.assertTrue(deps['model_compatibility_files']['download_missing'])
+
+        compat = compatibility_bundle()
+        compat['validated_adducts'] = ['[M+H]+', '[M-H]-']
+        with patch('msbuddy.load.check_download_joblibload', return_value=compat) as loader:
+            init_compatibility_models(deps)
+            init_compatibility_models(deps)
+        self.assertEqual(loader.call_count, 1)
+        self.assertTrue(deps['model_compatibility_loaded'])
+        self.assertIn('model_ms1_ms2', deps)
+        self.assertIn('candidate_selector', deps)
+        self.assertEqual(deps['candidate_limits'], tuple(compat['candidate_limits']))
+        self.assertIn('validated_adduct_signatures', deps)
+        self.assertIn('legacy_dependencies', deps)
+
 
 if __name__ == '__main__':
     unittest.main()
