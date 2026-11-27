@@ -57,137 +57,27 @@ msbuddy changelog
   optional MassDesk search, neutral-loss tolerance experiments, and
   formula-disjoint ranker comparisons).
 
-0.1.2 (2023-10-03)
-- First release of a working version on PyPI.
+1.4.1 (2026-11-16)
+- Unify QTOF and timsTOF as the ``tof`` instrument family, with unchanged
+  10/20 ppm tolerances. The former settings remain supported aliases.
+- Normalize per-feature and MGF metadata to the same TOF family and use one
+  model input while retaining compatibility with existing spectral bundles.
+- Update the CLI, Nextflow wrapper, documentation, and regression coverage.
+- The frozen model uses its former QTOF indicator for all TOF inputs; timsTOF
+  predictions can change and the original validation does not cover this change.
 
-0.2.0 (2023-10-15)
-- Update deep learning features & models for molecular formula annotation.
-- Update API function 'mass_to_formula', mass errors are output as well. Formula results are sorted by mass errors.
-- Add new API function 'mz_to_formula', for charged ions. Ion type (adduct form) is required.
-
-0.2.1 (2023-10-18)
-- Bug fixes for load_mgf.
-- Add mgf demo file.
-
-0.2.2 (2023-10-18)
-- Add new API function 'assign_subformula'.
-
-0.2.3 (2023-11-05)
-- Update export: pd.Dataframe 'append' deprecated.
-
-0.2.4 (2023-11-09, stable version)
-- Bug fixes for export results in cmd line version.
-- Add version control for downloaded data (loaded DBs).
-
-0.2.5 (2023-11-22)
-- Update MsbuddyConfig class and PreprocessedMS2 class.
-
-0.2.6 / 0.2.7 (2023-12-09)
-- Update base class "Adduct".
-
-0.2.8 / 0.2.9(2023-12-10)
-- Bug fix for load_mgf (now can load metabolite features with MS1 and MS2 spectra using the same identifier).
-- Update command line version.
-
-0.3.0 / 0.3.1 (2024-01-22)
-- Update deep learning features & models for molecular formula annotation.
-Now we use a learning-to-rank model to rank the formula candidates.
-- Update MS2 preprocessing: reserve top 6 peaks (user-defined) for each 50 Da window.
-- Update database source: now we use the GitHub release to manage the database source.
-- Update candidate formula search, FDR estimation, ML etc.
-
-0.3.2 (2024-01-24)
-- timeout_decorator package seems not working on Windows, so we remove it.
-
-0.3.3 (2024-01-27)
-- Bug fix for candidate formula generation (pre-ranking).
-
-0.3.4 (2024-01-29)
-- Update function `load_mgf`: 'FEATURE_ID' now is added as a new identifier for metabolite features.
-
-0.3.5 / 0.3.6 (2024-01-29)
-- Bug fix for MS/MS preprocessing.
-
-0.3.7 (2024-03-19)
-- Update cmd line bug.
-
-0.3.8 (2024-10-14)
-- Update mgf loader. Add more field names for adduct loading.
-
-0.3.9 (2025-01-03)
-- Include 'halogen' argument in `mass_to_formula` and `mz_to_formula` functions.
-- Minor updates on text output.
-
-0.3.10 (2025-02-02)
--  Include 'dbe_cutoff' argument in `mass_to_formula` and `mz_to_formula` functions.
-
-0.3.11 (2025-02-05)
--  Include 'integer_dbe' argument in `mass_to_formula` and `mz_to_formula` functions.
--  In `mass_to_formula` and `mz_to_formula` functions, only output formulas that pass SENIOR rules.
-
-0.3.12 (2025-02-13)
--  `lightgbm` is not required if only using `mass_to_formula` and `mz_to_formula` functions.
-
-0.3.13, 0.3.14 (2026-01-27)
-- Update USI loading function.
-
-0.3.15 (2026-08-22)
-- Bug fix for cmd line version.
-
-0.3.16 (2026-08-27)
-- Allow configurable data directories and file names.
-
-1.0.0 (2026-11-05)
-- Break compatibility with 0.x formula and configuration APIs: use element-count
-  mappings, the new formula helpers, and ``element_ranges``; ``add_data`` appends.
-- Reject unsupported elements in formulas, adducts, and element ranges.
-- Improve loading and annotation performance, and add regression tests and benchmarks.
-- Fix handling of empty spectra, USIs, MGF metadata, and multiply charged precursors.
-- Preserve fragment-search mass precision across NumPy 1.x and 2.x.
-- MGF spectra without polarity information now warn and default to positive mode.
-- Move most package metadata to pyproject.toml and use one version number throughout.
-- Update the maintainer contact address.
-
-1.0.1 (2026-11-13)
-- Preserve bottom-up MS/MS intensity when merging duplicate precursor-database
-  candidates, so their evidence survives the pre-ranking cutoff.
-- Add regression coverage for candidate merging and retention at the
-  350-candidate cutoff.
-
-1.1.0 (2026-11-14)
-- Replace the four evidence-mode ranking models and add explicit element/adduct
-  features, a learned candidate selector, and validated mode-specific budgets.
-- Preserve missing-answer probability mass in calibrated confidence and FDR
-  estimates; avoid automatic certainty for singleton candidates.
-- Add max_candidates / --max-candidates and preserve other settings when
-  updating engine configuration.
-- Bound fragment subformula matching without large Cartesian allocations,
-  preserve large raw peak indices, and retain legacy-model compatibility.
-- Verify standard model downloads with SHA-256 and atomic replacement.
-- Declare LightGBM as an inference dependency and expand regression coverage.
-
-1.1.1 (2026-11-14)
-- Include F, Cl, Br and I by default in annotation and direct mass searches.
-  Set halogen=False only when prior knowledge rules out halogens.
-- Add --no-halogen to exclude halogens in the CLI while retaining existing
-  --halogen, -halogen and -hal flags. The Nextflow wrapper defaults to -hal 1
-  and accepts -hal 0 to exclude halogens.
-- Clarify the default and explicit exclusion in the README, configuration,
-  command-line, Python API, model and migration documentation.
-- Retain the validated 1.1.0 model bundle and calibration.
-
-1.2.0 (2026-11-14)
-- Add one compact CPU spectral encoder shared by MS2 and joint MS1+MS2 ranking,
-  combined with formula, mass, isotope and fragment evidence.
-- Add conditional probability calibration using precursor fit and observed
-  isotope count, preserving explicit absent-answer probability mass.
-- Accept optional instrument and collision-energy metadata in MetaFeature and
-  MGF input; mask unknown units and stepped energies.
-- Add timstof configuration and use_spectral / --no-spectral selection, with
-  established rankers retained outside validated compact-model settings.
-- Keep halogens enabled by default and retain the recommended candidate budgets.
-- Use lazy CPU ONNX Runtime inference without requiring PyTorch or CUDA.
-- Clarify per-query confidence cutoffs versus pooled expected-error selection.
+1.4.0 (2026-11-16)
+- Ship the compact hybrid spectral scorer selected in the 1.4 research review.
+  Keep the candidate policy and optional compatibility route unchanged.
+- Compress the unchanged scorer and calibration losslessly into an 8.75 MB
+  standard model bundle. Repack the lossless formula database into 8,192-row
+  indexed blocks with standard-library LZMA, reducing it to 18.41 MB while
+  preserving every formula, index and stored mass bit.
+- Reduce the standard model plus database download to 27.16 MB; the large
+  compatibility weights remain an optional on-demand download.
+- Report the fresh accuracy results and the external confidence limitation:
+  nominal 5% FDR selections are not validated across sources, particularly
+  for halogen-rich MS2 data. No general 5% FDR guarantee is claimed.
 
 1.3.0 (2026-11-15)
 - Use one shared compact MS2/joint scorer with soft count likelihoods and
@@ -204,24 +94,134 @@ Now we use a learning-to-rank model to rank the formula candidates.
 - Publish frozen accuracy and error-rate comparisons, including the smaller
   external PFAS MS2 limitation, and retain the 25/50 MS2/joint candidate budgets.
 
-1.4.0 (2026-11-16)
-- Ship the compact hybrid spectral scorer selected in the 1.4 research review.
-  Keep the candidate policy and optional compatibility route unchanged.
-- Compress the unchanged scorer and calibration losslessly into an 8.75 MB
-  standard model bundle. Repack the lossless formula database into 8,192-row
-  indexed blocks with standard-library LZMA, reducing it to 18.41 MB while
-  preserving every formula, index and stored mass bit.
-- Reduce the standard model plus database download to 27.16 MB; the large
-  compatibility weights remain an optional on-demand download.
-- Report the fresh accuracy results and the external confidence limitation:
-  nominal 5% FDR selections are not validated across sources, particularly
-  for halogen-rich MS2 data. No general 5% FDR guarantee is claimed.
+1.2.0 (2026-11-14)
+- Add one compact CPU spectral encoder shared by MS2 and joint MS1+MS2 ranking,
+  combined with formula, mass, isotope and fragment evidence.
+- Add conditional probability calibration using precursor fit and observed
+  isotope count, preserving explicit absent-answer probability mass.
+- Accept optional instrument and collision-energy metadata in MetaFeature and
+  MGF input; mask unknown units and stepped energies.
+- Add timstof configuration and use_spectral / --no-spectral selection, with
+  established rankers retained outside validated compact-model settings.
+- Keep halogens enabled by default and retain the recommended candidate budgets.
+- Use lazy CPU ONNX Runtime inference without requiring PyTorch or CUDA.
+- Clarify per-query confidence cutoffs versus pooled expected-error selection.
 
-1.4.1 (2026-11-16)
-- Unify QTOF and timsTOF as the ``tof`` instrument family, with unchanged
-  10/20 ppm tolerances. The former settings remain supported aliases.
-- Normalize per-feature and MGF metadata to the same TOF family and use one
-  model input while retaining compatibility with existing spectral bundles.
-- Update the CLI, Nextflow wrapper, documentation, and regression coverage.
-- The frozen model uses its former QTOF indicator for all TOF inputs; timsTOF
-  predictions can change and the original validation does not cover this change.
+1.1.1 (2026-11-14)
+- Include F, Cl, Br and I by default in annotation and direct mass searches.
+  Set halogen=False only when prior knowledge rules out halogens.
+- Add --no-halogen to exclude halogens in the CLI while retaining existing
+  --halogen, -halogen and -hal flags. The Nextflow wrapper defaults to -hal 1
+  and accepts -hal 0 to exclude halogens.
+- Clarify the default and explicit exclusion in the README, configuration,
+  command-line, Python API, model and migration documentation.
+- Retain the validated 1.1.0 model bundle and calibration.
+
+1.1.0 (2026-11-14)
+- Replace the four evidence-mode ranking models and add explicit element/adduct
+  features, a learned candidate selector, and validated mode-specific budgets.
+- Preserve missing-answer probability mass in calibrated confidence and FDR
+  estimates; avoid automatic certainty for singleton candidates.
+- Add max_candidates / --max-candidates and preserve other settings when
+  updating engine configuration.
+- Bound fragment subformula matching without large Cartesian allocations,
+  preserve large raw peak indices, and retain legacy-model compatibility.
+- Verify standard model downloads with SHA-256 and atomic replacement.
+- Declare LightGBM as an inference dependency and expand regression coverage.
+
+1.0.1 (2026-11-13)
+- Preserve bottom-up MS/MS intensity when merging duplicate precursor-database
+  candidates, so their evidence survives the pre-ranking cutoff.
+- Add regression coverage for candidate merging and retention at the
+  350-candidate cutoff.
+
+1.0.0 (2026-11-05)
+- Break compatibility with 0.x formula and configuration APIs: use element-count
+  mappings, the new formula helpers, and ``element_ranges``; ``add_data`` appends.
+- Reject unsupported elements in formulas, adducts, and element ranges.
+- Improve loading and annotation performance, and add regression tests and benchmarks.
+- Fix handling of empty spectra, USIs, MGF metadata, and multiply charged precursors.
+- Preserve fragment-search mass precision across NumPy 1.x and 2.x.
+- MGF spectra without polarity information now warn and default to positive mode.
+- Move most package metadata to pyproject.toml and use one version number throughout.
+- Update the maintainer contact address.
+
+0.3.16 (2026-08-27)
+- Allow configurable data directories and file names.
+
+0.3.15 (2026-08-22)
+- Bug fix for cmd line version.
+
+0.3.13, 0.3.14 (2026-01-27)
+- Update USI loading function.
+
+0.3.12 (2025-02-13)
+-  `lightgbm` is not required if only using `mass_to_formula` and `mz_to_formula` functions.
+
+0.3.11 (2025-02-05)
+-  Include 'integer_dbe' argument in `mass_to_formula` and `mz_to_formula` functions.
+-  In `mass_to_formula` and `mz_to_formula` functions, only output formulas that pass SENIOR rules.
+
+0.3.10 (2025-02-02)
+-  Include 'dbe_cutoff' argument in `mass_to_formula` and `mz_to_formula` functions.
+
+0.3.9 (2025-01-03)
+- Include 'halogen' argument in `mass_to_formula` and `mz_to_formula` functions.
+- Minor updates on text output.
+
+0.3.8 (2024-10-14)
+- Update mgf loader. Add more field names for adduct loading.
+
+0.3.7 (2024-03-19)
+- Update cmd line bug.
+
+0.3.5 / 0.3.6 (2024-01-29)
+- Bug fix for MS/MS preprocessing.
+
+0.3.4 (2024-01-29)
+- Update function `load_mgf`: 'FEATURE_ID' now is added as a new identifier for metabolite features.
+
+0.3.3 (2024-01-27)
+- Bug fix for candidate formula generation (pre-ranking).
+
+0.3.2 (2024-01-24)
+- timeout_decorator package seems not working on Windows, so we remove it.
+
+0.3.0 / 0.3.1 (2024-01-22)
+- Update deep learning features & models for molecular formula annotation.
+Now we use a learning-to-rank model to rank the formula candidates.
+- Update MS2 preprocessing: reserve top 6 peaks (user-defined) for each 50 Da window.
+- Update database source: now we use the GitHub release to manage the database source.
+- Update candidate formula search, FDR estimation, ML etc.
+
+0.2.8 / 0.2.9 (2023-12-10)
+- Bug fix for load_mgf (now can load metabolite features with MS1 and MS2 spectra using the same identifier).
+- Update command line version.
+
+0.2.6 / 0.2.7 (2023-12-09)
+- Update base class "Adduct".
+
+0.2.5 (2023-11-22)
+- Update MsbuddyConfig class and PreprocessedMS2 class.
+
+0.2.4 (2023-11-09, stable version)
+- Bug fixes for export results in cmd line version.
+- Add version control for downloaded data (loaded DBs).
+
+0.2.3 (2023-11-05)
+- Update export: pd.Dataframe 'append' deprecated.
+
+0.2.2 (2023-10-18)
+- Add new API function 'assign_subformula'.
+
+0.2.1 (2023-10-18)
+- Bug fixes for load_mgf.
+- Add mgf demo file.
+
+0.2.0 (2023-10-15)
+- Update deep learning features & models for molecular formula annotation.
+- Update API function 'mass_to_formula', mass errors are output as well. Formula results are sorted by mass errors.
+- Add new API function 'mz_to_formula', for charged ions. Ion type (adduct form) is required.
+
+0.1.2 (2023-10-03)
+- First release of a working version on PyPI.
