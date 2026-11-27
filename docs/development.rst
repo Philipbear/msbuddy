@@ -18,10 +18,8 @@ as follows:
 * ``export.py`` writes results, while ``main_cmd.py`` provides the command line.
 * ``utils.py`` contains formula parsing and enumeration utilities.
 
-The ``tests`` directory contains regression tests, ``benchmarks`` contains local
-performance checks, and ``demo`` provides sample input. The historical
-``db_prep`` scripts are used for preparing databases rather than the normal
-annotation workflow.
+The ``tests`` directory contains regression tests, and ``demo`` provides sample
+input.
 
 Tests
 -----
@@ -33,9 +31,6 @@ Install the project dependencies, then run from the repository root::
 The regression tests use synthetic inputs and do not download the databases or
 models. A full annotation run also requires the database files and LightGBM, as
 described in the installation and quick-start guides.
-
-See :doc:`candidate_audit` for labelled-library sampling, stage-specific recall,
-optional MassDesk fragment search, pruning ablations, and ranker experiments.
 
 GitHub Actions are currently disabled for this repository. If Actions are
 re-enabled, the ``Tests`` workflow runs only when started manually from the
@@ -51,18 +46,3 @@ documentation, and package builds. Most package metadata is in
 ``pyproject.toml``; ``setup.py`` supplies license metadata compatible with
 Python 3.8's build tools. Build the source distribution and wheel with
 ``python -m build``.
-
-Performance checks
-------------------
-
-Run the synthetic scaling benchmark from the repository root::
-
-   python -m benchmarks.benchmark_workflows
-
-Use ``--help`` to change the number of spectra, peaks, candidates, formula
-rows, and repetitions. The benchmark reports median elapsed times after a warmup;
-it measures individual operations and uses a stand-in for feature calculation
-when timing matrix assembly. It does not measure a complete annotation run or
-download any data. Compare timings on the same machine and environment. Initial
-startup and the first annotation can take longer because databases and models
-are loaded and Numba compiles the numerical functions.

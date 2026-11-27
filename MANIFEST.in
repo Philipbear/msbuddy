@@ -1,8 +1,5 @@
 include changelog.md
 include main_nextflow.py
-include test.py
 recursive-include docs *.rst *.py
-include docs/candidate_audit.rst
 recursive-include tests *.py
-recursive-include benchmarks *.py
 recursive-include demo *.mgf *.csv

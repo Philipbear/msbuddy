@@ -48,7 +48,6 @@ Source codes are available at `GitHub <https://github.com/Philipbear/msbuddy>`_.
    delta
    cmdapi
    development
-   candidate_audit
    contact
 
 Citation
